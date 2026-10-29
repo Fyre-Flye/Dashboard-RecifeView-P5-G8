@@ -119,8 +119,8 @@ if escolhido:
     a = t156.set_index("bairro_oficial").loc[escolhido]
     b = tdc.set_index("bairro_oficial").loc[escolhido]
     kpi(k[1], "Pedidos ao 156", a["volume_txt"], f"{a['taxa_txt'].split(' (')[0]} / mil hab. / ano")
-    kpi(k[2], "Ações da Defesa Civil", b["volume_txt"], f"{b['taxa_txt'].split(' (')[0]} / mil hab. / ano",
-        "Só as pedidas pelo cidadão (vistoria, lona). A Defesa Civil publica até 2024.")
+    kpi(k[2], "Defesa Civil", b["volume_txt"], f"{b['taxa_txt'].split(' (')[0]} / mil hab. / ano",
+        "Ações da Defesa Civil pedidas pelo cidadão (vistoria, lona). A Defesa Civil publica até 2024.")
     if escolhido in ind.index:
         i = ind.loc[escolhido]
         kpi(k[3], "Local repetido (156)", metricas.porcentagem(i["pct_reincidencia_156"], 1), "2021–2025")
