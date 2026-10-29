@@ -99,7 +99,11 @@ _ACENTOS = {
     "SERVICOS": "serviços", "INFORMACAO": "informação", "RECLAMACAO": "reclamação", "SOLICITACAO": "solicitação",
     "DENUNCIA": "denúncia", "SUGESTAO": "sugestão", "VISTORIA": "vistoria", "ACAO": "ação", "PROTECAO": "proteção",
     "CALCADAS": "calçadas", "ARVORES": "árvores", "NECROPOLES": "necrópoles", "MOBILIARIO": "mobiliário",
-    "REPOSICAO": "reposição", "VEICULO": "veículo", "SEMAFOROS": "semáforos", "EMPREL": "Emprel",
+    "REPOSICAO": "reposição", "VEICULO": "veículo", "SEMAFOROS": "semáforos", "EMPREL": "Emprel", "LAMPADA": "lâmpada", "LAMPADAS": "lâmpadas",
+    "PUBLICO": "público", "CAPINACAO": "capinação", "IMPLANTACAO": "implantação", "LUMINARIA": "luminária",
+    "MUDANCA": "mudança", "ASFALTICO": "asfáltico", "PRACA": "praça", "RECUPERACAO": "recuperação",
+    "PARALELEPIPEDO": "paralelepípedo", "REMOCAO": "remoção", "POCO": "poço", "PRE-MOLDADOS": "pré-moldados",
+    "FITOSSANITARIO": "fitossanitário", "VIA": "via",
 }
 _SIGLAS = {"EMLURB", "URB", "CTTU", "SEINFRA", "SEDEC", "COMPESA", "SEGOV", "EMPREL", "CONVIVA", "RECIPREV", "COMDICA"}
 
