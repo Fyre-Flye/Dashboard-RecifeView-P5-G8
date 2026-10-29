@@ -10,7 +10,7 @@ from dataclasses import dataclass
 import pandas as pd
 import streamlit as st
 
-from src.config import ANO_MAX, ANO_MIN
+from src.config import ANO_MAX, ANO_MIN, nome_categoria
 from src.dados import categorias_156, tabela
 
 PERIODO_PADRAO = (2021, 2025)     # recorte comum da EDA (N3): todas as fontes têm dado
@@ -55,7 +55,7 @@ def desenhar_barra_lateral() -> None:
         st.multiselect("Bairro", opcoes["bairro_oficial"].tolist(), key="f_bairros", placeholder="Todos",
                        format_func=nomes.get)
         st.multiselect("Categoria de serviço", categorias_156(), key="f_categorias", placeholder="Todas",
-                       format_func=lambda c: c.capitalize(),
+                       format_func=nome_categoria,
                        help="Grupos de serviço do 156. Na Câmara, a categoria foi inferida da ementa.")
         if st.button("Limpar filtros", width="stretch"):
             for chave in ("f_rpas", "f_bairros", "f_categorias"):
@@ -83,7 +83,7 @@ def legenda(f: Filtros, ignorados: dict[str, str] | None = None) -> None:
         nomes = dict(zip(tabela("bairros")["bairro_oficial"], tabela("bairros")["nome"]))
         partes.append(", ".join(nomes.get(b, b) for b in f.bairros[:4]) + ("…" if len(f.bairros) > 4 else ""))
     if f.categorias:
-        partes.append(", ".join(c.capitalize() for c in f.categorias[:3]) + ("…" if len(f.categorias) > 3 else ""))
+        partes.append(", ".join(nome_categoria(c) for c in f.categorias[:3]) + ("…" if len(f.categorias) > 3 else ""))
     texto = "Recorte: " + " · ".join(partes)
     if ignorados:
         texto += "  \n" + " ".join(f"_{k}_: {v}" for k, v in ignorados.items())

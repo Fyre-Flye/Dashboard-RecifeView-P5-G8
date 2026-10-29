@@ -87,3 +87,35 @@ def eixo_numero(titulo: str | None = None, fmt: str = ",.0f", **kwargs) -> alt.A
 
 def registrar_tema() -> None:
     alt.theme.register("recifeview", enable=True)(tema_recifeview)
+
+
+# As fontes publicam nomes em maiúsculas e sem acento. Para exibir, devolvemos acentos às palavras comuns.
+_ACENTOS = {
+    "PAVIMENTACAO": "pavimentação", "ILUMINACAO": "iluminação", "PUBLICA": "pública", "PRACAS": "praças",
+    "TRANSITO": "trânsito", "SINALIZACAO": "sinalização", "ARBORIZACAO": "arborização", "FISCALIZACAO": "fiscalização",
+    "PROVISORIA": "provisória", "LUMINARIAS": "luminárias", "DENUNCIAS": "denúncias", "VAO": "vão",
+    "CONSERVACAO": "conservação", "MANUTENCAO": "manutenção", "EDUCACAO": "educação", "SAUDE": "saúde",
+    "AGUA": "água", "ESGOTO": "esgoto", "PODA": "poda", "URBANISTICO": "urbanístico", "ANIMAIS": "animais",
+    "SERVICOS": "serviços", "INFORMACAO": "informação", "RECLAMACAO": "reclamação", "SOLICITACAO": "solicitação",
+    "DENUNCIA": "denúncia", "SUGESTAO": "sugestão", "VISTORIA": "vistoria", "ACAO": "ação", "PROTECAO": "proteção",
+    "CALCADAS": "calçadas", "ARVORES": "árvores", "NECROPOLES": "necrópoles", "MOBILIARIO": "mobiliário",
+    "REPOSICAO": "reposição", "VEICULO": "veículo", "SEMAFOROS": "semáforos", "EMPREL": "Emprel",
+}
+_SIGLAS = {"EMLURB", "URB", "CTTU", "SEINFRA", "SEDEC", "COMPESA", "SEGOV", "EMPREL", "CONVIVA", "RECIPREV", "COMDICA"}
+
+
+def nome_categoria(texto) -> str:
+    """'ILUMINACAO PUBLICA' -> 'Iluminação pública'."""
+    if texto is None or texto != texto:
+        return "—"
+    palavras = [_ACENTOS.get(p, p.lower()) for p in str(texto).replace("/", " / ").split()]
+    frase = " ".join(palavras).replace(" / ", "/")
+    return frase[:1].upper() + frase[1:]
+
+
+def nome_orgao(texto) -> str:
+    """Mantém siglas em maiúsculas e encurta nomes compostos: 'SEINFRA/INFRAESTRUTURA' -> 'SEINFRA'."""
+    if texto is None or texto != texto:
+        return "—"
+    primeiro = str(texto).split("/")[0].strip()
+    return primeiro if primeiro in _SIGLAS else nome_categoria(primeiro)
