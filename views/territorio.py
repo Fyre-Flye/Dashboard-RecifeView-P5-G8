@@ -66,9 +66,13 @@ def faixas_quintil(taxa: pd.Series) -> pd.Series:
 def mapa(t: pd.DataFrame, titulo_legenda: str, chave: str) -> alt.Chart:
     geo = alt.Data(values=malha()["features"])
     campos = ["nome", "rpa", "taxa", "faixa", "taxa_txt", "volume_txt", "favela_txt", "destaque"]
-    clique = alt.selection_point(fields=["properties.bairro_oficial"], name="bairro", on="click", empty=False)
+    # A seleção usa um campo calculado sem ponto no nome: com "properties.bairro_oficial", o Streamlit
+    # devolve a chave escapada ("properties\\.bairro_oficial") e o clique no mapa não abria o detalhe.
+    clique = alt.selection_point(fields=["bairro"], name="bairro", on="click", empty=False)
     ordem = t.dropna(subset=["taxa"]).groupby("faixa")["taxa"].min().sort_values().index.tolist()
-    return alt.Chart(geo).mark_geoshape(stroke="white", strokeWidth=0.7).transform_lookup(
+    return alt.Chart(geo).mark_geoshape(stroke="white", strokeWidth=0.7).transform_calculate(
+        bairro="datum.properties.bairro_oficial",
+    ).transform_lookup(
         lookup="properties.bairro_oficial", from_=alt.LookupData(t, "bairro_oficial", campos),
     ).encode(
         color=alt.condition("isValid(datum.faixa)", alt.Color(
@@ -105,7 +109,7 @@ def bairro_clicado(evento) -> str | None:
     if not evento:
         return None
     pontos = evento.selection.get("bairro", [])
-    return pontos[0].get("properties.bairro_oficial") if pontos else None
+    return pontos[0].get("bairro") if pontos else None
 
 
 escolhido = bairro_clicado(ev1) or bairro_clicado(ev2) or (f.bairros[0] if len(f.bairros) == 1 else None)
