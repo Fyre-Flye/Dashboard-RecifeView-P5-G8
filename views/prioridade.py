@@ -47,6 +47,15 @@ def para_valor(opcao: int) -> float:
     return float(opcao) if opcao > 0 else 1 / -opcao
 
 
+def restaurar_julgamentos() -> None:
+    """Callback do botão: roda antes dos sliders serem desenhados, então pode trocar o valor deles.
+
+    Alterar o estado de um widget depois de ele existir na página dá StreamlitAPIException.
+    """
+    for (a, b), v in ahp.JULGAMENTOS_PADRAO.items():
+        st.session_state[chave_estado(a, b)] = para_opcao(v)
+
+
 for (a, b), v in ahp.JULGAMENTOS_PADRAO.items():
     st.session_state.setdefault(chave_estado(a, b), para_opcao(v))
 
@@ -66,10 +75,7 @@ with c1:
 
         op = st.select_slider(f"{na} × {nb}", OPCOES, key=chave_estado(a, b), format_func=rotulo)
         julgamentos[(a, b)] = para_valor(op)
-    if st.button("Voltar à proposta inicial do grupo", icon=":material/restart_alt:"):
-        for (a, b), v in ahp.JULGAMENTOS_PADRAO.items():
-            st.session_state[chave_estado(a, b)] = para_opcao(v)
-        st.rerun()
+    st.button("Voltar à proposta inicial do grupo", icon=":material/restart_alt:", on_click=restaurar_julgamentos)
 
 m = ahp.matriz_de_comparacao(julgamentos, CHAVES)
 w = dict(zip(CHAVES, ahp.pesos(m)))
