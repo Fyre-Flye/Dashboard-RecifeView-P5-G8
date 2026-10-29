@@ -57,11 +57,14 @@ def desenhar_barra_lateral() -> None:
         st.multiselect("Categoria de serviço", categorias_156(), key="f_categorias", placeholder="Todas",
                        format_func=nome_categoria,
                        help="Grupos de serviço do 156. Na Câmara, a categoria foi inferida da ementa.")
-        if st.button("Limpar filtros", width="stretch"):
-            for chave in ("f_rpas", "f_bairros", "f_categorias"):
-                st.session_state[chave] = []
-            st.session_state["f_anos"] = PERIODO_PADRAO
-            st.rerun()
+        st.button("Limpar filtros", width="stretch", on_click=limpar)
+
+
+def limpar() -> None:
+    """Callback do botão: roda antes dos widgets serem desenhados, então pode trocar o valor deles."""
+    for chave in ("f_rpas", "f_bairros", "f_categorias"):
+        st.session_state[chave] = []
+    st.session_state["f_anos"] = PERIODO_PADRAO
 
 
 def atuais() -> Filtros:

@@ -1,6 +1,9 @@
-import pandas as pd
+from pathlib import Path
 
-from src.filtros import Filtros
+import pandas as pd
+from streamlit.testing.v1 import AppTest
+
+from src.filtros import PERIODO_PADRAO, Filtros
 
 
 def _df():
@@ -32,3 +35,14 @@ def test_tabela_sem_a_coluna_ignora_o_filtro():
     f = Filtros(anos=(2012, 2026), rpas=("3",), bairros=("GUABIRABA",), categorias=())
     sem_territorio = pd.DataFrame({"ano": [2022, 2023], "orgao": ["URB", "EMLURB"]})
     assert len(f.aplicar(sem_territorio)) == 2
+
+
+def test_limpar_filtros_volta_ao_padrao_sem_erro():
+    at = AppTest.from_file(str(Path(__file__).resolve().parents[1] / "app.py"), default_timeout=120)
+    at.session_state["f_rpas"] = ["6"]
+    at.session_state["f_anos"] = (2015, 2018)
+    at.run()
+    next(b for b in at.button if b.label == "Limpar filtros").click().run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert at.session_state["f_rpas"] == []
+    assert tuple(at.session_state["f_anos"]) == PERIODO_PADRAO
