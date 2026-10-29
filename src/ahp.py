@@ -36,7 +36,7 @@ CRITERIOS = [
              "Mede exposição a risco em encostas e áreas alagáveis."),
     Criterio("vulnerabilidade", "Vulnerabilidade", "pct_favela", "% da população",
              "Parcela da população do bairro em favelas e comunidades urbanas (Censo 2022). "
-             "Compensa o viés de notificação: mais pedido não quer dizer mais problema."),
+             "O mesmo problema pesa mais onde a capacidade de se recuperar é menor, e o volume de pedidos não mostra isso."),
     Criterio("atraso", "Atraso", "pct_atraso_156", "% do estoque aberto",
              "Parcela dos pedidos do 156 ainda abertos (arquivos 2025–2026) que já passaram do prazo "
              "típico da categoria (p90 dos atendidos de 2021–2025)."),
