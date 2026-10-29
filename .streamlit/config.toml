@@ -5,6 +5,9 @@
 [server]
 enableStaticServing = true
 
+[browser]
+gatherUsageStats = false
+
 [theme]
 base = "light"
 primaryColor = "#0F62FE"
