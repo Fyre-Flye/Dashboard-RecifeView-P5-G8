@@ -1,0 +1,4 @@
+# Para regerar os dados (pipeline/) e rodar os testes. O app em si só precisa do requirements.txt.
+-r requirements.txt
+shapely>=2.0
+pytest>=8

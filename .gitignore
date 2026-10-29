@@ -1,0 +1,28 @@
+# Ambiente virtual
+.venv/
+venv/
+
+# Cache Python e testes
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Segredos do Streamlit (nunca versionar)
+.streamlit/secrets.toml
+
+# Sistema e editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.ipynb_checkpoints/
+
+# Dados
+# raw: o dataset do grupo (camada ouro) e a malha bruta. NÃO vão para o Git: o dataset tem o texto
+#      da SEDEC (uso interno do grupo, nunca publicar) e o id_local (pseudônimo de endereço).
+# clean: só agregados sem dado pessoal, VERSIONADOS de propósito (o Streamlit Cloud lê do GitHub).
+data/raw/*
+!data/raw/.gitkeep
+
+# Skills do Streamlit (symlinks para o venv; cada pessoa roda `streamlit skills`)
+.claude/skills/
+.agents/skills/
