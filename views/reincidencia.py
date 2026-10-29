@@ -43,7 +43,7 @@ kpi(k2, "O problema voltou", metricas.porcentagem(intervalos["intervalo_reincide
 kpi(k3, "Pedido em dobro", metricas.porcentagem(intervalos["intervalo_duplicidade"] / intervalos.sum() * 100),
     "até 7 dias depois",
     "Repetições em até 7 dias: provável duplicidade (o mesmo problema registrado de novo antes de ser resolvido).")
-kpi(k4, "Pontos crônicos", metricas.numero((cron["pedidos"] >= 10).sum()), "10+ pedidos no mesmo local",
+kpi(k4, "Pontos crônicos", metricas.numero((cron["pedidos"] >= 10).sum()), "locais com 10+ pedidos",
     "Locais + serviço com 10 pedidos ou mais na janela 2015–2025, ativos no período escolhido.")
 
 # --- Por categoria (clique) e tipo de repetição ------------------------------------------------------

@@ -34,7 +34,7 @@ mesmo_dia = praz.loc[praz["dias"] == 0, "n"].sum() / total * 100
 acima_90 = praz.loc[praz["dias"] > 90, "n"].sum() / total * 100
 
 k1, k2, k3, k4 = st.columns(4)
-kpi(k1, "Metade é atendida em até", metricas.dias(mediana), "mediana",
+kpi(k1, "Metade sai em até", metricas.dias(mediana), "mediana",
     f"Mediana dos dias até a última movimentação, em {metricas.numero(total)} pedidos atendidos.")
 kpi(k2, "1 em cada 10 leva mais de", metricas.dias(p90), "p90",
     "Percentil 90: o limite da cauda longa. É o número que mais piorou nos últimos anos.")
@@ -62,8 +62,8 @@ with c1:
     leitura("A mediana quase não se move; o p90 sobe a partir de 2021. Em 2024–2026 a cauda ainda está incompleta: "
             "pedidos abertos há muito tempo só entram aqui quando forem atendidos.")
 
-FAIXAS = [(-1, 0, "mesmo dia"), (0, 7, "1–7 dias"), (7, 30, "8–30 dias"), (30, 90, "31–90 dias"),
-          (90, 365, "91–365 dias"), (365, np.inf, "mais de 1 ano")]
+FAIXAS = [(-1, 0, "mesmo dia"), (0, 7, "1–7 d"), (7, 30, "8–30 d"), (30, 90, "31–90 d"),
+          (90, 365, "91–365 d"), (365, np.inf, "> 1 ano")]
 faixa = pd.cut(praz["dias"], [a for a, _, _ in FAIXAS] + [np.inf], labels=[r for _, _, r in FAIXAS])
 dist = praz.groupby(faixa, observed=False)["n"].sum().reset_index()
 dist.columns = ["faixa", "n"]
@@ -73,7 +73,7 @@ ordem = [r for _, _, r in FAIXAS]
 with c2:
     st.markdown("**Em quanto tempo os pedidos são atendidos**")
     b = alt.Chart(dist).encode(
-        x=alt.X("faixa:N", sort=ordem, title=None, axis=alt.Axis(labelAngle=0, labelLimit=90)),
+        x=alt.X("faixa:N", sort=ordem, title=None, axis=alt.Axis(labelAngle=0, labelLimit=90, labelOverlap=False)),
         y=alt.Y("pct:Q", title="% dos atendidos"),
         tooltip=[alt.Tooltip("faixa:N", title="Faixa"), alt.Tooltip("rotulo:N", title="Pedidos")],
     )

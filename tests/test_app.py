@@ -11,6 +11,7 @@ PAGINAS = ["views/inicio.py", "views/retorno.py", "views/reincidencia.py", "view
 FILTROS = [
     {},                                                        # padrão: 2021–2025, cidade inteira
     {"f_bairros": ["GUABIRABA"]},                              # um bairro só
+    {"f_bairros": ["RECIFE"]},                                 # bairro com menos de 1.000 moradores (fora do AHP)
     {"f_rpas": ["1"], "f_categorias": ["PAVIMENTACAO"]},       # RPA + categoria
     {"f_categorias": ["COLETA SELETIVA"]},                     # categoria sem indicações da Câmara
     {"f_anos": (2012, 2012)},                                  # ano em que metade das fontes não existe

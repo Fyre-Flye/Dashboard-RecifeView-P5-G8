@@ -30,14 +30,14 @@ k1, k2, k3, k4 = st.columns(4)
 kpi(k1, "Indicações de vereadores", metricas.numero(len(ind)), "pedidos à Prefeitura",
     "Indicações (pedidos de providência) apresentadas na Câmara Municipal no recorte, lidas do sistema público SAGL.")
 kpi(k2, "Chegam à Prefeitura", metricas.porcentagem(enviadas / len(ind) * 100),
-    f"mediana de {metricas.dias(ind['dias_ate_envio'].median())} para enviar",
-    "Indicações com envio à Prefeitura registrado na tramitação.")
+    f"envio em {metricas.dias(ind['dias_ate_envio'].median())}",
+    "Indicações com envio à Prefeitura registrado na tramitação, e a mediana de dias até o envio.")
 kpi(k3, "Voltam com resposta", metricas.porcentagem(respondidas / len(ind) * 100),
     f"{metricas.numero(respondidas)} indicações",
     "Indicações com resposta da Prefeitura registrada na tramitação. Sem resposta registrada não quer dizer "
     "que o serviço não foi feito: quer dizer que a informação não voltou.")
-kpi(k4, "Tempo até a resposta", metricas.dias(mediana_resposta), "mediana, quando há resposta",
-    "Dias entre a apresentação da indicação e a resposta registrada, só para as que têm resposta.")
+kpi(k4, "Tempo até a resposta", metricas.dias(mediana_resposta), "mediana",
+    "Mediana dos dias entre a apresentação da indicação e a resposta registrada, só para as que têm resposta.")
 
 # --- Funil e canal de envio --------------------------------------------------------------------------
 st.subheader("A perda está toda depois da entrada")
@@ -51,7 +51,7 @@ etapas["pct"] = etapas["n"] / len(ind) * 100
 etapas["rotulo"] = etapas.apply(lambda r: f"{metricas.numero(r['n'])} ({metricas.porcentagem(r['pct'])})", axis=1)
 funil = alt.Chart(etapas).encode(
     y=alt.Y("etapa:N", sort=list(etapas["etapa"]), title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
-    x=alt.X("n:Q", axis=eixo_numero("indicações"), scale=alt.Scale(domain=[0, len(ind) * 1.35])),
+    x=alt.X("n:Q", axis=eixo_numero("indicações"), scale=alt.Scale(domain=[0, len(ind) * 1.6])),
     tooltip=[alt.Tooltip("etapa:N", title="Etapa"), alt.Tooltip("rotulo:N", title="Indicações")],
 )
 barras = funil.mark_bar(height=34).encode(
