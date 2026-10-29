@@ -4,7 +4,7 @@ Painel analítico do projeto **RecifeView** (Projetos 5, CESAR School, 2026.2, G
 "Fragmentação do Tratamento de Denúncias Recebidas via Conecta Recife", do Banco de Oportunidades da Prefeitura do
 Recife. Esta é a entrega **N4 — Dashboard Interativo, versão inicial**.
 
-**Link do app:** _(preencher após o deploy no Streamlit Community Cloud)_
+**Link do app:** https://dashboard-recifeview-p5-g8.streamlit.app/
 
 ## O que o painel mostra
 
