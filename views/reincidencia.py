@@ -63,15 +63,15 @@ with c1:
     st.markdown("**% dos pedidos em local repetido, por categoria**")
     clique = alt.selection_point(fields=["nome"], name="cat")
     base = alt.Chart(por_cat).encode(
-        y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=200)),
+        y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
         x=alt.X("pct:Q", title="% em local repetido", scale=alt.Scale(domain=[0, 100])),
         tooltip=[alt.Tooltip("nome:N", title="Categoria"), alt.Tooltip("rotulo:N", title="Em local repetido"),
                  alt.Tooltip("pedidos_txt:N", title="Pedidos")],
     )
-    barras = base.mark_bar(height=16).encode(
+    barras = base.mark_bar().encode(
         color=alt.condition(clique, alt.value(AZUL), alt.value(AZUL40))).add_params(clique)
     grafico = (barras + base.mark_text(align="left", dx=4, color=TEXTO, fontSize=11).encode(text="rotulo:N"))
-    evento = st.altair_chart(grafico.properties(height=max(180, 26 * len(por_cat))), width="stretch",
+    evento = st.altair_chart(grafico.properties(height=alt.Step(24)), width="stretch",
                              on_select="rerun", key="rep_cat")
     leitura(f"Categorias com {metricas.numero(minimo)} pedidos ou mais no recorte. Clique numa barra para ver, ao lado, "
             "como os pedidos dela se repetem.")

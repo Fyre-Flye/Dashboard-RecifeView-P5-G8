@@ -50,7 +50,7 @@ etapas = pd.DataFrame({
 etapas["pct"] = etapas["n"] / len(ind) * 100
 etapas["rotulo"] = etapas.apply(lambda r: f"{metricas.numero(r['n'])} ({metricas.porcentagem(r['pct'])})", axis=1)
 funil = alt.Chart(etapas).encode(
-    y=alt.Y("etapa:N", sort=list(etapas["etapa"]), title=None, axis=alt.Axis(labelLimit=200)),
+    y=alt.Y("etapa:N", sort=list(etapas["etapa"]), title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
     x=alt.X("n:Q", axis=eixo_numero("indicações"), scale=alt.Scale(domain=[0, len(ind) * 1.35])),
     tooltip=[alt.Tooltip("etapa:N", title="Etapa"), alt.Tooltip("rotulo:N", title="Indicações")],
 )
@@ -111,7 +111,7 @@ clique = alt.selection_point(fields=["categoria"], name="cat", empty=True)
 calor = alt.Chart(tab).encode(
     x=alt.X("orgao_nome:N", sort=ordem_org, title=None,
             axis=alt.Axis(labelAngle=-35, orient="top", labelLimit=160, labelOverlap=False, labelAlign="left")),
-    y=alt.Y("categoria_nome:N", sort=ordem_cat_nome, title=None, axis=alt.Axis(labelLimit=180)),
+    y=alt.Y("categoria_nome:N", sort=ordem_cat_nome, title=None, axis=alt.Axis(labelLimit=180, labelOverlap=False)),
     tooltip=[alt.Tooltip("categoria_nome:N", title="Categoria"), alt.Tooltip("orgao:N", title="Órgão"),
              alt.Tooltip("rotulo:N", title="% da categoria"), alt.Tooltip("n:Q", title="Indicações")],
 )
