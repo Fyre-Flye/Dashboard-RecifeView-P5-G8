@@ -60,7 +60,8 @@ def aplicar_correcoes(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     df, log["Ouvidoria: nomes de órgão harmonizados"] = correcoes.harmonizar_orgaos_ouvidoria(df)
     df, log["Câmara: matérias com bairro recuperado pela ementa"] = correcoes.recuperar_bairro_camara(df)
     df = correcoes.completar_territorio(df)
-    df, log["registros com prazo de zero dias (marcados)"] = correcoes.marcar_fechado_no_dia(df)
+    df, _ = correcoes.marcar_fechado_no_dia(df)
+    log["156: pedidos fechados no mesmo dia (marcados)"] = int((df["fechado_no_dia"] & (df["fonte"] == "156_EMLURB")).sum())
     df = df.drop(columns=["texto"])        # a ementa só serviu para recuperar o bairro; não sai daqui
     return df, log
 
