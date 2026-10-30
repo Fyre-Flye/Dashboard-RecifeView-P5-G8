@@ -82,7 +82,7 @@ circula (N3, 6.2).
 
 - **Razão de consistência (RC):** coerência dos julgamentos par a par; acima de 10% os pesos não devem ser usados.
 - **Pesos dos critérios:** resultado das comparações; aparecem em barras para qualquer pessoa conferir.
-- **Índice de prioridade (0 a 100) e posição:** soma ponderada das posições relativas do bairro em cada critério.
+- **Índice de prioridade (0 a 10) e posição:** soma ponderada das posições relativas do bairro em cada critério.
 - **Bairros mantidos no top 10 (sensibilidade):** se o ranking muda muito quando um peso muda. Apoia a decisão de
   quanto investir na validação dos pesos com especialistas.
 

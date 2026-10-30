@@ -8,7 +8,7 @@ Como funciona, em três passos:
 2. Os pesos são o autovetor principal da matriz de comparações; a razão de consistência (RC)
    diz se os julgamentos são coerentes entre si (RC ≤ 0,10).
 3. Cada bairro recebe uma nota de 0 a 1 em cada critério (posição relativa entre os bairros)
-   e o índice é a soma ponderada, de 0 a 100.
+   e o índice é a soma ponderada, de 0 a 10 (escala de nota, mais fácil de ler para gestores).
 
 Os julgamentos padrão abaixo são uma proposta inicial do grupo para discussão. NÃO foram validados
 por especialistas da Prefeitura; o painel deixa qualquer pessoa refazê-los.
@@ -64,6 +64,7 @@ JULGAMENTOS_PADRAO = {
 # Índice aleatório de Saaty (consistência de matrizes preenchidas ao acaso), por tamanho da matriz.
 INDICE_ALEATORIO = {1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45}
 RC_ACEITAVEL = 0.10
+NOTA_MAXIMA = 10        # o índice vai de 0 a 10
 
 
 def pares(chaves: list[str]) -> list[tuple[str, str]]:
@@ -113,9 +114,9 @@ def notas_por_criterio(indicadores: pd.DataFrame, criterios=CRITERIOS) -> pd.Dat
 
 
 def indice_prioridade(indicadores: pd.DataFrame, w: dict[str, float], criterios=CRITERIOS) -> pd.DataFrame:
-    """Índice de 0 a 100 e a contribuição de cada critério (pontos do índice)."""
+    """Índice de 0 a 10 e a contribuição de cada critério (pontos do índice)."""
     notas = notas_por_criterio(indicadores, criterios)
-    contrib = pd.DataFrame({c.chave: notas[c.chave] * w[c.chave] * 100 for c in criterios})
+    contrib = pd.DataFrame({c.chave: notas[c.chave] * w[c.chave] * NOTA_MAXIMA for c in criterios})
     resultado = indicadores.copy()
     resultado["indice"] = contrib.sum(axis=1)
     for c in criterios:

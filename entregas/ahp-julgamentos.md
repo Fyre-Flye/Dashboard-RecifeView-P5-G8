@@ -22,7 +22,7 @@ deixado de fora: priorizar por quem pediu é questionável em política pública
 Contexto do Drive).
 
 Cada bairro recebe, em cada critério, a sua **posição relativa** (percentil, de 0 a 1) entre os 89 bairros. O índice
-é a soma ponderada, de 0 a 100. Bairro sem dado num critério recebe 0 nele.
+é a soma ponderada, uma nota de 0 a 10. Bairro sem dado num critério recebe 0 nele.
 
 ## Julgamentos padrão (proposta inicial do grupo, NÃO validada)
 

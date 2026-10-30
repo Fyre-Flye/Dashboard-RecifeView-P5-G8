@@ -28,7 +28,7 @@ with st.expander("Os quatro critérios e como cada um é medido", expanded=False
     st.dataframe(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao}
                                for c in ahp.CRITERIOS]), hide_index=True, width="stretch")
     st.caption("Cada bairro recebe, em cada critério, a sua posição relativa entre os 89 bairros com 1.000 moradores "
-               "ou mais (0 = menor valor, 1 = maior). O índice é a soma ponderada dessas posições, de 0 a 100. Usar a "
+               "ou mais (0 = menor valor, 1 = maior). O índice é a soma ponderada dessas posições, uma nota de 0 a 10. Usar a "
                "posição, e não o valor bruto, evita que poucos bairros extremos achatem os outros.")
 
 # --- Comparações par a par ----------------------------------------------------------------------------
@@ -125,7 +125,7 @@ with c1:
         lookup="properties.bairro_oficial", from_=alt.LookupData(tabela_mapa, "bairro_oficial", campos),
     ).encode(
         color=alt.condition("isValid(datum.indice)", alt.Color(
-            "indice:Q", title="índice de prioridade (0 a 100)", scale=alt.Scale(range=RAMPA, domain=[0, 100]),
+            "indice:Q", title="índice de prioridade (0 a 10)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
             legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
             alt.value("#EEEEEE")),
         opacity=alt.condition("datum.destaque", alt.value(1), alt.value(0.25)),
@@ -152,7 +152,7 @@ with c2:
         f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES) + "</div>", unsafe_allow_html=True)
     barras = alt.Chart(longo).mark_bar(stroke="white", strokeWidth=1).encode(
         y=alt.Y("rotulo_bairro:N", sort=ordem, title=None, axis=alt.Axis(labelLimit=220, labelOverlap=False)),
-        x=alt.X("pontos:Q", title="pontos do índice (0 a 100)", stack="zero"),
+        x=alt.X("pontos:Q", title="pontos do índice (0 a 10)", stack="zero", scale=alt.Scale(domain=[0, ahp.NOTA_MAXIMA])),
         color=alt.Color("criterio:N", title=None,
                         scale=alt.Scale(domain=[CRIT[k].nome for k in CHAVES], range=[CORES[k] for k in CHAVES]),
                         legend=None),

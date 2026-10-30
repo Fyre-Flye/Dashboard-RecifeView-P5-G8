@@ -50,7 +50,7 @@ def test_indice_ordena_e_soma_as_contribuicoes():
     assert r.index[0] == "MORRO"
     contrib = r[[f"contrib_{c}" for c in CHAVES]].sum(axis=1)
     assert np.allclose(contrib, r["indice"])
-    assert r["indice"].between(0, 100).all()
+    assert r["indice"].between(0, ahp.NOTA_MAXIMA).all()
     assert r.loc["SEM_ESTOQUE", "contrib_atraso"] == 0     # sem dado no critério = nota 0
 
 
