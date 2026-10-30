@@ -5,7 +5,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import (NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_forte,
+from src.config import (NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_fechada, cor_forte, cor_fundo,
                         nome_categoria, nome_orgao, titulo)
 from src.dados import tabela
 
@@ -115,7 +115,7 @@ calor = alt.Chart(tab).encode(
     tooltip=[alt.Tooltip("categoria_nome:N", title="Categoria"), alt.Tooltip("orgao:N", title="Órgão"),
              alt.Tooltip("rotulo:N", title="% da categoria"), alt.Tooltip("n:Q", title="Indicações")],
 )
-celulas = calor.mark_rect(stroke="white", strokeWidth=2).encode(
+celulas = calor.mark_rect(stroke=cor_fundo(), strokeWidth=2).encode(
     color=alt.Color("pct:Q", scale=alt.Scale(range=RAMPA, domain=[0, 100]), legend=None),
     opacity=alt.condition(clique, alt.value(1), alt.value(0.35)),
 ).add_params(clique)
@@ -186,10 +186,10 @@ else:
              "APP CONECTA RECIFE": "app Conecta Recife", "OUTROS": "outros"}
     o["canal_nome"] = o["canal"].map(nomes)
     ordem = [nomes[c] for c in PRINCIPAIS + ["OUTROS"]]
-    cores = [AZUL40, AZUL70, AZUL, cor_forte(), DESTAQUE, AZUL25]     # o app é o único em laranja: é a ênfase do bloco
+    cores = [AZUL40, AZUL70, AZUL, cor_fechada(), DESTAQUE, AZUL25]     # o app é o único em laranja: é a ênfase do bloco
     c1, c2 = st.columns([1.6, 1], gap="large")
     with c1:
-        g = alt.Chart(o).mark_bar(size=34, stroke="white", strokeWidth=1).encode(
+        g = alt.Chart(o).mark_bar(size=34, stroke=cor_fundo(), strokeWidth=1).encode(
             x=alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)),
             y=alt.Y("pct:Q", title="% das manifestações", stack="normalize", axis=alt.Axis(format="%")),
             color=alt.Color("canal_nome:N", title="Canal", scale=alt.Scale(domain=ordem, range=cores), sort=ordem),

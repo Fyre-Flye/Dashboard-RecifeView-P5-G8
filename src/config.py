@@ -134,3 +134,42 @@ def cor_forte() -> str:
 def cor_suave() -> str:
     """Par da cor_forte() (mediana ao lado do p90): azul claro no tema claro, azul principal no escuro."""
     return AZUL if st.context.theme.type == "dark" else AZUL40
+
+
+# Duas categorias empilhadas que precisam ser comparadas (destaque, apoio). No escuro, o destaque é o claro
+# e o apoio é um azul fechado: as duas cores ficam com contraste ≥ 3:1 entre si nos dois temas.
+PAR_COMPARACAO_CLARO = (NAVY, AZUL25)
+AZUL_FECHADO_ESCURO = "#2B4675"
+PAR_COMPARACAO_ESCURO = ("#78A9FF", AZUL_FECHADO_ESCURO)
+
+# Rampa sequencial de prazo (do mais rápido ao mais lento). No escuro ela é invertida em luminosidade:
+# o mais lento é o mais claro, para continuar sendo o que mais chama atenção sobre o fundo escuro.
+RAMPA_PRAZO_CLARO = [AZUL25, AZUL40, AZUL70, AZUL, NAVY, NAVY]
+RAMPA_PRAZO_ESCURO = ["#24427C", "#2F5DB5", "#3F77E6", AZUL70, NAVY_NO_ESCURO, NAVY_NO_ESCURO]
+
+FUNDO_CLARO = "#FFFFFF"
+FUNDO_ESCURO = "#0B1220"  # igual ao [theme.dark] do config.toml
+
+
+def _escuro() -> bool:
+    return st.context.theme.type == "dark"
+
+
+def par_comparacao() -> tuple[str, str]:
+    """(destaque, apoio) do tema atual. Mesma limitação de troca de tema da cor_forte()."""
+    return PAR_COMPARACAO_ESCURO if _escuro() else PAR_COMPARACAO_CLARO
+
+
+def cor_fechada() -> str:
+    """Cor mais fechada de uma série categórica: azul-marinho no claro, azul fechado no escuro (a cor_forte()
+    vira azul claro no escuro e se confundiria com os azuis claros da mesma série)."""
+    return AZUL_FECHADO_ESCURO if _escuro() else NAVY
+
+
+def rampa_prazo() -> list[str]:
+    return RAMPA_PRAZO_ESCURO if _escuro() else RAMPA_PRAZO_CLARO
+
+
+def cor_fundo() -> str:
+    """Cor do fundo do app, para contornos que separam barras empilhadas sem parecer uma linha a mais."""
+    return FUNDO_ESCURO if _escuro() else FUNDO_CLARO

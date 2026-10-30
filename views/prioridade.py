@@ -4,7 +4,7 @@ import streamlit as st
 
 from src import ahp, filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA
+from src.config import DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo
 from src.dados import malha, tabela
 
 f = filtros.atuais()
@@ -150,7 +150,7 @@ with c2:
     st.markdown(f"**{titulo_lista}** · quanto cada critério contribui")
     st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
         f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES) + "</div>", unsafe_allow_html=True)
-    barras = alt.Chart(longo).mark_bar(stroke="white", strokeWidth=1).encode(
+    barras = alt.Chart(longo).mark_bar(stroke=cor_fundo(), strokeWidth=1).encode(
         y=alt.Y("rotulo_bairro:N", sort=ordem, title=None, axis=alt.Axis(labelLimit=220, labelOverlap=False)),
         x=alt.X("pontos:Q", title="pontos do índice (0 a 10)", stack="zero", scale=alt.Scale(domain=[0, ahp.NOTA_MAXIMA])),
         color=alt.Color("criterio:N", title=None,

@@ -5,7 +5,8 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL, AZUL25, AZUL40, AZUL70, TEXTO_TEMA, cor_forte, cor_suave, eixo_numero, nome_categoria
+from src.config import (AZUL25, TEXTO_TEMA, cor_forte, cor_fundo, cor_suave, eixo_numero, nome_categoria, par_comparacao,
+                        rampa_prazo)
 from src.dados import tabela
 
 f = filtros.atuais()
@@ -77,7 +78,7 @@ with c2:
         y=alt.Y("pct:Q", title="% dos atendidos"),
         tooltip=[alt.Tooltip("faixa:N", title="Faixa"), alt.Tooltip("rotulo:N", title="Pedidos")],
     )
-    cores = alt.Scale(domain=ordem, range=[AZUL25, AZUL40, AZUL70, AZUL, cor_forte(), cor_forte()])
+    cores = alt.Scale(domain=ordem, range=rampa_prazo())
     st.altair_chart((b.mark_bar(size=40).encode(color=alt.Color("faixa:N", scale=cores, legend=None))
                      + b.mark_text(dy=-8, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N")).properties(height=300),
                     width="stretch")
@@ -127,16 +128,16 @@ else:
     longo = e.melt(id_vars=["nome", "abertos"], value_vars=["acima_prazo_tipico", "no_prazo"],
                    var_name="situacao", value_name="n")
     longo["situacao"] = longo["situacao"].map({"acima_prazo_tipico": "passou do prazo típico",
-                                                "no_prazo": "ainda dentro do prazo típico"})
+                                                "no_prazo": "dentro do prazo típico"})
     longo["n_txt"] = longo["n"].map(metricas.numero)
     c1, c2 = st.columns([1.6, 1], gap="large")
     with c1:
-        barras = alt.Chart(longo).mark_bar(stroke="white", strokeWidth=1).encode(
+        barras = alt.Chart(longo).mark_bar(stroke=cor_fundo(), strokeWidth=1).encode(
             y=alt.Y("nome:N", sort=e.sort_values("acima_prazo_tipico", ascending=False)["nome"].tolist(), title=None,
                     axis=alt.Axis(labelLimit=200, labelOverlap=False)),
             x=alt.X("n:Q", axis=eixo_numero("pedidos abertos")),
             color=alt.Color("situacao:N", title=None, scale=alt.Scale(
-                domain=["passou do prazo típico", "ainda dentro do prazo típico"], range=[cor_forte(), AZUL25])),
+                domain=["passou do prazo típico", "dentro do prazo típico"], range=list(par_comparacao()))),
             order=alt.Order("situacao:N", sort="descending"),
             tooltip=[alt.Tooltip("nome:N", title="Categoria"), alt.Tooltip("situacao:N", title="Situação"),
                      alt.Tooltip("n_txt:N", title="Pedidos")],

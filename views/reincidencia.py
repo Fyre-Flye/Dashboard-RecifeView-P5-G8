@@ -4,7 +4,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, nome_categoria, titulo
+from src.config import AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, cor_suave, nome_categoria, titulo
 from src.dados import tabela
 
 f = filtros.atuais()
@@ -94,7 +94,7 @@ with c2:
         tooltip=[alt.Tooltip("tipo:N", title="Tipo"), alt.Tooltip("rotulo:N", title="Participação")],
     )
     st.altair_chart((b.mark_bar(size=56).encode(color=alt.Color(
-        "tipo:N", scale=alt.Scale(domain=list(faixas["tipo"]), range=[AZUL40, CINZA, cor_forte()]), legend=None))
+        "tipo:N", scale=alt.Scale(domain=list(faixas["tipo"]), range=[cor_suave(), CINZA, cor_forte()]), legend=None))
         + b.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N")).properties(height=300), width="stretch")
     leitura("Duplicidade se resolve na triagem (juntar pedidos). Reincidência é outro problema: o serviço foi feito "
             "e não durou, ou não foi feito. Em quase todas as categorias, a reincidência é a maior parte.")

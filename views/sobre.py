@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from src import metricas
-from src.config import RAMPA, TEXTO
+from src.config import RAMPA, TEXTO, cor_fundo
 from src.dados import resumo_preparacao, tabela
 
 st.title("Sobre os Dados")
@@ -31,7 +31,7 @@ mapa = alt.Chart(cob).encode(
     tooltip=[alt.Tooltip("fonte_nome:N", title="Fonte"), alt.Tooltip("ano:O", title="Ano"),
              alt.Tooltip("n_txt:N", title="Registros")],
 )
-st.altair_chart((mapa.mark_rect(stroke="white", strokeWidth=2).encode(
+st.altair_chart((mapa.mark_rect(stroke=cor_fundo(), strokeWidth=2).encode(
     color=alt.Color("n:Q", scale=alt.Scale(type="log", range=RAMPA[1:]), legend=None))
     + mapa.mark_text(fontSize=9).encode(
         text=alt.Text("n_txt:N"), color=alt.condition("datum.n > 40000", alt.value("white"), alt.value(TEXTO))))
