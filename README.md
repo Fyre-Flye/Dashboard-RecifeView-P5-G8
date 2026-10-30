@@ -84,6 +84,10 @@ assets/                marca RecifeView
 RecifeView: azul `#0F62FE`, azul claro `#EAF2FF`, texto preto, fundo branco e tipografia Montserrat. Nos mapas,
 uma rampa de azuis de um só matiz; laranja só para ênfase pontual.
 
+O app tem **modo claro e escuro**: segue o sistema de quem abre, e dá para trocar no menu ⋮ do canto superior
+direito (System, Light ou Dark). Textos, eixos e legendas dos gráficos acompanham o tema na hora; a cor
+da série mais forte (p90, "com resposta") se ajusta na interação seguinte, por uma limitação do Streamlit.
+
 ## Uso de IA
 
 Feito pelo grupo com auxílio do Claude (Anthropic). Detalhes em [prompts/declaracao-uso-ia.md](prompts/declaracao-uso-ia.md).
