@@ -9,13 +9,7 @@ enableStaticServing = true
 gatherUsageStats = false
 
 [theme]
-base = "light"
-primaryColor = "#0F62FE"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#EAF2FF"
-textColor = "#111111"
-borderColor = "#C6DAFF"
-linkColor = "#0F62FE"
+# Comum aos dois modos. Quem abre o app escolhe claro, escuro ou "seguir o sistema" no menu ⋮ → Settings.
 font = "Montserrat, sans-serif"
 headingFont = "Montserrat, sans-serif"
 headingFontWeights = [700, 700, 600]
@@ -23,6 +17,24 @@ headingFontSizes = ["2.1rem", "1.5rem", "1.2rem"]
 baseRadius = "0.5rem"
 paddingTop = "0.5rem"
 showSidebarBorder = true
+
+[theme.light]
+primaryColor = "#0F62FE"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#EAF2FF"
+textColor = "#111111"
+borderColor = "#C6DAFF"
+linkColor = "#0F62FE"
+
+# Modo escuro: fundo azul-marinho (família do #062A5F da identidade) e um azul mais claro de destaque,
+# porque o #0F62FE puro tem pouco contraste sobre fundo escuro.
+[theme.dark]
+primaryColor = "#4589FF"
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#16233D"
+textColor = "#E8EEF9"
+borderColor = "#2A3B5C"
+linkColor = "#78A9FF"
 
 [[theme.fontFaces]]
 family = "Montserrat"
@@ -42,5 +54,8 @@ url = "app/static/fonts/montserrat-latin-700-normal.woff2"
 weight = "700"
 style = "normal"
 
-[theme.sidebar]
+[theme.light.sidebar]
 backgroundColor = "#EAF2FF"
+
+[theme.dark.sidebar]
+backgroundColor = "#101A2E"
