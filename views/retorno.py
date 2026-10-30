@@ -6,12 +6,12 @@ import streamlit as st
 from src import filtros, metricas
 from src.componentes import kpi, leitura
 from src.config import (AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, NAVY, RAMPA, TEXTO, eixo_numero,
-                        nome_categoria, nome_orgao)
+                        nome_categoria, nome_orgao, titulo)
 from src.dados import tabela
 
 f = filtros.atuais()
 
-st.title("Retorno e fragmentação")
+st.title("Retorno e Fragmentação")
 st.markdown("Depois que a demanda entra, ela **muda de mão** entre órgãos e **raramente volta** com resposta registrada. "
             "A Câmara é a única fonte pública que mostra o caminho inteiro, do pedido do vereador até a resposta da Prefeitura.")
 filtros.legenda(f, {"Ouvidoria": "não tem bairro nem a mesma classificação de serviço; o último bloco segue só o período."})
@@ -40,7 +40,7 @@ kpi(k4, "Tempo até a resposta", metricas.dias(mediana_resposta), "mediana",
     "Mediana dos dias entre a apresentação da indicação e a resposta registrada, só para as que têm resposta.")
 
 # --- Funil e canal de envio --------------------------------------------------------------------------
-st.subheader("A perda está toda depois da entrada")
+st.subheader("A Perda Está Toda Depois da Entrada")
 c1, c2 = st.columns([1, 1.25], gap="large")
 
 etapas = pd.DataFrame({
@@ -57,7 +57,7 @@ funil = alt.Chart(etapas).encode(
 barras = funil.mark_bar(height=34).encode(
     color=alt.Color("etapa:N", scale=alt.Scale(domain=list(etapas["etapa"]), range=[AZUL40, AZUL, NAVY]), legend=None))
 with c1:
-    st.markdown("**Funil das indicações**")
+    st.markdown("**Funil das Indicações**")
     st.altair_chart((barras + funil.mark_text(align="left", dx=6, fontSize=12, color=TEXTO).encode(text="rotulo:N"))
                     .properties(height=200), width="stretch")
     leitura("Quase tudo sai da Câmara em poucos dias. A queda acontece dentro da Prefeitura, no caminho de volta: "
@@ -80,7 +80,7 @@ canal = alt.Chart(por_ano).encode(
              alt.Tooltip("rotulo:N", title="Com resposta")],
 )
 with c2:
-    st.markdown("**Quando o envio vira sistema, a resposta aparece**")
+    st.markdown("**Quando o Envio Vira Sistema, a Resposta Aparece**")
     st.altair_chart((canal.mark_bar(size=46, color=AZUL) + canal.mark_text(dy=-8, color=TEXTO).encode(text="rotulo:N"))
                     .properties(height=260), width="stretch")
     leitura("De ofício e protocolo em papel para lote e sistema da SEGOV, a parte com resposta registrada sobe de "
@@ -88,7 +88,7 @@ with c2:
             "reduz a perda. Anos recentes ainda podem receber resposta.")
 
 # --- Para quem vai cada tipo de pedido --------------------------------------------------------------
-st.subheader("O mesmo tipo de pedido vai para órgãos diferentes")
+st.subheader("O Mesmo Tipo de Pedido Vai para Órgãos Diferentes")
 x = ind.dropna(subset=["categoria", "orgao"])
 top_cat = x["categoria"].value_counts().head(9).index
 top_org = x["orgao"].value_counts().head(7).index
@@ -160,7 +160,7 @@ with c2:
         valueformat=",.0f",
     ))
     sankey.update_layout(height=420, margin=dict(l=4, r=4, t=36, b=4), font=dict(family=FONTE, size=12, color=TEXTO),
-                         title=dict(text=f"{nome_categoria(foco)}: órgão → desfecho", font=dict(size=14), x=0),
+                         title=dict(text=titulo(f"{nome_categoria(foco)}: órgão → desfecho"), font=dict(size=14), x=0),
                          separators=",.")
     st.plotly_chart(sankey, width="stretch", config={"displayModeBar": False})
     linha = disp.set_index("categoria").loc[foco]
@@ -170,7 +170,7 @@ with c2:
             "risco se espalham.")
 
 # --- Ouvidoria ----------------------------------------------------------------------------------------
-st.subheader("Ouvidoria: por onde a manifestação entra")
+st.subheader("Ouvidoria: Por Onde a Manifestação Entra")
 ouv = f.aplicar(tabela("ouvidoria"), territorio=False, categoria=False)
 ouv = ouv[ouv["canal_entrada"].notna()]
 if ouv.empty:

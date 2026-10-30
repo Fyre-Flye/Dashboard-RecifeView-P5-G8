@@ -20,10 +20,10 @@ bairros = tabela("bairros").set_index("bairro_oficial")
 demanda = f.aplicar(tabela("demanda"), territorio=False, categoria=False)
 
 FONTES = {
-    "156": ("156_EMLURB", "Serviço urbano (156)", "pedidos / mil hab. / ano", 1000),
+    "156": ("156_EMLURB", "Serviço Urbano (156)", "pedidos / mil hab. / ano", 1000),
     "dc": ("DEFESA_CIVIL", "Emergência (Defesa Civil)", "ações pedidas / mil hab. / ano", 1000),
-    "sedec": ("SEDEC_CHAMADOS", "Áreas de risco (SEDEC)", "chamados / mil hab. / ano", 1000),
-    "camara": ("CAMARA_REQUERIMENTOS", "Indicações de vereadores", "indicações / 10 mil hab. / ano", 10000),
+    "sedec": ("SEDEC_CHAMADOS", "Áreas de Risco (SEDEC)", "chamados / mil hab. / ano", 1000),
+    "camara": ("CAMARA_REQUERIMENTOS", "Indicações de Vereadores", "indicações / 10 mil hab. / ano", 10000),
 }
 
 
@@ -134,7 +134,7 @@ if escolhido:
                  icon=":material/arrow_forward:")
 
 # --- Vulnerabilidade x demanda ------------------------------------------------------------------------
-st.subheader("Mais pedido não quer dizer mais problema")
+st.subheader("Mais Pedido Não Quer Dizer Mais Problema")
 def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> alt.Chart:
     d = t[t["taxa"].notna()]
     pontos = alt.Chart(d).mark_circle(size=70, opacity=0.85, stroke="white", strokeWidth=1).encode(
@@ -165,7 +165,7 @@ leitura("<b>Serviço urbano:</b> a nuvem é plana. Bairros mais vulneráveis nã
         "vez de confiar só no volume de pedidos.")
 
 # --- Tabela -------------------------------------------------------------------------------------------
-with st.expander("Tabela por bairro (para conferir e exportar)"):
+with st.expander("Tabela por Bairro (para Conferir e Exportar)"):
     tabela_b = t156[["nome", "rpa", "populacao", "pct_favela", "volume", "taxa"]].merge(
         tdc[["bairro_oficial", "volume", "taxa"]].rename(columns={"volume": "volume_dc", "taxa": "taxa_dc"}),
         left_on=t156["bairro_oficial"], right_on="bairro_oficial").drop(columns=["bairro_oficial"])

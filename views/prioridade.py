@@ -24,7 +24,7 @@ filtros.legenda(f, {"Período": "fixo em 2021–2025 (estoque aberto: arquivos 2
                     "Território": "RPA e bairro destacam o mapa e filtram a lista; a posição é sempre na cidade toda."})
 
 # --- Critérios ----------------------------------------------------------------------------------------
-with st.expander("Os quatro critérios e como cada um é medido", expanded=False):
+with st.expander("Os Quatro Critérios e Como Cada um É Medido", expanded=False):
     st.dataframe(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao}
                                for c in ahp.CRITERIOS]), hide_index=True, width="stretch")
     st.caption("Cada bairro recebe, em cada critério, a sua posição relativa entre os 89 bairros com 1.000 moradores "
@@ -61,7 +61,7 @@ for (a, b), v in ahp.JULGAMENTOS_PADRAO.items():
 
 c1, c2 = st.columns([1.15, 1], gap="large")
 with c1:
-    st.subheader("1. Compare os critérios dois a dois")
+    st.subheader("1. Compare os Critérios Dois a Dois")
     st.caption("Para cada par, quanto um critério é mais importante que o outro para decidir onde agir primeiro "
                "(escala de Saaty: 1 = igual, 3 = moderadamente, 5 = fortemente, 7 = muito, 9 = extremamente).")
     julgamentos = {}
@@ -82,7 +82,7 @@ w = dict(zip(CHAVES, ahp.pesos(m)))
 rc = ahp.razao_consistencia(m)
 
 with c2:
-    st.subheader("2. Pesos resultantes")
+    st.subheader("2. Pesos Resultantes")
     pesos = pd.DataFrame({"criterio": [CRIT[k].nome for k in CHAVES], "chave": CHAVES, "peso": [w[k] * 100 for k in CHAVES]})
     pesos["rotulo"] = pesos["peso"].map(lambda v: metricas.porcentagem(v, 1))
     base = alt.Chart(pesos).encode(
@@ -116,7 +116,7 @@ r["indice_txt"] = r["indice"].map(lambda v: metricas.numero(v, 1))
 for k in CHAVES:
     r[f"{k}_txt"] = r[CRIT[k].coluna].map(lambda v: metricas.numero(v, 1))
 
-st.subheader("3. Onde agir primeiro")
+st.subheader("3. Onde Agir Primeiro")
 c1, c2 = st.columns([1, 1.15], gap="large")
 with c1:
     tabela_mapa = r.reset_index()
@@ -146,8 +146,8 @@ with c2:
     longo["pontos_txt"] = longo["pontos"].map(lambda v: metricas.numero(v, 1))
     longo["indice_txt"] = longo["indice"].map(lambda v: metricas.numero(v, 1))
     ordem = (lista["posicao"].astype(str) + "º · " + lista["nome"]).tolist()
-    titulo = "Os 15 bairros com maior índice" + (" no recorte" if f.territorio_ativo else "")
-    st.markdown(f"**{titulo}** · quanto cada critério contribui")
+    titulo_lista = "Os 15 Bairros com Maior Índice" + (" no Recorte" if f.territorio_ativo else "")
+    st.markdown(f"**{titulo_lista}** · quanto cada critério contribui")
     st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
         f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES) + "</div>", unsafe_allow_html=True)
     barras = alt.Chart(longo).mark_bar(stroke="white", strokeWidth=1).encode(
@@ -165,7 +165,7 @@ with c2:
             "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
 
 # --- Sensibilidade --------------------------------------------------------------------------------------
-st.subheader("4. O resultado depende muito dos pesos?")
+st.subheader("4. O Resultado Depende Muito dos Pesos?")
 sens = ahp.sensibilidade(ind, w, top=10)
 quadro = sens.pivot(index="criterio", columns="fator", values="mantidos_no_top").reindex([CRIT[k].nome for k in CHAVES])
 quadro.columns = [f"peso × {str(c).replace('.', ',')}" for c in quadro.columns]

@@ -4,7 +4,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL, AZUL40, CINZA, NAVY, TEXTO, nome_categoria
+from src.config import AZUL, AZUL40, CINZA, NAVY, TEXTO, nome_categoria, titulo
 from src.dados import tabela
 
 f = filtros.atuais()
@@ -47,7 +47,7 @@ kpi(k4, "Pontos crônicos", metricas.numero((cron["pedidos"] >= 10).sum()), "loc
     "Locais + serviço com 10 pedidos ou mais na janela 2015–2025, ativos no período escolhido.")
 
 # --- Por categoria (clique) e tipo de repetição ------------------------------------------------------
-st.subheader("Onde mais se repete, e como")
+st.subheader("Onde Mais se Repete, e Como")
 por_cat = rep.groupby("categoria").agg(pedidos=("registros", "sum"), repetidos=("rep_contados", "sum"),
                                        dup=("intervalo_duplicidade", "sum"), inter=("intervalo_intermediario", "sum"),
                                        reinc=("intervalo_reincidencia", "sum")).reset_index()
@@ -60,7 +60,7 @@ por_cat["pedidos_txt"] = por_cat["pedidos"].map(metricas.numero)
 
 c1, c2 = st.columns([1.25, 1], gap="large")
 with c1:
-    st.markdown("**% dos pedidos em local repetido, por categoria**")
+    st.markdown("**% dos Pedidos em Local Repetido, por Categoria**")
     clique = alt.selection_point(fields=["nome"], name="cat")
     base = alt.Chart(por_cat).encode(
         y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
@@ -78,7 +78,7 @@ with c1:
 
 escolhidas = [p["nome"] for p in evento.selection.get("cat", [])] if evento else []
 alvo = por_cat[por_cat["nome"].isin(escolhidas)] if escolhidas else por_cat
-titulo = escolhidas[0] if escolhidas else "todas as categorias"
+recorte_cat = escolhidas[0] if escolhidas else "todas as categorias"
 faixas = pd.DataFrame({
     "tipo": ["Duplicidade · até 7 dias", "Intermediário · 8 a 29 dias", "Reincidência · 30 dias ou mais"],
     "n": [alvo["dup"].sum(), alvo["inter"].sum(), alvo["reinc"].sum()],
@@ -86,7 +86,7 @@ faixas = pd.DataFrame({
 faixas["pct"] = faixas["n"] / faixas["n"].sum() * 100 if faixas["n"].sum() else 0
 faixas["rotulo"] = faixas["pct"].map(lambda v: metricas.porcentagem(v))
 with c2:
-    st.markdown(f"**Intervalo até o pedido anterior no mesmo local · {titulo}**")
+    st.markdown(f"**{titulo('Intervalo até o pedido anterior no mesmo local · ' + recorte_cat)}**")
     b = alt.Chart(faixas).encode(
         x=alt.X("tipo:N", sort=list(faixas["tipo"]), title=None,
                 axis=alt.Axis(labelAngle=0, labelExpr="split(datum.value, ' · ')")),
@@ -100,7 +100,7 @@ with c2:
             "e não durou, ou não foi feito. Em quase todas as categorias, a reincidência é a maior parte.")
 
 # --- Pontos crônicos ----------------------------------------------------------------------------------
-st.subheader("Pontos crônicos")
+st.subheader("Pontos Crônicos")
 nomes = dict(zip(tabela("bairros")["bairro_oficial"], tabela("bairros")["nome"]))
 lista = cron.head(300).assign(
     bairro=lambda d: d["bairro_oficial"].map(nomes),

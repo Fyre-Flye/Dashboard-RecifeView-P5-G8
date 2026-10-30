@@ -50,7 +50,7 @@ linhas = por_ano.melt(id_vars="ano", value_vars=["mediana", "p90"], var_name="me
 linhas["medida"] = linhas["medida"].map({"mediana": "mediana", "p90": "p90 (1 em cada 10 leva mais)"})
 linhas["rotulo"] = linhas["dias"].map(metricas.dias)
 with c1:
-    st.markdown("**O prazo piorou na cauda (H4)**")
+    st.markdown("**O Prazo Piorou na Cauda (H4)**")
     base = alt.Chart(linhas).encode(
         x=alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)),
         y=alt.Y("dias:Q", title="dias até atender"),
@@ -71,7 +71,7 @@ dist["pct"] = dist["n"] / dist["n"].sum() * 100
 dist["rotulo"] = dist["pct"].map(lambda v: metricas.porcentagem(v, 1))
 ordem = [r for _, _, r in FAIXAS]
 with c2:
-    st.markdown("**Em quanto tempo os pedidos são atendidos**")
+    st.markdown("**Em Quanto Tempo os Pedidos São Atendidos**")
     b = alt.Chart(dist).encode(
         x=alt.X("faixa:N", sort=ordem, title=None, axis=alt.Axis(labelAngle=0, labelLimit=90, labelOverlap=False)),
         y=alt.Y("pct:Q", title="% dos atendidos"),
@@ -85,7 +85,7 @@ with c2:
             "meses ou anos (obras como escadaria e macrodrenagem).")
 
 # --- Por categoria ------------------------------------------------------------------------------------
-st.subheader("Cada categoria tem o seu prazo")
+st.subheader("Cada Categoria Tem o Seu Prazo")
 por_cat = metricas.percentis_por_grupo(praz, ["categoria"])
 minimo = 1000 if total > 200_000 else 30
 por_cat = por_cat[por_cat["pedidos"] >= minimo].copy()
@@ -114,7 +114,7 @@ leitura(f"Ponto claro = mediana; ponto escuro = p90; a linha entre eles é onde 
         "semáforo de prazo precisa de referência por categoria: 10 dias é atraso em iluminação e é rápido em drenagem.")
 
 # --- Estoque aberto -----------------------------------------------------------------------------------
-st.subheader("A fila de hoje: pedidos abertos que já passaram do prazo típico")
+st.subheader("A Fila de Hoje: Pedidos Abertos que Já Passaram do Prazo Típico")
 estoque = f.aplicar(tabela("estoque_156"), ano=False)
 if estoque.empty:
     st.caption("Sem pedidos abertos para o território ou a categoria escolhidos.")

@@ -123,3 +123,23 @@ def nome_orgao(texto) -> str:
         return "—"
     primeiro = str(texto).split("/")[0].strip()
     return primeiro if primeiro in _SIGLAS else nome_categoria(primeiro)
+
+
+# Títulos em "Title Case" à brasileira: palavras com inicial maiúscula, menos artigos, preposições,
+# contrações e conjunções curtas no meio do título ("Onde o Pedido se Perde").
+_MINUSCULAS = {"a", "o", "as", "os", "e", "ou", "de", "da", "do", "das", "dos", "em", "na", "no", "nas", "nos",
+               "por", "pela", "pelo", "para", "com", "ao", "aos", "à", "às", "um", "uma", "se", "que", "x", "×"}
+
+
+def titulo(texto: str) -> str:
+    """'Onde o pedido se perde' -> 'Onde o Pedido se Perde'. Siglas e números ficam como estão."""
+    palavras = texto.split(" ")
+    resultado = []
+    for i, p in enumerate(palavras):
+        if not p or not p[0].isalpha() or (p.isupper() and len(p) > 1):
+            resultado.append(p)                      # número, sigla (AHP, RPA, H4) ou símbolo
+        elif i > 0 and p.lower() in _MINUSCULAS and not resultado[-1].endswith((":", "·", ".")):
+            resultado.append(p.lower())
+        else:
+            resultado.append("/".join(parte[:1].upper() + parte[1:] for parte in p.split("/")))
+    return " ".join(resultado)

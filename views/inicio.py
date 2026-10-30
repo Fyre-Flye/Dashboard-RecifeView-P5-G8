@@ -8,7 +8,7 @@ from src.dados import tabela
 
 f = filtros.atuais()
 
-st.title("Demandas do cidadão no Recife")
+st.title("Demandas do Cidadão no Recife")
 st.markdown(
     "**Onde, em quais serviços e em que etapa** as demandas que chegam à Prefeitura por cinco portas diferentes "
     "se repetem, demoram ou ficam sem resposta. Painel para quem gerencia a retaguarda: a triagem da Ouvidoria "
@@ -50,7 +50,7 @@ kpi(k4, "Prazo do 156 (p90)", metricas.dias(p90), f"mediana: {metricas.dias(medi
 
 # --- Mensagem principal -----------------------------------------------------------------------------
 with st.container(border=True):
-    st.markdown("#### A porta de entrada funciona. A perda está depois dela.")
+    st.markdown("#### A Porta de Entrada Funciona. A Perda Está Depois Dela.")
     st.markdown(
         "O app Conecta Recife é só cerca de 3% das manifestações da Ouvidoria, e quase toda indicação de vereador "
         "chega à Prefeitura. O que falha é o caminho de volta: pouca coisa retorna com resposta registrada, o mesmo "
@@ -58,7 +58,7 @@ with st.container(border=True):
         "dessas perdas, e as duas últimas mostram onde agir primeiro."
     )
     c1, c2, c3 = st.columns(3)
-    c1.page_link("views/retorno.py", label="Retorno e fragmentação", icon=":material/call_split:")
+    c1.page_link("views/retorno.py", label="Retorno e Fragmentação", icon=":material/call_split:")
     c1.caption("Para onde vai cada tipo de pedido e quanto volta.")
     c2.page_link("views/reincidencia.py", label="Reincidência", icon=":material/repeat:")
     c2.caption("Repetir não é duplicar: o problema volta.")
@@ -71,7 +71,7 @@ with st.container(border=True):
     c5.caption("Um índice com critérios explícitos e ajustáveis.")
 
 # --- Volume por fonte -------------------------------------------------------------------------------
-st.subheader("Quanto chega por cada porta")
+st.subheader("Quanto Chega por Cada Porta")
 serie = d.groupby(["ano", "fonte_nome"], as_index=False)["n"].sum()
 serie["registros"] = serie["n"].map(metricas.numero)
 if serie.empty:

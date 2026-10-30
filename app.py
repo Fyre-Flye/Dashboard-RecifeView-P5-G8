@@ -9,20 +9,20 @@ st.logo("assets/recifeview_wordmark.png", icon_image="assets/recifeview_icone.pn
 registrar_tema()
 
 pagina = st.navigation({
-    "Visão geral": [
+    "Visão Geral": [
         st.Page("views/inicio.py", title="Início", icon=":material/home:", default=True),
     ],
-    "Onde o pedido se perde": [
-        st.Page("views/retorno.py", title="Retorno e fragmentação", icon=":material/call_split:"),
+    "Onde o Pedido se Perde": [
+        st.Page("views/retorno.py", title="Retorno e Fragmentação", icon=":material/call_split:"),
         st.Page("views/reincidencia.py", title="Reincidência", icon=":material/repeat:"),
         st.Page("views/prazos.py", title="Prazos", icon=":material/schedule:"),
     ],
-    "Onde agir primeiro": [
+    "Onde Agir Primeiro": [
         st.Page("views/territorio.py", title="Território", icon=":material/map:"),
         st.Page("views/prioridade.py", title="Prioridade (AHP)", icon=":material/low_priority:"),
     ],
     "Referência": [
-        st.Page("views/sobre.py", title="Sobre os dados", icon=":material/info:"),
+        st.Page("views/sobre.py", title="Sobre os Dados", icon=":material/info:"),
     ],
 })
 
