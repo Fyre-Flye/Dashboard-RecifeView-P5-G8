@@ -73,6 +73,7 @@ pipeline/              correções e agregação (roda fora do app)
 data/raw/              dataset do grupo (não versionado)
 data/clean/            agregados lidos pelo app (versionados)
 entregas/              rascunho do layout, justificativa das métricas, julgamentos do AHP
+relatorios/            relatório em PDF de cada entrega (N4: Semana 13)
 prompts/               declaração de uso de IA
 tests/                 pytest + AppTest do Streamlit
 static/fonts/          Montserrat (licença OFL), servida pelo próprio app
