@@ -1,12 +1,11 @@
 import streamlit as st
 
-from src.config import AVISO_IA, registrar_tema
+from src.config import AVISO_IA
 from src.filtros import desenhar_barra_lateral
 
 st.set_page_config(page_title="RecifeView · Demandas do Recife", page_icon="assets/recifeview_icone.png",
                    layout="wide")
 st.logo("assets/recifeview_wordmark.png", icon_image="assets/recifeview_icone.png", size="large")
-registrar_tema()
 
 pagina = st.navigation({
     "Visão Geral": [

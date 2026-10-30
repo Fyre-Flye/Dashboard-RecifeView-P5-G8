@@ -10,4 +10,4 @@ def kpi(coluna, rotulo: str, valor: str, contexto: str | None = None, ajuda: str
 
 def leitura(texto: str) -> None:
     """Bloco "Como ler / o que ver" abaixo de um gráfico, no mesmo formato da EDA."""
-    st.markdown(f"<div style='font-size:0.9rem;color:#4A4F5C'>{texto}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:0.9rem;color:inherit;opacity:.78'>{texto}</div>", unsafe_allow_html=True)

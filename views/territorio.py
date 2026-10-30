@@ -4,7 +4,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL, AZUL25, DESTAQUE, NAVY, RAMPA
+from src.config import AZUL, AZUL25, DESTAQUE, RAMPA, SEM_DADO, cor_forte
 from src.dados import malha, tabela
 
 f = filtros.atuais()
@@ -79,7 +79,7 @@ def mapa(t: pd.DataFrame, titulo_legenda: str, chave: str) -> alt.Chart:
             "faixa:O", title=titulo_legenda, sort=ordem, scale=alt.Scale(domain=ordem, range=RAMPA[1:1 + len(ordem)]),
             legend=alt.Legend(orient="bottom", direction="horizontal", titleLimit=320, labelLimit=120,
                               symbolType="square", columns=3)),
-            alt.value("#EEEEEE")),
+            alt.value(SEM_DADO)),
         opacity=alt.condition("datum.destaque", alt.value(1), alt.value(0.25)),
         strokeWidth=alt.condition(clique, alt.value(2.5), alt.value(0.7)),
         stroke=alt.condition(clique, alt.value(DESTAQUE), alt.value("white")),
@@ -145,7 +145,7 @@ def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> 
                  alt.Tooltip("taxa_txt:N", title="Taxa")],
     )
     tendencia = alt.Chart(d).transform_loess("pct_favela", "taxa", bandwidth=0.6).mark_line(
-        color=NAVY, strokeWidth=2.5).encode(x="pct_favela:Q", y=alt.Y("taxa:Q", scale=escala))
+        color=cor_forte(), strokeWidth=2.5).encode(x="pct_favela:Q", y=alt.Y("taxa:Q", scale=escala))
     return (pontos + tendencia).properties(height=280)
 
 

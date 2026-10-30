@@ -4,7 +4,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL, AZUL40, CINZA, NAVY, TEXTO, nome_categoria, titulo
+from src.config import AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, nome_categoria, titulo
 from src.dados import tabela
 
 f = filtros.atuais()
@@ -70,7 +70,7 @@ with c1:
     )
     barras = base.mark_bar().encode(
         color=alt.condition(clique, alt.value(AZUL), alt.value(AZUL40))).add_params(clique)
-    grafico = (barras + base.mark_text(align="left", dx=4, color=TEXTO, fontSize=11).encode(text="rotulo:N"))
+    grafico = (barras + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N"))
     evento = st.altair_chart(grafico.properties(height=alt.Step(24)), width="stretch",
                              on_select="rerun", key="rep_cat")
     leitura(f"Categorias com {metricas.numero(minimo)} pedidos ou mais no recorte. Clique numa barra para ver, ao lado, "
@@ -94,8 +94,8 @@ with c2:
         tooltip=[alt.Tooltip("tipo:N", title="Tipo"), alt.Tooltip("rotulo:N", title="Participação")],
     )
     st.altair_chart((b.mark_bar(size=56).encode(color=alt.Color(
-        "tipo:N", scale=alt.Scale(domain=list(faixas["tipo"]), range=[AZUL40, CINZA, NAVY]), legend=None))
-        + b.mark_text(dy=-8, color=TEXTO).encode(text="rotulo:N")).properties(height=300), width="stretch")
+        "tipo:N", scale=alt.Scale(domain=list(faixas["tipo"]), range=[AZUL40, CINZA, cor_forte()]), legend=None))
+        + b.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N")).properties(height=300), width="stretch")
     leitura("Duplicidade se resolve na triagem (juntar pedidos). Reincidência é outro problema: o serviço foi feito "
             "e não durou, ou não foi feito. Em quase todas as categorias, a reincidência é a maior parte.")
 

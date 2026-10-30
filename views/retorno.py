@@ -5,7 +5,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import (AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, NAVY, RAMPA, TEXTO, eixo_numero,
+from src.config import (NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_forte,
                         nome_categoria, nome_orgao, titulo)
 from src.dados import tabela
 
@@ -55,10 +55,10 @@ funil = alt.Chart(etapas).encode(
     tooltip=[alt.Tooltip("etapa:N", title="Etapa"), alt.Tooltip("rotulo:N", title="Indicações")],
 )
 barras = funil.mark_bar(height=34).encode(
-    color=alt.Color("etapa:N", scale=alt.Scale(domain=list(etapas["etapa"]), range=[AZUL40, AZUL, NAVY]), legend=None))
+    color=alt.Color("etapa:N", scale=alt.Scale(domain=list(etapas["etapa"]), range=[AZUL40, AZUL, cor_forte()]), legend=None))
 with c1:
     st.markdown("**Funil das Indicações**")
-    st.altair_chart((barras + funil.mark_text(align="left", dx=6, fontSize=12, color=TEXTO).encode(text="rotulo:N"))
+    st.altair_chart((barras + funil.mark_text(align="left", dx=6, fontSize=12, color=TEXTO_TEMA).encode(text="rotulo:N"))
                     .properties(height=200), width="stretch")
     leitura("Quase tudo sai da Câmara em poucos dias. A queda acontece dentro da Prefeitura, no caminho de volta: "
             "é a retaguarda descrita no desafio do Banco de Oportunidades.")
@@ -81,7 +81,7 @@ canal = alt.Chart(por_ano).encode(
 )
 with c2:
     st.markdown("**Quando o Envio Vira Sistema, a Resposta Aparece**")
-    st.altair_chart((canal.mark_bar(size=46, color=AZUL) + canal.mark_text(dy=-8, color=TEXTO).encode(text="rotulo:N"))
+    st.altair_chart((canal.mark_bar(size=46, color=AZUL) + canal.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N"))
                     .properties(height=260), width="stretch")
     leitura("De ofício e protocolo em papel para lote e sistema da SEGOV, a parte com resposta registrada sobe de "
             "menos de 1% para cerca de 45%. É o indício mais forte (H9) de que o encaminhamento digital e integrado "
@@ -142,7 +142,8 @@ with c2:
     curto = nome_orgao
     nos = [nome_categoria(foco)] + [curto(o) for o in orgs] + desf
     idx = {n: i for i, n in enumerate(nos)}
-    cor_desf = {"com resposta": NAVY, "sem resposta": AZUL25, "sem envio": CINZA, "retirada": CINZA}
+    cor_link_resposta = "rgba(166,200,255,0.55)" if cor_forte() != NAVY else "rgba(6,42,95,0.45)"
+    cor_desf = {"com resposta": cor_forte(), "sem resposta": AZUL25, "sem envio": CINZA, "retirada": CINZA}
     origem, destino, valor, cor = [], [], [], []
     for o in orgs:
         nome = curto(o)
@@ -151,7 +152,7 @@ with c2:
     for _, r in fluxo.iterrows():
         nome = curto(r.orgao)
         origem.append(idx[nome]); destino.append(idx[r.desfecho]); valor.append(int(r.n))
-        cor.append("rgba(6,42,95,0.45)" if r.desfecho == "com resposta" else "rgba(159,192,255,0.45)")
+        cor.append(cor_link_resposta if r.desfecho == "com resposta" else "rgba(159,192,255,0.45)")
     cores_nos = [AZUL] + [AZUL70] * len(orgs) + [cor_desf[d] for d in desf]
     sankey = go.Figure(go.Sankey(
         node=dict(label=nos, color=cores_nos, pad=22, thickness=14, line=dict(width=0)),
@@ -159,7 +160,7 @@ with c2:
                   hovertemplate="%{source.label} → %{target.label}: %{value:,.0f}<extra></extra>"),
         valueformat=",.0f",
     ))
-    sankey.update_layout(height=420, margin=dict(l=4, r=4, t=36, b=4), font=dict(family=FONTE, size=12, color=TEXTO),
+    sankey.update_layout(height=420, margin=dict(l=4, r=4, t=36, b=4), font=dict(family=FONTE, size=12),
                          title=dict(text=titulo(f"{nome_categoria(foco)}: órgão → desfecho"), font=dict(size=14), x=0),
                          separators=",.")
     st.plotly_chart(sankey, width="stretch", config={"displayModeBar": False})
@@ -185,7 +186,7 @@ else:
              "APP CONECTA RECIFE": "app Conecta Recife", "OUTROS": "outros"}
     o["canal_nome"] = o["canal"].map(nomes)
     ordem = [nomes[c] for c in PRINCIPAIS + ["OUTROS"]]
-    cores = [AZUL40, AZUL70, AZUL, NAVY, DESTAQUE, AZUL25]     # o app é o único em laranja: é a ênfase do bloco
+    cores = [AZUL40, AZUL70, AZUL, cor_forte(), DESTAQUE, AZUL25]     # o app é o único em laranja: é a ênfase do bloco
     c1, c2 = st.columns([1.6, 1], gap="large")
     with c1:
         g = alt.Chart(o).mark_bar(size=34, stroke="white", strokeWidth=1).encode(

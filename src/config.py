@@ -1,6 +1,11 @@
-"""Constantes do painel: cores da identidade RecifeView, nomes de exibição e o tema dos gráficos Altair."""
+"""Constantes do painel: cores da identidade RecifeView, nomes de exibição e formatação.
+
+Os gráficos não registram tema Altair próprio: textos, eixos, grade e legendas usam o tema do Streamlit,
+que troca entre claro e escuro na hora, sem rodar o app de novo.
+"""
 
 import altair as alt
+import streamlit as st
 
 # Identidade RecifeView (AssetsVisuais/PaletaDeCores.txt) e a rampa de azuis usada na EDA (N3)
 AZUL = "#0F62FE"
@@ -9,10 +14,11 @@ AZUL70 = "#5B93FE"
 AZUL40 = "#9FC0FF"
 AZUL25 = "#C6DAFF"
 CLARO = "#EAF2FF"
-TEXTO = "#111111"
-TEXTO_SECUNDARIO = "#4A4F5C"
+TEXTO = "#111111"           # só para texto sobre células claras de mapa de calor (a cor da célula não muda com o tema)
+TEXTO_TEMA = "currentColor"  # rótulos soltos: herdam a cor do texto do app, clara ou escura conforme o tema
+SEM_DADO = "#A7AFBD"         # bairro fora do índice/mapa: cinza médio, legível nos dois temas
 CINZA = "#8C8C8C"
-GRADE = "#E3ECFB"
+NAVY_NO_ESCURO = "#A6C8FF"   # o azul-marinho some no fundo escuro; no modo escuro, a cor forte vira azul claro
 DESTAQUE = "#E8590C"      # laranja de ênfase, usado só para chamar atenção a um ponto
 
 FONTE = "Montserrat, sans-serif"
@@ -46,31 +52,6 @@ AVISO_IA = ("Esta entrega foi auxiliada por IA (Claude, Anthropic); o grupo revi
             "Dados abertos da Prefeitura do Recife, Câmara Municipal e IBGE.")
 
 
-def tema_recifeview():
-    eixo = {"labelFont": FONTE, "titleFont": FONTE, "labelColor": TEXTO_SECUNDARIO, "titleColor": TEXTO_SECUNDARIO,
-            "titleFontWeight": 600, "labelFontSize": 11, "titleFontSize": 11, "gridColor": GRADE,
-            "domainColor": AZUL25, "tickColor": AZUL25}
-    return {
-        "config": {
-            "font": FONTE,
-            "background": "transparent",
-            "view": {"stroke": None},
-            "title": {"font": FONTE, "fontSize": 14, "fontWeight": 700, "color": TEXTO, "anchor": "start",
-                      "subtitleFont": FONTE, "subtitleColor": TEXTO_SECUNDARIO, "subtitleFontSize": 11},
-            "axis": eixo,
-            "axisX": {"grid": False},
-            "legend": {"labelFont": FONTE, "titleFont": FONTE, "labelColor": TEXTO, "titleColor": TEXTO_SECUNDARIO,
-                       "labelFontSize": 11, "titleFontSize": 11, "orient": "top", "titleOrient": "left"},
-            "header": {"labelFont": FONTE, "titleFont": FONTE},
-            "text": {"font": FONTE, "color": TEXTO},
-            "bar": {"color": AZUL, "cornerRadiusEnd": 3},
-            "line": {"color": AZUL, "strokeWidth": 2},
-            "point": {"color": AZUL, "size": 60, "filled": True},
-            "range": {"category": list(CORES_FONTE.values()), "heatmap": RAMPA, "ramp": RAMPA},
-        }
-    }
-
-
 def formato_br(campo: str = "datum.value", fmt: str = ",.0f") -> str:
     """Expressão Vega que formata um número no padrão brasileiro (1.234,5).
 
@@ -83,10 +64,6 @@ def formato_br(campo: str = "datum.value", fmt: str = ",.0f") -> str:
 
 def eixo_numero(titulo: str | None = None, fmt: str = ",.0f", **kwargs) -> alt.Axis:
     return alt.Axis(title=titulo, labelExpr=formato_br(fmt=fmt), **kwargs)
-
-
-def registrar_tema() -> None:
-    alt.theme.register("recifeview", enable=True)(tema_recifeview)
 
 
 # As fontes publicam nomes em maiúsculas e sem acento. Para exibir, devolvemos acentos às palavras comuns.
@@ -143,3 +120,17 @@ def titulo(texto: str) -> str:
         else:
             resultado.append("/".join(parte[:1].upper() + parte[1:] for parte in p.split("/")))
     return " ".join(resultado)
+
+
+def cor_forte() -> str:
+    """Cor da série mais forte (p90, "com resposta", reincidência): azul-marinho no claro, azul claro no escuro.
+
+    O tipo de tema vem do navegador. Se a pessoa trocar o tema pelo menu, esta cor só se ajusta na
+    próxima interação (limitação do Streamlit, issue #11920); o resto do painel troca na hora.
+    """
+    return NAVY_NO_ESCURO if st.context.theme.type == "dark" else NAVY
+
+
+def cor_suave() -> str:
+    """Par da cor_forte() (mediana ao lado do p90): azul claro no tema claro, azul principal no escuro."""
+    return AZUL if st.context.theme.type == "dark" else AZUL40

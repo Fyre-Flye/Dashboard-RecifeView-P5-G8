@@ -5,7 +5,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL, AZUL25, AZUL40, AZUL70, NAVY, TEXTO, eixo_numero, nome_categoria
+from src.config import AZUL, AZUL25, AZUL40, AZUL70, TEXTO_TEMA, cor_forte, cor_suave, eixo_numero, nome_categoria
 from src.dados import tabela
 
 f = filtros.atuais()
@@ -54,7 +54,7 @@ with c1:
     base = alt.Chart(linhas).encode(
         x=alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)),
         y=alt.Y("dias:Q", title="dias até atender"),
-        color=alt.Color("medida:N", title=None, scale=alt.Scale(range=[AZUL40, NAVY])),
+        color=alt.Color("medida:N", title=None, scale=alt.Scale(range=[cor_suave(), cor_forte()])),
         tooltip=[alt.Tooltip("ano:O", title="Ano"), alt.Tooltip("medida:N", title="Medida"),
                  alt.Tooltip("rotulo:N", title="Prazo")],
     )
@@ -77,9 +77,9 @@ with c2:
         y=alt.Y("pct:Q", title="% dos atendidos"),
         tooltip=[alt.Tooltip("faixa:N", title="Faixa"), alt.Tooltip("rotulo:N", title="Pedidos")],
     )
-    cores = alt.Scale(domain=ordem, range=[AZUL25, AZUL40, AZUL70, AZUL, NAVY, NAVY])
+    cores = alt.Scale(domain=ordem, range=[AZUL25, AZUL40, AZUL70, AZUL, cor_forte(), cor_forte()])
     st.altair_chart((b.mark_bar(size=40).encode(color=alt.Color("faixa:N", scale=cores, legend=None))
-                     + b.mark_text(dy=-8, color=TEXTO, fontSize=11).encode(text="rotulo:N")).properties(height=300),
+                     + b.mark_text(dy=-8, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N")).properties(height=300),
                     width="stretch")
     leitura("A distribuição é muito assimétrica: a maior parte se resolve em uma semana, e uma fatia pequena leva "
             "meses ou anos (obras como escadaria e macrodrenagem).")
@@ -104,12 +104,12 @@ escala = alt.Scale(type="log", domain=[1, 4000])
 eixo_x = alt.Axis(values=[1, 2, 8, 31, 91, 366, 1096, 3651], labelExpr="datum.value - 1", title="dias até atender (escala log)")
 faixa_cat = alt.Chart(por_cat).mark_rule(strokeWidth=3, color=AZUL25).encode(
     y=eixo_y, x=alt.X("mediana_plot:Q", scale=escala, axis=eixo_x), x2="p90_plot:Q", tooltip=dica)
-pontos_med = alt.Chart(por_cat).mark_point(filled=True, size=90, color=AZUL40).encode(
+pontos_med = alt.Chart(por_cat).mark_point(filled=True, size=90, color=cor_suave()).encode(
     y=eixo_y, x="mediana_plot:Q", tooltip=dica)
-pontos_p90 = alt.Chart(por_cat).mark_point(filled=True, size=90, color=NAVY).encode(
+pontos_p90 = alt.Chart(por_cat).mark_point(filled=True, size=90, color=cor_forte()).encode(
     y=eixo_y, x="p90_plot:Q", tooltip=dica)
 st.altair_chart((faixa_cat + pontos_med + pontos_p90).properties(height=alt.Step(28)), width="stretch")
-leitura(f"Ponto claro = mediana; ponto escuro = p90; a linha entre eles é onde fica a maior parte dos pedidos. "
+leitura(f"Em cada categoria, o ponto da esquerda é a mediana e o da direita é o p90; a linha entre eles é onde fica a maior parte dos pedidos. "
         f"Categorias com {metricas.numero(minimo)} pedidos atendidos ou mais, da mais lenta para a mais rápida. Um "
         "semáforo de prazo precisa de referência por categoria: 10 dias é atraso em iluminação e é rápido em drenagem.")
 
@@ -136,7 +136,7 @@ else:
                     axis=alt.Axis(labelLimit=200, labelOverlap=False)),
             x=alt.X("n:Q", axis=eixo_numero("pedidos abertos")),
             color=alt.Color("situacao:N", title=None, scale=alt.Scale(
-                domain=["passou do prazo típico", "ainda dentro do prazo típico"], range=[NAVY, AZUL25])),
+                domain=["passou do prazo típico", "ainda dentro do prazo típico"], range=[cor_forte(), AZUL25])),
             order=alt.Order("situacao:N", sort="descending"),
             tooltip=[alt.Tooltip("nome:N", title="Categoria"), alt.Tooltip("situacao:N", title="Situação"),
                      alt.Tooltip("n_txt:N", title="Pedidos")],

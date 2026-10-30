@@ -4,7 +4,7 @@ import streamlit as st
 
 from src import ahp, filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import AZUL25, DESTAQUE, RAMPA, TEXTO
+from src.config import DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA
 from src.dados import malha, tabela
 
 f = filtros.atuais()
@@ -93,7 +93,7 @@ with c2:
     )
     st.altair_chart((base.mark_bar().encode(color=alt.Color(
         "chave:N", scale=alt.Scale(domain=list(CORES), range=list(CORES.values())), legend=None))
-        + base.mark_text(align="left", dx=4, color=TEXTO).encode(text="rotulo:N")).properties(height=alt.Step(34)),
+        + base.mark_text(align="left", dx=4, color=TEXTO_TEMA).encode(text="rotulo:N")).properties(height=alt.Step(34)),
         width="stretch")
     ok = rc <= ahp.RC_ACEITAVEL
     kpi(st, "Razão de consistência (RC)", metricas.porcentagem(rc * 100, 1),
@@ -127,7 +127,7 @@ with c1:
         color=alt.condition("isValid(datum.indice)", alt.Color(
             "indice:Q", title="índice de prioridade (0 a 10)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
             legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
-            alt.value("#EEEEEE")),
+            alt.value(SEM_DADO)),
         opacity=alt.condition("datum.destaque", alt.value(1), alt.value(0.25)),
         tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("posicao:Q", title="Posição"),
                  alt.Tooltip("indice_txt:N", title="Índice")]
