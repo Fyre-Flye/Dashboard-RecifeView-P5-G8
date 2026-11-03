@@ -3,6 +3,8 @@
 Regra de privacidade: nenhuma tabela daqui leva texto livre (SEDEC ou ementa), `id_local`,
 coordenadas, autoria de vereador ou identificador de registro. O que sai é contagem ou indicador
 por ano, bairro, RPA, categoria e órgão, a partir de dados abertos da Prefeitura e da Câmara.
+A exceção é `ocorrencias_abertas_156`: uma linha por pedido aberto, só com campos que o 156 já
+publica (sem endereço, `id_local` ou protocolo), para o exemplo de classificação do AHP.
 """
 
 import numpy as np
@@ -166,6 +168,16 @@ def ouvidoria(df: pd.DataFrame) -> pd.DataFrame:
     return t
 
 
+def _prazo_tipico(s156: pd.DataFrame) -> pd.Series:
+    """p90 dos dias até atender, por categoria, nos atendidos do 156 de 2021 a 2025."""
+    atendidos = s156[s156["ano"].between(*JANELA_INDICADORES) & (s156["situacao"] == "ATENDIDA")]
+    return atendidos.groupby(_texto(atendidos["categoria"]))["dias_ate_movimento"].quantile(0.9)
+
+
+def _abertos_recentes(s156: pd.DataFrame) -> pd.DataFrame:
+    return s156[_texto(s156["arquivo_origem"]).isin(["156_2025", "156_2026"]) & (s156["situacao"] != "ATENDIDA")]
+
+
 def estoque_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
     """Pedidos ainda abertos nos arquivos recentes do 156 (2025 e 2026) e quantos passaram do prazo típico.
 
@@ -174,12 +186,9 @@ def estoque_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame
     "Prazo típico" = p90 dos dias até atender da mesma categoria (atendidos de 2021 a 2025).
     """
     s = df[df["fonte"] == "156_EMLURB"]
-    atendidos = s[s["ano"].between(*JANELA_INDICADORES) & (s["situacao"] == "ATENDIDA")]
-    p90 = atendidos.groupby(_texto(atendidos["categoria"]))["dias_ate_movimento"].quantile(0.9)
-
-    abertos = s[_texto(s["arquivo_origem"]).isin(["156_2025", "156_2026"]) & (s["situacao"] != "ATENDIDA")]
+    abertos = _abertos_recentes(s)
     idade = (data_referencia - abertos["data_abertura"]).dt.days
-    limite = _texto(abertos["categoria"]).map(p90)
+    limite = _texto(abertos["categoria"]).map(_prazo_tipico(s))
     t = pd.DataFrame({
         "rpa": _texto(abertos["rpa"]),
         "bairro_oficial": _texto(abertos["bairro_oficial"]),
@@ -189,6 +198,37 @@ def estoque_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame
         "acima_prazo_tipico": (idade > limite).astype(int),
     })
     return t.groupby(["rpa", "bairro_oficial", "categoria", "situacao"], dropna=False).sum().reset_index()
+
+
+def ocorrencias_abertas_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
+    """Uma linha por pedido aberto do 156 (arquivos 2025 e 2026), para o exemplo de classificação do AHP.
+
+    É a única tabela com uma linha por pedido. Leva só o que o 156 já publica nos dados abertos
+    (data, bairro, RPA, categoria, serviço e situação) e três números calculados aqui: a idade do
+    pedido na data de referência, o prazo típico da categoria e quantos pedidos o mesmo endereço já
+    tinha tido para o mesmo serviço antes deste. O endereço, o `id_local` e o protocolo não saem.
+    Pedido sem número no endereço fica com `pedidos_anteriores` vazio: não dá para saber.
+    """
+    s = df[df["fonte"] == "156_EMLURB"]
+    historico = s[(s["numero_informado"].astype(str) == "True") & s["id_local"].notna()]
+    chave = [historico["id_local"], _texto(historico["servico_codigo"])]
+    # Pedidos do mesmo endereço e serviço abertos ANTES deste (o mesmo dia não conta: costuma ser o próprio
+    # pedido repetido em dois arquivos anuais, ou um pedido em dobro).
+    antes = historico.groupby(chave, dropna=False)["data_abertura"].rank(method="min") - 1
+
+    abertos = _abertos_recentes(s)
+    t = pd.DataFrame({
+        "data_abertura": abertos["data_abertura"].dt.normalize(),
+        "rpa": _texto(abertos["rpa"]),
+        "bairro_oficial": _texto(abertos["bairro_oficial"]),
+        "categoria": _texto(abertos["categoria"]),
+        "servico": _texto(abertos["servico"]),
+        "situacao": _texto(abertos["situacao"]),
+        "idade_dias": (data_referencia - abertos["data_abertura"]).dt.days.astype("Int64"),
+        "prazo_tipico_dias": _texto(abertos["categoria"]).map(_prazo_tipico(s)).astype(float),
+        "pedidos_anteriores": antes.reindex(abertos.index).astype("Int64"),
+    })
+    return t.sort_values("data_abertura").reset_index(drop=True)
 
 
 def _taxa_por_mil(base: pd.DataFrame, anos: int, populacao: pd.Series, por: int = 1000) -> pd.Series:

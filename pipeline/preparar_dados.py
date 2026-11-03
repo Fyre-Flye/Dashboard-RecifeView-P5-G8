@@ -103,6 +103,7 @@ def main() -> None:
         "camara_indicacoes": agregados.camara_indicacoes(df),
         "ouvidoria": agregados.ouvidoria(df),
         "estoque_156": estoque,
+        "ocorrencias_abertas_156": agregados.ocorrencias_abertas_156(df, DATA_REFERENCIA),
         "indicadores_bairro": agregados.indicadores_bairro(df, bairros, estoque),
     }
     for nome, tabela in tabelas.items():

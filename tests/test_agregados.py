@@ -99,3 +99,22 @@ def test_nenhum_arquivo_publicado_tem_coluna_sensivel():
         assert not COLUNAS_PROIBIDAS & colunas, f"{arquivo.name} tem coluna sensível: {COLUNAS_PROIBIDAS & colunas}"
     geo = json.loads((CLEAN / "bairros.geojson").read_text(encoding="utf-8"))
     assert set(geo["features"][0]["properties"]) == {"bairro_oficial", "nome"}
+
+
+def test_ocorrencias_abertas_contam_pedidos_anteriores_sem_expor_o_local():
+    df = pd.DataFrame([
+        _pedido_156("A", "2023-01-01"),
+        _pedido_156("A", "2024-01-01"),
+        _pedido_156("A", "2025-03-01", situacao="CADASTRADA", dias=None),     # aberto: 2 anteriores
+        _pedido_156("A", "2025-03-01", situacao="CADASTRADA", dias=None),     # mesmo dia: não conta como anterior
+        _pedido_156("B", "2025-05-01", situacao="EXECUCAO", dias=None),       # aberto, local novo: 0
+        _pedido_156("C", "2025-05-01", situacao="CADASTRADA", dias=None, numero=False),  # sem número: vazio
+        _pedido_156("D", "2024-05-01", situacao="CADASTRADA", dias=None),     # arquivo antigo: fora
+    ])
+    t = agregados.ocorrencias_abertas_156(df, pd.Timestamp("2025-06-01"))
+    assert len(t) == 4
+    assert not COLUNAS_PROIBIDAS & set(t.columns)
+    assert t["pedidos_anteriores"].tolist()[:2] == [2, 2]
+    assert t["pedidos_anteriores"].isna().sum() == 1
+    assert t.loc[t["situacao"] == "EXECUCAO", "pedidos_anteriores"].item() == 0
+    assert t["idade_dias"].tolist()[:2] == [92, 92]
