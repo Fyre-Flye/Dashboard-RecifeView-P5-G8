@@ -18,7 +18,7 @@ repetem, demoram ou ficam sem resposta. A narrativa segue os insights da EDA (N3
 | Reincidência | Repetir não é duplicar: o problema volta | % em local repetido por categoria, intervalo entre pedidos, pontos crônicos |
 | Prazos | Quem demora está demorando mais | mediana e p90 por ano, faixas de prazo, prazo por categoria, estoque aberto fora do prazo |
 | Território | Serviço urbano e emergência apontam para bairros diferentes | dois mapas por habitante, detalhe do bairro clicado, vulnerabilidade × demanda |
-| Prioridade (AHP) | Onde agir primeiro, com critérios explícitos | comparação par a par editável, pesos, RC, mapa e ranking, pedidos abertos reais classificados (sorteio), sensibilidade |
+| Prioridade (AHP) | Onde agir primeiro, com critérios explícitos | comparação par a par editável, pesos, RC, mapa e ranking, registros em aberto reais classificados (156, Câmara e Ouvidoria, por sorteio), sensibilidade |
 | Sobre os dados | Fontes, cobertura, cuidados, correções e privacidade | tabela de cobertura por fonte e ano, glossário |
 
 Filtros globais na barra lateral (valem em todas as páginas): **período**, **RPA**, **bairro** e **categoria de
@@ -63,10 +63,11 @@ heurística, uso interno do grupo), as ementas, o pseudônimo de endereço (`id_
 indicações. O teste `test_nenhum_arquivo_publicado_tem_coluna_sensivel` falha se alguma tabela publicada tiver
 essas colunas.
 
-A única tabela com uma linha por pedido é `ocorrencias_abertas_156.parquet`, usada no exemplo de classificação da
-página de Prioridade. Ela leva só o que o 156 já publica nos dados abertos (data, bairro, RPA, categoria, serviço e
-situação) e três números calculados no pipeline (idade, prazo típico da categoria e pedidos anteriores no mesmo
-endereço e serviço), sem endereço, `id_local` ou protocolo.
+Três tabelas têm uma linha por registro em aberto, para o exemplo de classificação da página de Prioridade:
+`ocorrencias_abertas_156`, `indicacoes_sem_resposta` (Câmara) e `manifestacoes_abertas_ouvidoria`. Elas levam só o
+que as fontes já publicam nos dados abertos (datas, bairro, RPA, categoria ou assunto, órgão, canal e situação) e
+números calculados no pipeline (idade, prazo típico e repetições), sem endereço, `id_local`, protocolo, ementa ou
+autoria. A Ouvidoria não tem bairro nem coordenadas na base aberta.
 
 ## Estrutura
 

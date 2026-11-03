@@ -7,7 +7,8 @@ import streamlit as st
 
 from src import ahp, filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero, nome_categoria
+from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero, nome_categoria,
+                        nome_orgao)
 from src.dados import malha, resumo_preparacao, tabela
 
 f = filtros.atuais()
@@ -28,12 +29,12 @@ filtros.legenda(f, {"Período": "fixo em 2021–2025 (estoque aberto: arquivos 2
                     "Categoria": "vale só para os pedidos da seção 4."})
 
 # --- Critérios ----------------------------------------------------------------------------------------
-with st.expander("Os Quatro Critérios e Como Cada um É Medido", expanded=False):
-    st.dataframe(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao}
-                               for c in ahp.CRITERIOS]), hide_index=True, width="stretch")
-    st.caption("Cada bairro recebe, em cada critério, a sua posição relativa entre os 89 bairros com 1.000 moradores "
-               "ou mais (0 = menor valor, 1 = maior). O índice é a soma ponderada dessas posições, uma nota de 0 a 10. Usar a "
-               "posição, e não o valor bruto, evita que poucos bairros extremos achatem os outros.")
+st.subheader("Os Quatro Critérios e Como Cada Um É Medido")
+st.table(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao}
+                       for c in ahp.CRITERIOS]).set_index("Critério"))
+leitura("Cada bairro recebe, em cada critério, a sua posição relativa entre os 89 bairros com 1.000 moradores ou mais "
+        "(0 = menor valor, 1 = maior). O índice é a soma ponderada dessas posições, uma nota de 0 a 10. Usar a posição, "
+        "e não o valor bruto, evita que poucos bairros extremos achatem os outros. Os pesos saem das comparações abaixo.")
 
 # --- Comparações par a par ----------------------------------------------------------------------------
 OPCOES = [-9, -8, -7, -6, -5, -4, -3, -2, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -172,19 +173,81 @@ with c2:
 SITUACAO = {"CADASTRADA": "cadastrado", "PREPARACAO": "em preparação", "EXECUCAO": "em execução",
             "PENDENCIA": "com pendência", "FISCALIZACAO": "em fiscalização", "MONITORAMENTO": "em monitoramento"}
 SORTEIO = "sorteio_ocorrencias"
+CANAL_ENVIO = {"OFICIO": "ofício", "PROTOCOLO NA PREFEITURA": "protocolo na Prefeitura",
+               "LOTE JSON SISTEMA PCR": "lote do sistema da Prefeitura", "SISTEMA SEGOV": "sistema da SEGOV",
+               "ENVIADO AO EXECUTIVO": "envio ao Executivo", "E-MAIL": "e-mail",
+               "CIENCIA AOS INTERESSADOS": "ciência aos interessados"}
 NOTA_ALTA = 7
+F156, CAMARA, OUVIDORIA = "Central 156 / Emlurb", "Indicações da Câmara", "Ouvidoria"
+FONTES_EXEMPLO = {
+    F156: {"tabela": "ocorrencias_abertas_156", "registro": "pedidos abertos", "genero": "o",
+           "explica": "**pedidos abertos do 156**: risco e vulnerabilidade vêm do bairro do pedido; atraso e "
+                      "reincidência vêm do próprio pedido."},
+    CAMARA: {"tabela": "indicacoes_sem_resposta", "registro": "indicações sem resposta", "genero": "a",
+             "explica": "**indicações de vereadores enviadas à Prefeitura e ainda sem resposta registrada**, o retrato "
+                        "da fragmentação: risco e vulnerabilidade vêm do bairro; o atraso conta desde o envio, contra o "
+                        "tempo típico de resposta do tema; a reincidência são outras indicações do mesmo tema no mesmo "
+                        "bairro nos 90 dias anteriores (a Câmara não tem endereço)."},
+    OUVIDORIA: {"tabela": "manifestacoes_abertas_ouvidoria", "registro": "manifestações abertas", "genero": "a",
+                "explica": "**manifestações abertas na Ouvidoria** (inclui o app Conecta Recife). A base aberta da "
+                           "Ouvidoria **não tem bairro, endereço nem coordenadas**, então risco, vulnerabilidade e "
+                           "reincidência não se aplicam: a nota usa só o atraso em relação ao prazo legal e **não é "
+                           "comparável** com a das outras fontes."},
+}
 
 
 def sortear() -> None:
     st.session_state[SORTEIO] = random.randrange(1_000_000)
 
 
-def anteriores_txt(n) -> str:
-    if pd.isna(n):
-        return "Endereço sem número: não dá para saber se o problema se repete."
-    if n == 0:
-        return "Primeiro pedido deste serviço no endereço."
-    return f"O endereço já teve <b>{metricas.numero(n)}</b> pedido{'s' if n > 1 else ''} do mesmo serviço antes deste."
+def data_br(v) -> str:
+    return f"{v:%d/%m/%Y}" if pd.notna(v) else "—"
+
+
+def classificar(fonte: str) -> pd.DataFrame:
+    base = tabela(FONTES_EXEMPLO[fonte]["tabela"])
+    if fonte == OUVIDORIA:
+        return ahp.indice_so_atraso(base)
+    r = ahp.indice_ocorrencias(f.aplicar(base, ano=False), ind, w)
+    r["nome"] = r["bairro_oficial"].map(ind["nome"])
+    return r
+
+
+def textos(linha: pd.Series, fonte: str) -> tuple[str, str, str, str]:
+    """Título, contexto, tempo e repetição de um registro, para o cartão."""
+    n = linha.get("pedidos_anteriores")
+    if fonte == F156:
+        vezes = linha["idade_dias"] / linha["prazo_tipico_dias"] if linha["prazo_tipico_dias"] else np.nan
+        prazo = (f"prazo típico da categoria: {metricas.numero(linha['prazo_tipico_dias'])} dias "
+                 f"({metricas.numero(vezes, 1)}× o prazo)") if pd.notna(vezes) else "categoria sem prazo típico"
+        if pd.isna(n):
+            rep = "Endereço sem número: não dá para saber se o problema se repete."
+        elif n == 0:
+            rep = "Primeiro pedido deste serviço no endereço."
+        else:
+            rep = f"O endereço já teve <b>{metricas.numero(n)}</b> pedido{'s' if n > 1 else ''} do mesmo serviço antes deste."
+        return (nome_categoria(linha["servico"]),
+                f"{nome_categoria(linha['categoria'])} · {linha['nome']} (RPA {linha['rpa']}) · "
+                f"{SITUACAO.get(linha['situacao'], str(linha['situacao']).lower())}",
+                f"Aberto em {data_br(linha['data_abertura'])}, há {metricas.numero(linha['idade_dias'])} dias; {prazo}.", rep)
+    if fonte == CAMARA:
+        vezes = linha["idade_dias"] / linha["prazo_tipico_dias"]
+        rep = ("Nenhuma outra indicação do mesmo tema no bairro nos 90 dias anteriores." if n == 0 else
+               f"<b>{metricas.numero(n)}</b> outra{'s' if n > 1 else ''} indicaç{'ões' if n > 1 else 'ão'} do mesmo tema "
+               f"no bairro nos 90 dias anteriores.")
+        return (f"Indicação: {nome_categoria(linha['categoria']).lower()}",
+                f"{linha['nome']} (RPA {linha['rpa']}) · enviada a {nome_orgao(linha['orgao'])} "
+                f"por {CANAL_ENVIO.get(linha['canal_envio'], str(linha['canal_envio']).lower())}",
+                f"Apresentada em {data_br(linha['data_abertura'])}, enviada em {data_br(linha['data_envio'])}: há "
+                f"{metricas.numero(linha['idade_dias'])} dias sem resposta; tempo típico até a resposta no tema: "
+                f"{metricas.numero(linha['prazo_tipico_dias'])} dias ({metricas.numero(vezes, 1)}×).", rep)
+    canal = linha["canal_entrada"]
+    canal = f"canal {str(canal).lower()}" if pd.notna(canal) else "canal não informado (o campo some no arquivo de 2025)"
+    return (nome_categoria(linha["assunto"]),
+            f"{nome_categoria(linha['natureza'])} · {nome_categoria(linha['orgao'])} · {canal}",
+            f"Registrada em {data_br(linha['data_abertura'])}; prazo legal em {data_br(linha['data_prazo'])}: "
+            f"<b>{metricas.numero(linha['dias_alem_do_prazo'])} dias além do prazo</b>.",
+            "Sem lugar na base aberta: risco, vulnerabilidade e reincidência não se aplicam.")
 
 
 def barra_contribuicao(linha: pd.Series) -> alt.Chart:
@@ -201,7 +264,8 @@ def barra_contribuicao(linha: pd.Series) -> alt.Chart:
     ).transform_calculate(ordem=f"indexof({CHAVES}, datum.chave)").properties(height=22)
 
 
-def cartao(linha: pd.Series, total: int) -> None:
+def cartao(linha: pd.Series, total: int, fonte: str) -> None:
+    titulo_cartao, contexto, tempo, repeticao = textos(linha, fonte)
     with st.container(border=True):
         a, b = st.columns([1, 3.4], vertical_alignment="center")
         a.markdown(f"<div style='font-size:.78rem;opacity:.7'>nota</div>"
@@ -210,34 +274,77 @@ def cartao(linha: pd.Series, total: int) -> None:
                    f"<span style='font-size:1.05rem'> de 10</span></div>"
                    f"<div style='font-size:.78rem;opacity:.7'>{metricas.numero(linha['fila'])}º de "
                    f"{metricas.numero(total)} na fila</div>", unsafe_allow_html=True)
-        atraso = linha["idade_dias"] / linha["prazo_tipico_dias"] if linha["prazo_tipico_dias"] else np.nan
-        prazo = (f"prazo típico da categoria: {metricas.numero(linha['prazo_tipico_dias'])} dias "
-                 f"({metricas.numero(atraso, 1)}× o prazo)") if pd.notna(atraso) else "categoria sem prazo típico"
-        b.markdown(f"**{nome_categoria(linha['servico'])}**  \n"
-                   f"<span style='font-size:.88rem'>{nome_categoria(linha['categoria'])} · {linha['nome']} "
-                   f"(RPA {linha['rpa']}) · {SITUACAO.get(linha['situacao'], str(linha['situacao']).lower())}<br>"
-                   f"Aberto em {linha['data_abertura']:%d/%m/%Y}, há {metricas.numero(linha['idade_dias'])} dias; "
-                   f"{prazo}.<br>{anteriores_txt(linha['pedidos_anteriores'])}</span>", unsafe_allow_html=True)
+        b.markdown(f"**{titulo_cartao}**  \n<span style='font-size:.88rem'>{contexto}<br>{tempo}<br>{repeticao}</span>",
+                   unsafe_allow_html=True)
         b.altair_chart(barra_contribuicao(linha), width="stretch")
 
 
+def tabela_exibicao(linhas: pd.DataFrame, fonte: str, notas: bool = True) -> pd.DataFrame:
+    num = metricas.numero
+    t = pd.DataFrame({"Fila": linhas["fila"].map(lambda v: f"{num(v)}º"), "Nota": linhas["indice"].round(1)})
+    if fonte == F156:
+        t["Serviço"] = linhas["servico"].map(nome_categoria)
+        t["Bairro"] = linhas["nome"] + " (RPA " + linhas["rpa"].astype(str) + ")"
+        t["Situação"] = linhas["situacao"].map(lambda v: SITUACAO.get(v, v))
+        t["Aberto em"] = linhas["data_abertura"].map(data_br)
+        t["Aberto há"] = linhas["idade_dias"].map(lambda v: f"{num(v)} dias")
+        t["Prazo típico"] = linhas["prazo_tipico_dias"].map(lambda v: f"{num(v)} dias" if pd.notna(v) else "—")
+        t["Pedidos anteriores"] = linhas["pedidos_anteriores"].map(lambda v: "sem número" if pd.isna(v) else num(v))
+    elif fonte == CAMARA:
+        t["Tema"] = linhas["categoria"].map(nome_categoria)
+        t["Bairro"] = linhas["nome"] + " (RPA " + linhas["rpa"].astype(str) + ")"
+        t["Enviada a"] = linhas["orgao"].map(nome_orgao)
+        t["Enviada em"] = linhas["data_envio"].map(data_br)
+        t["Sem resposta há"] = linhas["idade_dias"].map(lambda v: f"{num(v)} dias")
+        t["Tempo típico"] = linhas["prazo_tipico_dias"].map(lambda v: f"{num(v)} dias")
+        t["Mesmo tema no bairro (90 dias)"] = linhas["pedidos_anteriores"].map(num)
+    else:
+        t["Assunto"] = linhas["assunto"].map(nome_categoria)
+        t["Natureza"] = linhas["natureza"].map(nome_categoria)
+        t["Órgão"] = linhas["orgao"].map(nome_categoria)
+        t["Canal"] = linhas["canal_entrada"].map(lambda v: str(v).lower() if pd.notna(v) else "—")
+        t["Registrada em"] = linhas["data_abertura"].map(data_br)
+        t["Dias além do prazo"] = linhas["dias_alem_do_prazo"].map(num)
+    if notas:
+        for k in CHAVES:
+            t[CRIT[k].nome] = linhas[f"nota_{k}"].map(lambda v: num(v, 1))
+    return t
+
+
+def mostrar_tabela(t: pd.DataFrame) -> None:
+    st.dataframe(t, hide_index=True, width="stretch", column_config={
+        "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized"),
+        **{CRIT[k].nome: st.column_config.TextColumn(CRIT[k].nome, help=f"Nota de 0 a 10 no critério {CRIT[k].nome}")
+           for k in CHAVES if CRIT[k].nome in t}})
+
+
 st.subheader("4. Exemplo de Ocorrências Classificadas")
-st.markdown("O índice acima é do **bairro**. Aqui o mesmo AHP, com os mesmos pesos, dá uma nota de 0 a 10 a **pedidos "
-            "abertos do 156**: risco e vulnerabilidade vêm do bairro do pedido; atraso e reincidência vêm do próprio "
-            "pedido. Mude as comparações lá em cima e as notas mudam aqui.")
-nomes_bairro = ind["nome"]
-oc = ahp.indice_ocorrencias(f.aplicar(tabela("ocorrencias_abertas_156"), ano=False), ind, w)
+fonte = st.radio("Fonte", list(FONTES_EXEMPLO), horizontal=True, key="fonte_exemplo",
+                 help="Fontes abertas com registros ainda em aberto. Defesa Civil e SEDEC ficam de fora: não têm "
+                      "situação confiável de aberto/fechado na base aberta.")
+info = FONTES_EXEMPLO[fonte]
+st.markdown("O índice acima é do **bairro**. Aqui o mesmo AHP, com os mesmos pesos, dá uma nota de 0 a 10 a "
+            + info["explica"] + ("" if fonte == OUVIDORIA else " Mude as comparações lá em cima e as notas mudam aqui."))
+if fonte == OUVIDORIA and (f.territorio_ativo or f.categorias):
+    st.caption("Os filtros de território e de categoria não valem aqui: a Ouvidoria não tem bairro nem a mesma "
+               "classificação de serviço.")
+oc = classificar(fonte)
 if oc.empty:
-    st.caption("Nenhum pedido aberto no recorte escolhido (ou o bairro está fora do índice, com menos de 1.000 moradores).")
+    st.caption(f"Nenhum registro em aberto no recorte escolhido (ou o bairro está fora do índice, com menos de "
+               f"1.000 moradores).")
 else:
-    oc["nome"] = oc["bairro_oficial"].map(nomes_bairro)
     oc["fila"] = oc["indice"].rank(ascending=False, method="min").astype(int)
     st.session_state.setdefault(SORTEIO, 2026)
     b1, b2 = st.columns([1, 3], vertical_alignment="center")
     b1.button("Sortear Ocorrências", icon=":material/casino:", on_click=sortear, width="stretch")
-    recorte = "do recorte" if (f.territorio_ativo or f.categorias) else "da cidade"
-    b2.caption(f"Três pedidos sorteados entre os {metricas.numero(len(oc))} pedidos abertos {recorte}, "
-               "do de maior nota para o de menor. A fila é a ordem de todos eles pela nota.")
+    recorte = "do recorte" if fonte != OUVIDORIA and (f.territorio_ativo or f.categorias) else "da cidade"
+    fora = len(tabela(info["tabela"])) - len(oc) if fonte == CAMARA and not (f.territorio_ativo or f.categorias) else 0
+    g = info["genero"]
+    b2.caption(f"Três {info['registro'].split()[0]} sortead{g}s entre {g}s {metricas.numero(len(oc))} {info['registro']} "
+               f"{recorte}, d{g} de maior nota para {g} de menor. A fila é a ordem de tod{g}s el{'e' if g == 'o' else 'a'}s "
+               "pela nota."
+               + (f" {metricas.numero(fora)} indicações ficam de fora: sem bairro identificado na ementa ou em bairro "
+                  "com menos de 1.000 moradores." if fora else ""))
     amostra = oc.sample(min(3, len(oc)), random_state=st.session_state[SORTEIO]).sort_values("indice", ascending=False)
 
     st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
@@ -245,70 +352,58 @@ else:
         + " &nbsp; <span style='opacity:.7'>(pontos de cada critério na nota)</span></div>", unsafe_allow_html=True)
     aba_cartoes, aba_tabela = st.tabs(["Cartões", "Tabela"])
     with aba_tabela:
-        numero_br = lambda v, casas=0: metricas.numero(v, casas)  # noqa: E731
-        t = pd.DataFrame({
-            "Fila": amostra["fila"].map(lambda v: f"{numero_br(v)}º"),
-            "Nota": amostra["indice"].round(1),
-            "Serviço": amostra["servico"].map(nome_categoria),
-            "Categoria": amostra["categoria"].map(nome_categoria),
-            "Bairro": amostra["nome"] + " (RPA " + amostra["rpa"].astype(str) + ")",
-            "Situação": amostra["situacao"].map(lambda v: SITUACAO.get(v, v)),
-            "Aberto em": amostra["data_abertura"].dt.strftime("%d/%m/%Y"),
-            "Aberto há": amostra["idade_dias"].map(lambda v: f"{numero_br(v)} dias"),
-            "Prazo típico": amostra["prazo_tipico_dias"].map(lambda v: f"{numero_br(v)} dias" if pd.notna(v) else "—"),
-            "Pedidos anteriores": amostra["pedidos_anteriores"].map(lambda v: "sem número" if pd.isna(v) else numero_br(v)),
-            **{CRIT[k].nome: amostra[f"nota_{k}"].map(lambda v: numero_br(v, 1)) for k in CHAVES},
-        })
-        st.dataframe(t, hide_index=True, width="stretch", column_config={
-            "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized"),
-            **{CRIT[k].nome: st.column_config.TextColumn(CRIT[k].nome, help=f"Nota de 0 a 10 no critério {CRIT[k].nome}")
-               for k in CHAVES}})
-        st.caption("Nas quatro últimas colunas, a nota de 0 a 10 do pedido em cada critério; a nota final pondera essas "
-                   "quatro pelos pesos do AHP. \"Sem número\": o endereço não tem número, então não dá para contar as "
-                   "repetições.")
+        mostrar_tabela(tabela_exibicao(amostra, fonte))
+        st.caption("Nas quatro últimas colunas, a nota de 0 a 10 em cada critério (vazia quando o critério não se aplica); "
+                   "a nota final pondera essas notas pelos pesos do AHP.")
     with aba_cartoes:
         c1, c2 = st.columns([1.35, 1], gap="large")
         with c1:
             for _, linha in amostra.iterrows():
-                cartao(linha, len(oc))
+                cartao(linha, len(oc), fonte)
         with c2:
             st.markdown("**Onde Cada um Cai na Fila**")
             faixas = np.arange(0, ahp.NOTA_MAXIMA + 0.5, 0.5)
             dist = pd.cut(oc["indice"], faixas, include_lowest=True).value_counts(sort=False)
-            dist = pd.DataFrame({"inicio": faixas[:-1], "fim": faixas[1:], "pedidos": dist.to_numpy()})
+            dist = pd.DataFrame({"inicio": faixas[:-1], "fim": faixas[1:], "registros": dist.to_numpy()})
             dist["faixa"] = dist["inicio"].map(lambda v: metricas.numero(v, 1)) + " a " + dist["fim"].map(lambda v: metricas.numero(v, 1))
             marcas = amostra.assign(rotulo=[f"{i}º" for i in range(1, len(amostra) + 1)],
                                     altura=[8 + 14 * i for i in range(len(amostra))],   # degraus: notas próximas não se cobrem
                                     nota_txt=amostra["indice"].map(lambda v: metricas.numero(v, 1)))
             barras_fila = alt.Chart(dist).mark_bar(color=cor_suave()).encode(
                 x=alt.X("inicio:Q", bin="binned", title="nota de prioridade (0 a 10)", scale=alt.Scale(domain=[0, 10])),
-                x2="fim:Q", y=alt.Y("pedidos:Q", axis=eixo_numero("pedidos abertos")),
-                tooltip=[alt.Tooltip("faixa:N", title="Nota"), alt.Tooltip("pedidos:Q", title="Pedidos", format=",")])
+                x2="fim:Q", y=alt.Y("registros:Q", axis=eixo_numero(info["registro"])),
+                tooltip=[alt.Tooltip("faixa:N", title="Nota"), alt.Tooltip("registros:Q", title="Registros", format=",")])
             linhas = alt.Chart(marcas).mark_rule(color=DESTAQUE, strokeWidth=2).encode(
                 x="indice:Q", tooltip=[alt.Tooltip("nota_txt:N", title="Nota")])
             rotulos = alt.Chart(marcas).mark_text(color=DESTAQUE, align="left", dx=4, fontWeight="bold", fontSize=12).encode(
                 x="indice:Q", y=alt.Y("altura:Q", scale=None), text="rotulo:N")
             st.altair_chart((barras_fila + linhas + rotulos).properties(height=260), width="stretch")
             alta = (oc["indice"] >= NOTA_ALTA).mean() * 100
-            kpi(st, f"Pedidos com nota {NOTA_ALTA} ou mais", metricas.porcentagem(alta, 1),
-                f"{metricas.numero((oc['indice'] >= NOTA_ALTA).sum())} de {metricas.numero(len(oc))} abertos",
-                "Com os pesos atuais. Seria o primeiro lote de uma fila de atendimento.")
+            kpi(st, f"Com nota {NOTA_ALTA} ou mais", metricas.porcentagem(alta, 1),
+                f"{metricas.numero((oc['indice'] >= NOTA_ALTA).sum())} de {metricas.numero(len(oc))} {info['registro']}",
+                "Com os pesos atuais. Seria o primeiro lote de uma fila de atendimento."
+                + (" Na Ouvidoria a nota é a posição pelo atraso, então 30% ficam sempre acima de 7." if fonte == OUVIDORIA else ""))
 
     data_ref = pd.Timestamp(resumo_preparacao()["data_referencia_estoque"])
-    leitura(f"<b>Atraso:</b> 5 = o pedido chegou ao prazo típico da categoria (p90 dos atendidos de 2021–2025); 10 = o "
-            f"dobro do prazo ou mais. <b>Reincidência:</b> 0 = primeiro pedido do serviço no endereço; 10 = dez ou mais "
-            f"pedidos anteriores (escala log). A idade é contada até {data_ref:%d/%m/%Y}, data em que as bases foram "
-            "baixadas. É um exemplo: os tetos e os pesos precisam ser validados com quem opera o 156, e "
-            "endereços genéricos podem inflar a reincidência.")
+    if fonte == F156:
+        texto_leitura = ("<b>Atraso:</b> 5 = o pedido chegou ao prazo típico da categoria (p90 dos atendidos de 2021–2025); "
+                         "10 = o dobro do prazo ou mais. <b>Reincidência:</b> 0 = primeiro pedido do serviço no endereço; "
+                         "10 = dez ou mais pedidos anteriores (escala log). Endereços genéricos podem inflar a reincidência.")
+    elif fonte == CAMARA:
+        texto_leitura = ("<b>Atraso:</b> 5 = a indicação chegou ao tempo típico de resposta do tema (p90 das indicações "
+                         "respondidas); 10 = o dobro ou mais. <b>Reincidência:</b> 0 = nenhuma outra indicação do mesmo tema "
+                         "no bairro nos 90 dias anteriores; 10 = dez ou mais. \"Sem resposta registrada\" pode incluir "
+                         "resposta dada fora do sistema da Câmara; tema e bairro vêm da ementa (rótulo fraco).")
+    else:
+        texto_leitura = ("<b>Atraso:</b> todas as manifestações abertas já passaram do prazo legal (10 dias úteis), então "
+                         "a nota é a posição de cada uma entre as abertas pelos dias além do prazo: 10 = a mais atrasada. "
+                         "Só os arquivos de 2024 e 2025 entram (nos antigos, \"aberto\" pode ser só o retrato do ano); "
+                         "o de 2025 cobre de julho a dezembro.")
+    leitura(f"{texto_leitura} A idade é contada até {data_ref:%d/%m/%Y}, data em que as bases foram baixadas. É um "
+            "exemplo: os tetos e os pesos precisam ser validados com quem opera cada serviço.")
 
-    with st.expander(f"A Fila Inteira: os 20 Pedidos de Maior Nota {'no Recorte' if recorte == 'do recorte' else 'na Cidade'}"):
-        top = oc.head(20)
-        st.dataframe(pd.DataFrame({
-            "Fila": top["fila"].map(lambda v: f"{metricas.numero(v)}º"), "Nota": top["indice"].round(1), "Serviço": top["servico"].map(nome_categoria),
-            "Bairro": top["nome"], "Aberto em": top["data_abertura"].dt.strftime("%d/%m/%Y"),
-            "Aberto há (dias)": top["idade_dias"], "Pedidos anteriores": top["pedidos_anteriores"],
-        }), hide_index=True, width="stretch",
-            column_config={"Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized")})
+    with st.expander(f"A Fila Inteira: os 20 de Maior Nota {'no Recorte' if recorte == 'do recorte' else 'na Cidade'}"):
+        mostrar_tabela(tabela_exibicao(oc.head(20), fonte, notas=False))
 
 
 # --- Sensibilidade --------------------------------------------------------------------------------------

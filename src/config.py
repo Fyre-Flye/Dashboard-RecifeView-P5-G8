@@ -88,6 +88,15 @@ _ACENTOS = {
     "AREAS": "áreas", "REGULARIZACAO": "regularização", "CORRIMAO": "corrimão", "VEGETACAO": "vegetação",
     "CRITICO": "crítico", "NAO": "não", "PONTILHOES": "pontilhões", "PRE": "pré", "ARVORE": "árvore",
     "PUBLICAS": "públicas", "EMLURB": "Emlurb", "RECIFE": "Recife", "SOCIOAMBIENTAL": "socioambiental",
+    # assuntos, naturezas e órgãos da Ouvidoria
+    "SEGURANCA": "segurança", "REFERENCIA": "referência", "VIOLACAO": "violação", "ORGAO": "órgão",
+    "SECRETARIA": "secretaria", "ELOGIO": "elogio", "TRANSPORTE": "transporte", "PUBLICOS": "públicos",
+    "ATENCAO": "atenção", "BASICA": "básica", "MEDICA": "médica", "CONSULTA": "consulta", "EXAMES": "exames",
+    "TRIBUTOS": "tributos", "ILUMINACAO": "iluminação", "HABITACAO": "habitação", "ASSISTENCIA": "assistência",
+    "TECNICA": "técnica", "POLITICAS": "políticas", "ESPORTES": "esportes", "TRANSITO": "trânsito",
+    "ACESSIBILIDADE": "acessibilidade", "PREVIDENCIA": "previdência", "LICITACAO": "licitação",
+    "AGENCIA": "agência", "CREDITO": "crédito", "EDUCACAO": "educação", "NAO": "não", "CLASSIFICADO": "classificado",
+    "INFORMACAO": "informação",
 }
 _SIGLAS = {"EMLURB", "URB", "CTTU", "SEINFRA", "SEDEC", "COMPESA", "SEGOV", "EMPREL", "CONVIVA", "RECIPREV", "COMDICA"}
 
