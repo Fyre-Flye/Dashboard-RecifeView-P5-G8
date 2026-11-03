@@ -100,3 +100,11 @@ def test_indice_de_ocorrencias_vai_de_0_a_10_e_ignora_bairro_fora_do_indice():
     assert r.iloc[0]["idade_dias"] == 40           # mesmo bairro: o mais atrasado vem primeiro
     soma = r[[f"contrib_{c.chave}" for c in ahp.CRITERIOS]].sum(axis=1)
     assert np.allclose(soma, r["indice"])
+
+
+def test_indice_so_atraso_ordena_pelo_atraso_e_zera_os_outros_criterios():
+    r = ahp.indice_so_atraso(pd.DataFrame({"dias_alem_do_prazo": [10, 500, 100]}))
+    assert r["dias_alem_do_prazo"].tolist() == [500, 100, 10]
+    assert r["indice"].iloc[0] == ahp.NOTA_MAXIMA
+    assert (r["contrib_risco"] == 0).all() and r["nota_risco"].isna().all()
+    assert np.allclose(r["indice"], r["contrib_atraso"])

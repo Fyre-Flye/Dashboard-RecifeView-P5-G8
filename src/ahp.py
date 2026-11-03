@@ -186,3 +186,20 @@ def indice_ocorrencias(ocorrencias: pd.DataFrame, indicadores: pd.DataFrame, w: 
     resultado["indice"] = resultado[[f"contrib_{c.chave}" for c in criterios]].sum(axis=1)
     resultado["percentil"] = resultado["indice"].rank(pct=True, method="max") * 100
     return resultado.sort_values("indice", ascending=False)
+
+
+def indice_so_atraso(registros: pd.DataFrame, coluna: str = "dias_alem_do_prazo", criterios=CRITERIOS) -> pd.DataFrame:
+    """Nota de 0 a 10 quando só o atraso pode ser medido (Ouvidoria: a base aberta não tem lugar).
+
+    Todas as manifestações abertas já passaram do prazo legal, então uma escala fixa daria 10 a todas.
+    A nota é a posição relativa dos dias além do prazo entre as abertas: 10 = a mais atrasada.
+    Os outros critérios ficam vazios e não somam pontos; a nota não é comparável com a das outras fontes.
+    """
+    resultado = registros.copy()
+    nota = resultado[coluna].astype(float).rank(pct=True, method="average") * NOTA_MAXIMA
+    for c in criterios:
+        resultado[f"nota_{c.chave}"] = nota if c.chave == "atraso" else np.nan
+        resultado[f"contrib_{c.chave}"] = nota if c.chave == "atraso" else 0.0
+    resultado["indice"] = nota
+    resultado["percentil"] = resultado["indice"].rank(pct=True, method="max") * 100
+    return resultado.sort_values("indice", ascending=False)
