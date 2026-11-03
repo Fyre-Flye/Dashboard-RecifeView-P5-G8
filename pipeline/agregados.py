@@ -3,15 +3,18 @@
 Regra de privacidade: nenhuma tabela daqui leva texto livre (SEDEC ou ementa), `id_local`,
 coordenadas, autoria de vereador ou identificador de registro. O que sai é contagem ou indicador
 por ano, bairro, RPA, categoria e órgão, a partir de dados abertos da Prefeitura e da Câmara.
-A exceção é `ocorrencias_abertas_156`: uma linha por pedido aberto, só com campos que o 156 já
-publica (sem endereço, `id_local` ou protocolo), para o exemplo de classificação do AHP.
+As exceções são as tabelas com uma linha por registro em aberto (`ocorrencias_abertas_156`,
+`indicacoes_sem_resposta` e `manifestacoes_abertas_ouvidoria`), usadas no exemplo de classificação
+do AHP: levam só campos que as fontes já publicam, sem endereço, `id_local`, protocolo, ementa ou autoria.
 """
 
 import numpy as np
 import pandas as pd
 
 ANOS = (2012, 2026)
-JANELA_INDICADORES = (2021, 2025)      # mesmo recorte da EDA (N3) para os indicadores por bairro
+JANELA_INDICADORES = (2021, 2025)
+JANELA_REPETICAO_CAMARA_DIAS = 90      # indicações do mesmo tema no mesmo bairro, nos 90 dias antes
+ARQUIVOS_RECENTES_OUVIDORIA = ("ouvidoria_2024", "ouvidoria_2025")      # mesmo recorte da EDA (N3) para os indicadores por bairro
 JANELA_REINCIDENCIA = (2015, 2025)     # definição padronizada de reincidência da N3 (seção 4.4)
 POPULACAO_MINIMA = 1000                # bairros menores distorcem a taxa por habitante (N3, 3.8)
 DUPLICIDADE_MAX_DIAS = 7
@@ -227,6 +230,76 @@ def ocorrencias_abertas_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> 
         "idade_dias": (data_referencia - abertos["data_abertura"]).dt.days.astype("Int64"),
         "prazo_tipico_dias": _texto(abertos["categoria"]).map(_prazo_tipico(s)).astype(float),
         "pedidos_anteriores": antes.reindex(abertos.index).astype("Int64"),
+    })
+    return t.sort_values("data_abertura").reset_index(drop=True)
+
+
+def _anteriores_na_janela(datas: pd.Series, chave: list[pd.Series], dias: int) -> pd.Series:
+    """Quantos registros da mesma chave abriram nos `dias` anteriores (o mesmo dia não conta)."""
+    def contar(grupo: pd.Series) -> pd.Series:
+        t = grupo.sort_values()
+        valores = t.to_numpy()
+        inicio = np.searchsorted(valores, valores - np.timedelta64(dias, "D"), side="left")
+        fim = np.searchsorted(valores, valores, side="left")
+        return pd.Series(fim - inicio, index=t.index)
+    return datas.groupby(chave, dropna=False, group_keys=False).apply(contar)
+
+
+def indicacoes_sem_resposta(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
+    """Uma linha por indicação enviada à Prefeitura e ainda sem resposta registrada (exemplo do AHP).
+
+    "Aberta" aqui é a indicação que saiu da Câmara e não voltou: o retrato da fragmentação. A idade conta
+    a partir do envio; o prazo típico é o p90 dos dias até a resposta das indicações do mesmo tema que
+    tiveram resposta (todas as respondidas, se o tema tiver menos de 30). `pedidos_anteriores` são as
+    indicações do mesmo tema no mesmo bairro nos 90 dias antes (a Câmara não tem endereço). O tema e o
+    bairro foram inferidos da ementa: rótulo fraco. Sem ementa, autoria ou número da indicação.
+    """
+    ind = df[(df["fonte"] == "CAMARA_REQUERIMENTOS") & (df["tipo_registro"] == "INDICACAO")]
+    respondidas = pd.to_numeric(ind["camara_dias_ate_resposta"], errors="coerce").where(ind["camara_data_resposta"].notna())
+    por_tema = respondidas.groupby(_texto(ind["categoria"])).agg(["count", lambda s: s.quantile(0.9)])
+    prazo = por_tema.loc[por_tema["count"] >= 30].iloc[:, 1]
+
+    com_bairro = ind[ind["bairro_oficial"].notna()]
+    repeticao = _anteriores_na_janela(com_bairro["data_abertura"],
+                                      [_texto(com_bairro["bairro_oficial"]), _texto(com_bairro["categoria"])],
+                                      JANELA_REPETICAO_CAMARA_DIAS)
+
+    abertas = ind[ind["camara_data_envio_prefeitura"].notna() & ind["camara_data_resposta"].isna()
+                  & (_texto(ind["camara_desfecho"]) == "ENVIADO, SEM RESPOSTA REGISTRADA")]
+    t = pd.DataFrame({
+        "data_abertura": abertas["data_abertura"].dt.normalize(),
+        "data_envio": abertas["camara_data_envio_prefeitura"].dt.normalize(),
+        "rpa": _texto(abertas["rpa"]),
+        "bairro_oficial": _texto(abertas["bairro_oficial"]),
+        "categoria": _texto(abertas["categoria"]),
+        "orgao": _texto(abertas["orgao"]),
+        "canal_envio": _texto(abertas["camara_canal_envio"]),
+        "idade_dias": (data_referencia - abertas["camara_data_envio_prefeitura"]).dt.days.astype("Int64"),
+        "prazo_tipico_dias": _texto(abertas["categoria"]).map(prazo).fillna(respondidas.quantile(0.9)).astype(float),
+        "pedidos_anteriores": repeticao.reindex(abertas.index).astype("Int64"),
+    })
+    return t.sort_values("data_envio").reset_index(drop=True)
+
+
+def manifestacoes_abertas_ouvidoria(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
+    """Uma linha por manifestação "aberta" nos arquivos recentes da Ouvidoria (2024 e 2025), para o exemplo do AHP.
+
+    A base aberta da Ouvidoria não tem bairro, endereço nem coordenadas, então só o atraso em relação ao
+    prazo legal pode ser medido. Como no 156, só os arquivos recentes entram: nos antigos, "aberto" pode
+    ser só o retrato do ano. Sem protocolo e sem texto (o filtro de situação também deixa de fora as
+    linhas quebradas do arquivo de 2025).
+    """
+    o = df[(df["fonte"] == "OUVIDORIA") & _texto(df["arquivo_origem"]).isin(ARQUIVOS_RECENTES_OUVIDORIA)
+           & (_texto(df["situacao"]) == "ABERTO")]
+    prazo = pd.to_datetime(o["ouv_data_prazo"], errors="coerce")
+    t = pd.DataFrame({
+        "data_abertura": o["data_abertura"].dt.normalize(),
+        "data_prazo": prazo.dt.normalize(),
+        "assunto": _texto(o["servico"]),
+        "natureza": _texto(o["tipo_registro"]),
+        "orgao": _texto(o["orgao"]),
+        "canal_entrada": _texto(o["canal_entrada"]),
+        "dias_alem_do_prazo": (data_referencia - prazo).dt.days.astype("Int64"),
     })
     return t.sort_values("data_abertura").reset_index(drop=True)
 

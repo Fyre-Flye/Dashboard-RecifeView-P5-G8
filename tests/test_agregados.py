@@ -118,3 +118,47 @@ def test_ocorrencias_abertas_contam_pedidos_anteriores_sem_expor_o_local():
     assert t["pedidos_anteriores"].isna().sum() == 1
     assert t.loc[t["situacao"] == "EXECUCAO", "pedidos_anteriores"].item() == 0
     assert t["idade_dias"].tolist()[:2] == [92, 92]
+
+
+def _indicacao(data, envio, resposta=None, bairro="VARZEA", categoria="DRENAGEM", dias_resposta=None):
+    return {"fonte": "CAMARA_REQUERIMENTOS", "tipo_registro": "INDICACAO", "ano": pd.Timestamp(data).year,
+            "data_abertura": pd.Timestamp(data), "camara_data_envio_prefeitura": pd.Timestamp(envio) if envio else pd.NaT,
+            "camara_data_resposta": pd.Timestamp(resposta) if resposta else pd.NaT,
+            "camara_dias_ate_resposta": dias_resposta, "camara_canal_envio": "OFICIO", "orgao": "EMLURB",
+            "camara_desfecho": "ENVIADO E COM RESPOSTA REGISTRADA" if resposta else "ENVIADO, SEM RESPOSTA REGISTRADA",
+            "bairro_oficial": bairro, "rpa": "4", "categoria": categoria, "texto": "ementa", "camara_autoria": "vereador"}
+
+
+def test_indicacoes_sem_resposta_contam_repeticao_no_bairro_e_nao_levam_ementa():
+    df = pd.DataFrame([
+        _indicacao("2024-01-01", "2024-01-05", "2024-03-01", dias_resposta=60),
+        _indicacao("2024-02-01", "2024-02-03"),                       # sem resposta; 1 anterior no bairro (31 dias)
+        _indicacao("2024-09-01", "2024-09-02"),                       # sem resposta; anteriores fora da janela de 90 dias
+        _indicacao("2024-02-01", "2024-02-03", bairro="IPUTINGA"),    # outro bairro
+    ])
+    t = agregados.indicacoes_sem_resposta(df, pd.Timestamp("2025-01-01"))
+    assert len(t) == 3
+    assert not COLUNAS_PROIBIDAS & set(t.columns) and "camara_autoria" not in t.columns
+    varzea = t[t["bairro_oficial"] == "VARZEA"].sort_values("data_envio")
+    assert varzea["pedidos_anteriores"].tolist() == [1, 0]
+    assert t.loc[t["bairro_oficial"] == "IPUTINGA", "pedidos_anteriores"].item() == 0
+    assert varzea["idade_dias"].iloc[0] == (pd.Timestamp("2025-01-01") - pd.Timestamp("2024-02-03")).days
+
+
+def test_manifestacoes_abertas_usam_so_arquivos_recentes_e_situacao_aberta():
+    base = {"fonte": "OUVIDORIA", "servico": "OBRA", "tipo_registro": "RECLAMACAO", "orgao": "URB",
+            "canal_entrada": "0800", "texto": None}
+    df = pd.DataFrame([
+        base | {"arquivo_origem": "ouvidoria_2025", "situacao": "ABERTO", "data_abertura": pd.Timestamp("2025-08-01"),
+                "ouv_data_prazo": pd.Timestamp("2025-08-15")},
+        base | {"arquivo_origem": "ouvidoria_2025", "situacao": "CONCLUIDO", "data_abertura": pd.Timestamp("2025-08-01"),
+                "ouv_data_prazo": pd.Timestamp("2025-08-15")},
+        base | {"arquivo_origem": "ouvidoria_2021", "situacao": "ABERTO", "data_abertura": pd.Timestamp("2021-08-01"),
+                "ouv_data_prazo": pd.Timestamp("2021-08-15")},
+        base | {"arquivo_origem": "ouvidoria_2025", "situacao": "texto quebrado com nome", "data_abertura": pd.Timestamp("2025-08-01"),
+                "ouv_data_prazo": pd.Timestamp("2025-08-15")},
+    ])
+    t = agregados.manifestacoes_abertas_ouvidoria(df, pd.Timestamp("2025-09-14"))
+    assert len(t) == 1
+    assert t["dias_alem_do_prazo"].item() == 30
+    assert not COLUNAS_PROIBIDAS & set(t.columns)

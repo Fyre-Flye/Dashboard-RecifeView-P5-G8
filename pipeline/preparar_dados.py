@@ -37,11 +37,12 @@ COLUNAS = [
     "id_local", "numero_informado", "texto", "ouv_no_prazo", "camara_data_envio_prefeitura", "camara_canal_envio",
     "camara_data_resposta", "camara_dias_ate_envio", "camara_dias_ate_resposta", "camara_desfecho",
     "bairro_populacao_2022", "bairro_domicilios_2022", "bairro_pct_pop_favela_2022", "arquivo_origem",
+    "ouv_data_prazo",
 ]
 CATEGORICAS = ["fonte", "categoria", "servico_codigo", "servico", "tipo_registro", "orgao", "canal_entrada",
                "bairro_oficial", "rpa", "situacao", "iniciativa", "numero_informado", "texto", "ouv_no_prazo",
                "camara_canal_envio", "camara_desfecho", "arquivo_origem"]
-DATAS = ["data_abertura", "data_ult_movimento", "camara_data_envio_prefeitura", "camara_data_resposta"]
+DATAS = ["data_abertura", "data_ult_movimento", "camara_data_envio_prefeitura", "camara_data_resposta", "ouv_data_prazo"]
 
 
 def ler_dataset(caminho: Path) -> pd.DataFrame:
@@ -104,6 +105,8 @@ def main() -> None:
         "ouvidoria": agregados.ouvidoria(df),
         "estoque_156": estoque,
         "ocorrencias_abertas_156": agregados.ocorrencias_abertas_156(df, DATA_REFERENCIA),
+        "indicacoes_sem_resposta": agregados.indicacoes_sem_resposta(df, DATA_REFERENCIA),
+        "manifestacoes_abertas_ouvidoria": agregados.manifestacoes_abertas_ouvidoria(df, DATA_REFERENCIA),
         "indicadores_bairro": agregados.indicadores_bairro(df, bairros, estoque),
     }
     for nome, tabela in tabelas.items():
