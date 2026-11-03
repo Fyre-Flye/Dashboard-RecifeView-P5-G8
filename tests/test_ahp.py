@@ -59,3 +59,44 @@ def test_sensibilidade_sem_mudanca_mantem_todo_o_top():
     s = ahp.sensibilidade(_indicadores(), w, top=2, fatores=(1.0,))
     assert (s["mantidos_no_top"] == 2).all()
     assert len(s) == len(CHAVES)
+
+
+def _ocorrencias(**colunas):
+    base = {"bairro_oficial": ["A", "A", "B"], "idade_dias": [10, 40, 10], "prazo_tipico_dias": [20.0, 20.0, 20.0],
+            "pedidos_anteriores": [0, 0, 0]}
+    base.update(colunas)
+    return pd.DataFrame(base).astype({"pedidos_anteriores": "Int64"})
+
+
+def _indicadores_dois_bairros():
+    return pd.DataFrame({"taxa_defesa_civil": [1.0, 5.0], "pct_favela": [10.0, 50.0], "pct_atraso_156": [20.0, 40.0],
+                         "pct_reincidencia_156": [30.0, 50.0]}, index=pd.Index(["A", "B"], name="bairro_oficial"))
+
+
+def test_nota_de_atraso_e_meia_no_prazo_tipico_e_cheia_no_dobro():
+    notas = ahp.notas_ocorrencias(_ocorrencias(idade_dias=[20, 40, 999]), _indicadores_dois_bairros())
+    assert notas["atraso"].tolist() == [0.5, 1.0, 1.0]
+
+
+def test_reincidencia_sem_numero_no_endereco_vale_zero_e_tem_teto():
+    anteriores = pd.array([pd.NA, 1, 50], dtype="Int64")
+    notas = ahp.notas_ocorrencias(_ocorrencias(pedidos_anteriores=anteriores), _indicadores_dois_bairros())
+    assert notas.loc[0, "reincidencia"] == 0
+    assert 0 < notas.loc[1, "reincidencia"] < 1
+    assert notas.loc[2, "reincidencia"] == 1
+
+
+def test_pedido_herda_risco_e_vulnerabilidade_do_bairro():
+    notas = ahp.notas_ocorrencias(_ocorrencias(), _indicadores_dois_bairros())
+    assert notas.loc[0, "risco"] == notas.loc[1, "risco"] < notas.loc[2, "risco"]
+
+
+def test_indice_de_ocorrencias_vai_de_0_a_10_e_ignora_bairro_fora_do_indice():
+    w = {"risco": 0.4, "vulnerabilidade": 0.3, "atraso": 0.2, "reincidencia": 0.1}
+    oc = _ocorrencias(bairro_oficial=["A", "A", "FORA"])
+    r = ahp.indice_ocorrencias(oc, _indicadores_dois_bairros(), w)
+    assert set(r["bairro_oficial"]) == {"A"}
+    assert r["indice"].between(0, ahp.NOTA_MAXIMA).all()
+    assert r.iloc[0]["idade_dias"] == 40           # mesmo bairro: o mais atrasado vem primeiro
+    soma = r[[f"contrib_{c.chave}" for c in ahp.CRITERIOS]].sum(axis=1)
+    assert np.allclose(soma, r["indice"])

@@ -66,6 +66,10 @@ INDICE_ALEATORIO = {1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32,
 RC_ACEITAVEL = 0.10
 NOTA_MAXIMA = 10        # o índice vai de 0 a 10
 
+# Classificação de um pedido (prova de conceito): onde as notas de atraso e reincidência chegam ao máximo.
+ATRASO_TETO = 2.0             # aberto há o dobro do prazo típico da categoria, ou mais
+REINCIDENCIA_TETO = 10        # 10 pedidos anteriores no mesmo endereço e serviço, ou mais
+
 
 def pares(chaves: list[str]) -> list[tuple[str, str]]:
     return list(combinations(chaves, 2))
@@ -143,3 +147,42 @@ def sensibilidade(indicadores: pd.DataFrame, w: dict[str, float], top: int = 10,
             linhas.append({"criterio": c.nome, "fator": f, "peso_testado": novo[c.chave],
                            "mantidos_no_top": len(base & topo)})
     return pd.DataFrame(linhas)
+
+
+def notas_ocorrencias(ocorrencias: pd.DataFrame, indicadores: pd.DataFrame) -> pd.DataFrame:
+    """Nota de 0 a 1 de cada pedido aberto em cada critério (prova de conceito).
+
+    - Risco e vulnerabilidade são do lugar: o pedido herda a nota do seu bairro.
+    - Atraso é do pedido: idade ÷ prazo típico da categoria, com teto no dobro do prazo
+      (0,5 = chegou ao prazo típico; 1 = dobro do prazo ou mais). Sem prazo típico: 0.
+    - Reincidência é do pedido: pedidos anteriores no mesmo endereço e serviço, em escala log
+      (1 anterior ≈ 0,29; 3 ≈ 0,58; 10 ou mais = 1). Sem número no endereço: 0, porque não dá para saber.
+    """
+    lugar = notas_por_criterio(indicadores)
+    bairro = ocorrencias["bairro_oficial"]
+    proporcao = (ocorrencias["idade_dias"] / ocorrencias["prazo_tipico_dias"]).astype(float)
+    anteriores = ocorrencias["pedidos_anteriores"].astype(float)
+    return pd.DataFrame({
+        "risco": bairro.map(lugar["risco"]).astype(float),
+        "vulnerabilidade": bairro.map(lugar["vulnerabilidade"]).astype(float),
+        "atraso": (proporcao.clip(0, ATRASO_TETO) / ATRASO_TETO).fillna(0.0),
+        "reincidencia": (np.log1p(anteriores) / np.log1p(REINCIDENCIA_TETO)).clip(0, 1).fillna(0.0),
+    }, index=ocorrencias.index)
+
+
+def indice_ocorrencias(ocorrencias: pd.DataFrame, indicadores: pd.DataFrame, w: dict[str, float],
+                       criterios=CRITERIOS) -> pd.DataFrame:
+    """Nota de prioridade de 0 a 10 de cada pedido aberto, com os mesmos pesos do índice dos bairros.
+
+    Pedidos de bairros fora do índice (menos de 1.000 moradores) ficam de fora. `percentil` diz quantos
+    por cento dos pedidos classificados têm nota menor ou igual.
+    """
+    dentro = ocorrencias[ocorrencias["bairro_oficial"].isin(indicadores.index)]
+    notas = notas_ocorrencias(dentro, indicadores)
+    resultado = dentro.copy()
+    for c in criterios:
+        resultado[f"nota_{c.chave}"] = notas[c.chave] * NOTA_MAXIMA
+        resultado[f"contrib_{c.chave}"] = notas[c.chave] * w[c.chave] * NOTA_MAXIMA
+    resultado["indice"] = resultado[[f"contrib_{c.chave}" for c in criterios]].sum(axis=1)
+    resultado["percentil"] = resultado["indice"].rank(pct=True, method="max") * 100
+    return resultado.sort_values("indice", ascending=False)
