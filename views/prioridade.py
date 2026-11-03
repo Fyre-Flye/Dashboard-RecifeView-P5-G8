@@ -205,8 +205,10 @@ def cartao(linha: pd.Series, total: int) -> None:
     with st.container(border=True):
         a, b = st.columns([1, 3.4], vertical_alignment="center")
         a.markdown(f"<div style='font-size:.78rem;opacity:.7'>nota</div>"
-                   f"<div style='font-size:2.4rem;font-weight:700;line-height:1.05'>{metricas.numero(linha['indice'], 1)}</div>"
-                   f"<div style='font-size:.78rem;opacity:.7'>de 10 · {metricas.numero(linha['fila'])}º de "
+                   f"<div style='font-weight:700;line-height:1.05;white-space:nowrap'>"
+                   f"<span style='font-size:2.4rem'>{metricas.numero(linha['indice'], 1)}</span>"
+                   f"<span style='font-size:1.05rem'> de 10</span></div>"
+                   f"<div style='font-size:.78rem;opacity:.7'>{metricas.numero(linha['fila'])}º de "
                    f"{metricas.numero(total)} na fila</div>", unsafe_allow_html=True)
         atraso = linha["idade_dias"] / linha["prazo_tipico_dias"] if linha["prazo_tipico_dias"] else np.nan
         prazo = (f"prazo típico da categoria: {metricas.numero(linha['prazo_tipico_dias'])} dias "
