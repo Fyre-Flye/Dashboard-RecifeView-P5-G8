@@ -66,7 +66,7 @@ INDICE_ALEATORIO = {1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32,
 RC_ACEITAVEL = 0.10
 NOTA_MAXIMA = 10        # o índice vai de 0 a 10
 
-# Classificação de um pedido (prova de conceito): onde as notas de atraso e reincidência chegam ao máximo.
+# Classificação de um pedido (exemplo na página de Prioridade): onde as notas de atraso e reincidência chegam ao máximo.
 ATRASO_TETO = 2.0             # aberto há o dobro do prazo típico da categoria, ou mais
 REINCIDENCIA_TETO = 10        # 10 pedidos anteriores no mesmo endereço e serviço, ou mais
 
@@ -150,7 +150,7 @@ def sensibilidade(indicadores: pd.DataFrame, w: dict[str, float], top: int = 10,
 
 
 def notas_ocorrencias(ocorrencias: pd.DataFrame, indicadores: pd.DataFrame) -> pd.DataFrame:
-    """Nota de 0 a 1 de cada pedido aberto em cada critério (prova de conceito).
+    """Nota de 0 a 1 de cada pedido aberto em cada critério (exemplo de classificação).
 
     - Risco e vulnerabilidade são do lugar: o pedido herda a nota do seu bairro.
     - Atraso é do pedido: idade ÷ prazo típico da categoria, com teto no dobro do prazo

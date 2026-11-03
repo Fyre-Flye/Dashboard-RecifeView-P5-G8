@@ -168,7 +168,7 @@ with c2:
     leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
             "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
 
-# --- Prova de conceito: pedidos classificados -------------------------------------------------------------
+# --- Exemplo de ocorrências classificadas ----------------------------------------------------------------
 SITUACAO = {"CADASTRADA": "cadastrado", "PREPARACAO": "em preparação", "EXECUCAO": "em execução",
             "PENDENCIA": "com pendência", "FISCALIZACAO": "em fiscalização", "MONITORAMENTO": "em monitoramento"}
 SORTEIO = "sorteio_ocorrencias"
@@ -219,7 +219,7 @@ def cartao(linha: pd.Series, total: int) -> None:
         b.altair_chart(barra_contribuicao(linha), width="stretch")
 
 
-st.subheader("4. Prova de Conceito: Pedidos Reais Classificados")
+st.subheader("4. Exemplo de Ocorrências Classificadas")
 st.markdown("O índice acima é do **bairro**. Aqui o mesmo AHP, com os mesmos pesos, dá uma nota de 0 a 10 a **pedidos "
             "abertos do 156**: risco e vulnerabilidade vêm do bairro do pedido; atraso e reincidência vêm do próprio "
             "pedido. Mude as comparações lá em cima e as notas mudam aqui.")
@@ -296,7 +296,7 @@ else:
     leitura(f"<b>Atraso:</b> 5 = o pedido chegou ao prazo típico da categoria (p90 dos atendidos de 2021–2025); 10 = o "
             f"dobro do prazo ou mais. <b>Reincidência:</b> 0 = primeiro pedido do serviço no endereço; 10 = dez ou mais "
             f"pedidos anteriores (escala log). A idade é contada até {data_ref:%d/%m/%Y}, data em que as bases foram "
-            "baixadas. É uma prova de conceito: os tetos e os pesos precisam ser validados com quem opera o 156, e "
+            "baixadas. É um exemplo: os tetos e os pesos precisam ser validados com quem opera o 156, e "
             "endereços genéricos podem inflar a reincidência.")
 
     with st.expander(f"A Fila Inteira: os 20 Pedidos de Maior Nota {'no Recorte' if recorte == 'do recorte' else 'na Cidade'}"):
