@@ -18,7 +18,7 @@ repetem, demoram ou ficam sem resposta. A narrativa segue os insights da EDA (N3
 | Reincidência | Repetir não é duplicar: o problema volta | % em local repetido por categoria, intervalo entre pedidos, pontos crônicos |
 | Prazos | Quem demora está demorando mais | mediana e p90 por ano, faixas de prazo, prazo por categoria, estoque aberto fora do prazo |
 | Território | Serviço urbano e emergência apontam para bairros diferentes | dois mapas por habitante, detalhe do bairro clicado, vulnerabilidade × demanda |
-| Prioridade (AHP) | Onde agir primeiro, com critérios explícitos | comparação par a par editável, pesos, RC, mapa e ranking, sensibilidade |
+| Prioridade (AHP) | Onde agir primeiro, com critérios explícitos | comparação par a par editável, pesos, RC, mapa e ranking, pedidos abertos reais classificados (sorteio), sensibilidade |
 | Sobre os dados | Fontes, cobertura, cuidados, correções e privacidade | tabela de cobertura por fonte e ano, glossário |
 
 Filtros globais na barra lateral (valem em todas as páginas): **período**, **RPA**, **bairro** e **categoria de
@@ -62,6 +62,11 @@ O repositório é público, então só tem **contagens e indicadores agregados**
 heurística, uso interno do grupo), as ementas, o pseudônimo de endereço (`id_local`), as coordenadas e a autoria das
 indicações. O teste `test_nenhum_arquivo_publicado_tem_coluna_sensivel` falha se alguma tabela publicada tiver
 essas colunas.
+
+A única tabela com uma linha por pedido é `ocorrencias_abertas_156.parquet`, usada no exemplo de classificação da
+página de Prioridade. Ela leva só o que o 156 já publica nos dados abertos (data, bairro, RPA, categoria, serviço e
+situação) e três números calculados no pipeline (idade, prazo típico da categoria e pedidos anteriores no mesmo
+endereço e serviço), sem endereço, `id_local` ou protocolo.
 
 ## Estrutura
 

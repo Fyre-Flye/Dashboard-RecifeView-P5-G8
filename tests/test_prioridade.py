@@ -21,3 +21,14 @@ def test_voltar_a_proposta_inicial_restaura_os_julgamentos():
 
     assert not at.exception, [e.value for e in at.exception]
     assert at.select_slider(key="ahp_risco_vulnerabilidade").value == ahp.JULGAMENTOS_PADRAO[("risco", "vulnerabilidade")]
+
+
+def test_sortear_ocorrencias_troca_os_pedidos_sem_erro():
+    at = AppTest.from_file(APP, default_timeout=120)
+    at.switch_page("views/prioridade.py").run()
+    antes = at.session_state["sorteio_ocorrencias"]
+    botao = next(b for b in at.button if b.label == "Sortear Ocorrências")
+    for _ in range(3):
+        botao.click().run()
+        assert not at.exception, [e.value for e in at.exception]
+    assert at.session_state["sorteio_ocorrencias"] != antes

@@ -4,6 +4,8 @@ Os gráficos não registram tema Altair próprio: textos, eixos, grade e legenda
 que troca entre claro e escuro na hora, sem rodar o app de novo.
 """
 
+import re
+
 import altair as alt
 import streamlit as st
 
@@ -81,16 +83,20 @@ _ACENTOS = {
     "MUDANCA": "mudança", "ASFALTICO": "asfáltico", "PRACA": "praça", "RECUPERACAO": "recuperação",
     "PARALELEPIPEDO": "paralelepípedo", "REMOCAO": "remoção", "POCO": "poço", "PRE-MOLDADOS": "pré-moldados",
     "FITOSSANITARIO": "fitossanitário", "VIA": "via",
+    # nomes de serviço do 156
+    "VARRICAO": "varrição", "OPERACAO": "operação", "INSTALACAO": "instalação", "ERRADICACAO": "erradicação",
+    "AREAS": "áreas", "REGULARIZACAO": "regularização", "CORRIMAO": "corrimão", "VEGETACAO": "vegetação",
+    "CRITICO": "crítico", "NAO": "não", "PONTILHOES": "pontilhões", "PRE": "pré", "ARVORE": "árvore",
+    "PUBLICAS": "públicas", "EMLURB": "Emlurb", "RECIFE": "Recife", "SOCIOAMBIENTAL": "socioambiental",
 }
 _SIGLAS = {"EMLURB", "URB", "CTTU", "SEINFRA", "SEDEC", "COMPESA", "SEGOV", "EMPREL", "CONVIVA", "RECIPREV", "COMDICA"}
 
 
 def nome_categoria(texto) -> str:
-    """'ILUMINACAO PUBLICA' -> 'Iluminação pública'."""
+    """'ILUMINACAO PUBLICA' -> 'Iluminação pública'. Serve também para os nomes de serviço do 156."""
     if texto is None or texto != texto:
         return "—"
-    palavras = [_ACENTOS.get(p, p.lower()) for p in str(texto).replace("/", " / ").split()]
-    frase = " ".join(palavras).replace(" / ", "/")
+    frase = re.sub(r"[A-Z]+(?:-[A-Z]+)?", lambda m: _ACENTOS.get(m.group(), m.group().lower()), str(texto).strip())
     return frase[:1].upper() + frase[1:]
 
 

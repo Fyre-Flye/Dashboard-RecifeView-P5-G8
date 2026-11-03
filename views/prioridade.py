@@ -1,11 +1,14 @@
+import random
+
 import altair as alt
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 from src import ahp, filtros, metricas
 from src.componentes import kpi, leitura
-from src.config import DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo
-from src.dados import malha, tabela
+from src.config import DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero, nome_categoria
+from src.dados import malha, resumo_preparacao, tabela
 
 f = filtros.atuais()
 CRIT = {c.chave: c for c in ahp.CRITERIOS}
@@ -21,7 +24,8 @@ st.info("Os julgamentos que vêm carregados são uma **proposta inicial do grupo
         "pela Prefeitura. O próximo passo é refazer as comparações com a Profª Maíra, o Prof. Marcelo e, se possível, "
         "quem opera a Defesa Civil e a Emlurb. Você pode refazê-las abaixo e ver o mapa mudar.", icon=":material/info:")
 filtros.legenda(f, {"Período": "fixo em 2021–2025 (estoque aberto: arquivos 2025–2026), como na EDA.",
-                    "Território": "RPA e bairro destacam o mapa e filtram a lista; a posição é sempre na cidade toda."})
+                    "Território": "RPA e bairro destacam o mapa e filtram a lista; a posição é sempre na cidade toda.",
+                    "Categoria": "vale só para os pedidos da seção 4."})
 
 # --- Critérios ----------------------------------------------------------------------------------------
 with st.expander("Os Quatro Critérios e Como Cada um É Medido", expanded=False):
@@ -164,8 +168,149 @@ with c2:
     leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
             "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
 
+# --- Prova de conceito: pedidos classificados -------------------------------------------------------------
+SITUACAO = {"CADASTRADA": "cadastrado", "PREPARACAO": "em preparação", "EXECUCAO": "em execução",
+            "PENDENCIA": "com pendência", "FISCALIZACAO": "em fiscalização", "MONITORAMENTO": "em monitoramento"}
+SORTEIO = "sorteio_ocorrencias"
+NOTA_ALTA = 7
+
+
+def sortear() -> None:
+    st.session_state[SORTEIO] = random.randrange(1_000_000)
+
+
+def anteriores_txt(n) -> str:
+    if pd.isna(n):
+        return "Endereço sem número: não dá para saber se o problema se repete."
+    if n == 0:
+        return "Primeiro pedido deste serviço no endereço."
+    return f"O endereço já teve <b>{metricas.numero(n)}</b> pedido{'s' if n > 1 else ''} do mesmo serviço antes deste."
+
+
+def barra_contribuicao(linha: pd.Series) -> alt.Chart:
+    d = pd.DataFrame({"chave": CHAVES, "criterio": [CRIT[k].nome for k in CHAVES],
+                      "pontos": [linha[f"contrib_{k}"] for k in CHAVES],
+                      "nota": [metricas.numero(linha[f"nota_{k}"], 1) for k in CHAVES]})
+    d["pontos_txt"] = d["pontos"].map(lambda v: metricas.numero(v, 1))
+    return alt.Chart(d).mark_bar(stroke=cor_fundo(), strokeWidth=1, height=14).encode(
+        x=alt.X("pontos:Q", stack="zero", scale=alt.Scale(domain=[0, ahp.NOTA_MAXIMA]), axis=None),
+        color=alt.Color("chave:N", scale=alt.Scale(domain=CHAVES, range=[CORES[k] for k in CHAVES]), legend=None),
+        order=alt.Order("ordem:Q"),
+        tooltip=[alt.Tooltip("criterio:N", title="Critério"), alt.Tooltip("nota:N", title="Nota no critério (0 a 10)"),
+                 alt.Tooltip("pontos_txt:N", title="Pontos na nota final")],
+    ).transform_calculate(ordem=f"indexof({CHAVES}, datum.chave)").properties(height=22)
+
+
+def cartao(linha: pd.Series, total: int) -> None:
+    with st.container(border=True):
+        a, b = st.columns([1, 3.4], vertical_alignment="center")
+        a.markdown(f"<div style='font-size:.78rem;opacity:.7'>nota</div>"
+                   f"<div style='font-size:2.4rem;font-weight:700;line-height:1.05'>{metricas.numero(linha['indice'], 1)}</div>"
+                   f"<div style='font-size:.78rem;opacity:.7'>de 10 · {metricas.numero(linha['fila'])}º de "
+                   f"{metricas.numero(total)} na fila</div>", unsafe_allow_html=True)
+        atraso = linha["idade_dias"] / linha["prazo_tipico_dias"] if linha["prazo_tipico_dias"] else np.nan
+        prazo = (f"prazo típico da categoria: {metricas.numero(linha['prazo_tipico_dias'])} dias "
+                 f"({metricas.numero(atraso, 1)}× o prazo)") if pd.notna(atraso) else "categoria sem prazo típico"
+        b.markdown(f"**{nome_categoria(linha['servico'])}**  \n"
+                   f"<span style='font-size:.88rem'>{nome_categoria(linha['categoria'])} · {linha['nome']} "
+                   f"(RPA {linha['rpa']}) · {SITUACAO.get(linha['situacao'], str(linha['situacao']).lower())}<br>"
+                   f"Aberto em {linha['data_abertura']:%d/%m/%Y}, há {metricas.numero(linha['idade_dias'])} dias; "
+                   f"{prazo}.<br>{anteriores_txt(linha['pedidos_anteriores'])}</span>", unsafe_allow_html=True)
+        b.altair_chart(barra_contribuicao(linha), width="stretch")
+
+
+st.subheader("4. Prova de Conceito: Pedidos Reais Classificados")
+st.markdown("O índice acima é do **bairro**. Aqui o mesmo AHP, com os mesmos pesos, dá uma nota de 0 a 10 a **pedidos "
+            "abertos do 156**: risco e vulnerabilidade vêm do bairro do pedido; atraso e reincidência vêm do próprio "
+            "pedido. Mude as comparações lá em cima e as notas mudam aqui.")
+nomes_bairro = ind["nome"]
+oc = ahp.indice_ocorrencias(f.aplicar(tabela("ocorrencias_abertas_156"), ano=False), ind, w)
+if oc.empty:
+    st.caption("Nenhum pedido aberto no recorte escolhido (ou o bairro está fora do índice, com menos de 1.000 moradores).")
+else:
+    oc["nome"] = oc["bairro_oficial"].map(nomes_bairro)
+    oc["fila"] = oc["indice"].rank(ascending=False, method="min").astype(int)
+    st.session_state.setdefault(SORTEIO, 2026)
+    b1, b2 = st.columns([1, 3], vertical_alignment="center")
+    b1.button("Sortear Ocorrências", icon=":material/casino:", on_click=sortear, width="stretch")
+    recorte = "do recorte" if (f.territorio_ativo or f.categorias) else "da cidade"
+    b2.caption(f"Três pedidos sorteados entre os {metricas.numero(len(oc))} pedidos abertos {recorte}, "
+               "do de maior nota para o de menor. A fila é a ordem de todos eles pela nota.")
+    amostra = oc.sample(min(3, len(oc)), random_state=st.session_state[SORTEIO]).sort_values("indice", ascending=False)
+
+    st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
+        f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES)
+        + " &nbsp; <span style='opacity:.7'>(pontos de cada critério na nota)</span></div>", unsafe_allow_html=True)
+    aba_cartoes, aba_tabela = st.tabs(["Cartões", "Tabela"])
+    with aba_tabela:
+        numero_br = lambda v, casas=0: metricas.numero(v, casas)  # noqa: E731
+        t = pd.DataFrame({
+            "Fila": amostra["fila"].map(lambda v: f"{numero_br(v)}º"),
+            "Nota": amostra["indice"].round(1),
+            "Serviço": amostra["servico"].map(nome_categoria),
+            "Categoria": amostra["categoria"].map(nome_categoria),
+            "Bairro": amostra["nome"] + " (RPA " + amostra["rpa"].astype(str) + ")",
+            "Situação": amostra["situacao"].map(lambda v: SITUACAO.get(v, v)),
+            "Aberto em": amostra["data_abertura"].dt.strftime("%d/%m/%Y"),
+            "Aberto há": amostra["idade_dias"].map(lambda v: f"{numero_br(v)} dias"),
+            "Prazo típico": amostra["prazo_tipico_dias"].map(lambda v: f"{numero_br(v)} dias" if pd.notna(v) else "—"),
+            "Pedidos anteriores": amostra["pedidos_anteriores"].map(lambda v: "sem número" if pd.isna(v) else numero_br(v)),
+            **{CRIT[k].nome: amostra[f"nota_{k}"].map(lambda v: numero_br(v, 1)) for k in CHAVES},
+        })
+        st.dataframe(t, hide_index=True, width="stretch", column_config={
+            "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized"),
+            **{CRIT[k].nome: st.column_config.TextColumn(CRIT[k].nome, help=f"Nota de 0 a 10 no critério {CRIT[k].nome}")
+               for k in CHAVES}})
+        st.caption("Nas quatro últimas colunas, a nota de 0 a 10 do pedido em cada critério; a nota final pondera essas "
+                   "quatro pelos pesos do AHP. \"Sem número\": o endereço não tem número, então não dá para contar as "
+                   "repetições.")
+    with aba_cartoes:
+        c1, c2 = st.columns([1.35, 1], gap="large")
+        with c1:
+            for _, linha in amostra.iterrows():
+                cartao(linha, len(oc))
+        with c2:
+            st.markdown("**Onde Cada um Cai na Fila**")
+            faixas = np.arange(0, ahp.NOTA_MAXIMA + 0.5, 0.5)
+            dist = pd.cut(oc["indice"], faixas, include_lowest=True).value_counts(sort=False)
+            dist = pd.DataFrame({"inicio": faixas[:-1], "fim": faixas[1:], "pedidos": dist.to_numpy()})
+            dist["faixa"] = dist["inicio"].map(lambda v: metricas.numero(v, 1)) + " a " + dist["fim"].map(lambda v: metricas.numero(v, 1))
+            marcas = amostra.assign(rotulo=[f"{i}º" for i in range(1, len(amostra) + 1)],
+                                    altura=[8 + 14 * i for i in range(len(amostra))],   # degraus: notas próximas não se cobrem
+                                    nota_txt=amostra["indice"].map(lambda v: metricas.numero(v, 1)))
+            barras_fila = alt.Chart(dist).mark_bar(color=cor_suave()).encode(
+                x=alt.X("inicio:Q", bin="binned", title="nota de prioridade (0 a 10)", scale=alt.Scale(domain=[0, 10])),
+                x2="fim:Q", y=alt.Y("pedidos:Q", axis=eixo_numero("pedidos abertos")),
+                tooltip=[alt.Tooltip("faixa:N", title="Nota"), alt.Tooltip("pedidos:Q", title="Pedidos", format=",")])
+            linhas = alt.Chart(marcas).mark_rule(color=DESTAQUE, strokeWidth=2).encode(
+                x="indice:Q", tooltip=[alt.Tooltip("nota_txt:N", title="Nota")])
+            rotulos = alt.Chart(marcas).mark_text(color=DESTAQUE, align="left", dx=4, fontWeight="bold", fontSize=12).encode(
+                x="indice:Q", y=alt.Y("altura:Q", scale=None), text="rotulo:N")
+            st.altair_chart((barras_fila + linhas + rotulos).properties(height=260), width="stretch")
+            alta = (oc["indice"] >= NOTA_ALTA).mean() * 100
+            kpi(st, f"Pedidos com nota {NOTA_ALTA} ou mais", metricas.porcentagem(alta, 1),
+                f"{metricas.numero((oc['indice'] >= NOTA_ALTA).sum())} de {metricas.numero(len(oc))} abertos",
+                "Com os pesos atuais. Seria o primeiro lote de uma fila de atendimento.")
+
+    data_ref = pd.Timestamp(resumo_preparacao()["data_referencia_estoque"])
+    leitura(f"<b>Atraso:</b> 5 = o pedido chegou ao prazo típico da categoria (p90 dos atendidos de 2021–2025); 10 = o "
+            f"dobro do prazo ou mais. <b>Reincidência:</b> 0 = primeiro pedido do serviço no endereço; 10 = dez ou mais "
+            f"pedidos anteriores (escala log). A idade é contada até {data_ref:%d/%m/%Y}, data em que as bases foram "
+            "baixadas. É uma prova de conceito: os tetos e os pesos precisam ser validados com quem opera o 156, e "
+            "endereços genéricos podem inflar a reincidência.")
+
+    with st.expander(f"A Fila Inteira: os 20 Pedidos de Maior Nota {'no Recorte' if recorte == 'do recorte' else 'na Cidade'}"):
+        top = oc.head(20)
+        st.dataframe(pd.DataFrame({
+            "Fila": top["fila"].map(lambda v: f"{metricas.numero(v)}º"), "Nota": top["indice"].round(1), "Serviço": top["servico"].map(nome_categoria),
+            "Bairro": top["nome"], "Aberto em": top["data_abertura"].dt.strftime("%d/%m/%Y"),
+            "Aberto há (dias)": top["idade_dias"], "Pedidos anteriores": top["pedidos_anteriores"],
+        }), hide_index=True, width="stretch",
+            column_config={"Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized")})
+
+
 # --- Sensibilidade --------------------------------------------------------------------------------------
-st.subheader("4. O Resultado Depende Muito dos Pesos?")
+st.subheader("5. O Resultado Depende Muito dos Pesos?")
 sens = ahp.sensibilidade(ind, w, top=10)
 quadro = sens.pivot(index="criterio", columns="fator", values="mantidos_no_top").reindex([CRIT[k].nome for k in CHAVES])
 quadro.columns = [f"peso × {str(c).replace('.', ',')}" for c in quadro.columns]
