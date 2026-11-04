@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from src.config import NOMES_FONTE
+from src.config import rotulo_fonte
 
 PASTA = Path(__file__).resolve().parents[1] / "data" / "clean"
 
@@ -15,7 +15,7 @@ PASTA = Path(__file__).resolve().parents[1] / "data" / "clean"
 def tabela(nome: str) -> pd.DataFrame:
     df = pd.read_parquet(PASTA / f"{nome}.parquet")
     if "fonte" in df.columns:
-        df["fonte_nome"] = df["fonte"].map(NOMES_FONTE)
+        df["fonte_nome"] = df["fonte"].astype(str).map(rotulo_fonte)
     return df
 
 

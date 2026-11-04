@@ -31,17 +31,34 @@ NOMES_FONTE = {
     "156_EMLURB": "Central 156 / Emlurb",
     "DEFESA_CIVIL": "Defesa Civil",
     "OUVIDORIA": "Ouvidoria",
-    "SEDEC_CHAMADOS": "SEDEC (áreas de risco)",
-    "CAMARA_REQUERIMENTOS": "Câmara (vereadores)",
+    "SEDEC_CHAMADOS": "SEDEC, áreas de risco",
+    "CAMARA_REQUERIMENTOS": "Câmara Municipal",
 }
+# Registros de cada fonte no dataset do RecifeView (v1.0, 13/10/2026). Sempre que o painel cita uma fonte,
+# diz também quantos registros ela tem (preferência do grupo).
+TOTAL_REGISTROS = {
+    "156_EMLURB": 1_377_158,
+    "DEFESA_CIVIL": 886_263,
+    "OUVIDORIA": 222_855,
+    "SEDEC_CHAMADOS": 90_659,
+    "CAMARA_REQUERIMENTOS": 66_546,
+}
+
+
+def rotulo_fonte(codigo: str) -> str:
+    """'156_EMLURB' -> 'Central 156 / Emlurb (1.377.158 registros)'."""
+    total = f"{TOTAL_REGISTROS[codigo]:,}".replace(",", ".")
+    return f"{NOMES_FONTE[codigo]} ({total} registros)"
+
+
 CORES_FONTE = {
-    "Central 156 / Emlurb": AZUL,
-    "Defesa Civil": DESTAQUE,
-    "Ouvidoria": "#1B998B",
-    "SEDEC (áreas de risco)": "#9A3FB8",
-    "Câmara (vereadores)": "#B8860B",
+    "156_EMLURB": AZUL,
+    "DEFESA_CIVIL": DESTAQUE,
+    "OUVIDORIA": "#1B998B",
+    "SEDEC_CHAMADOS": "#9A3FB8",
+    "CAMARA_REQUERIMENTOS": "#B8860B",
 }
-ESCALA_FONTE = alt.Scale(domain=list(CORES_FONTE), range=list(CORES_FONTE.values()))
+ESCALA_FONTE = alt.Scale(domain=[rotulo_fonte(c) for c in CORES_FONTE], range=list(CORES_FONTE.values()))
 
 # Rampa sequencial de um só matiz (claro -> escuro) para magnitude nos mapas e no mapa de calor
 RAMPA = [CLARO, AZUL25, AZUL40, AZUL70, AZUL, NAVY]

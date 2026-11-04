@@ -2,7 +2,7 @@ import altair as alt
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import kpi
+from src.componentes import fontes, kpi
 from src.config import ESCALA_FONTE, eixo_numero
 from src.dados import tabela
 
@@ -15,6 +15,7 @@ st.markdown(
     "e os gestores dos órgãos executores."
 )
 filtros.legenda(f)
+fontes(['156_EMLURB', 'DEFESA_CIVIL', 'OUVIDORIA', 'SEDEC_CHAMADOS', 'CAMARA_REQUERIMENTOS'])
 
 # --- KPIs -------------------------------------------------------------------------------------------
 demanda = tabela("demanda")
@@ -81,12 +82,13 @@ else:
     base = alt.Chart(serie).encode(
         x=alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)),
         y=alt.Y("n:Q", axis=eixo_numero("registros por ano")),
-        color=alt.Color("fonte_nome:N", title="Fonte", scale=ESCALA_FONTE),
+        color=alt.Color("fonte_nome:N", title="Fonte", scale=ESCALA_FONTE,
+                        legend=alt.Legend(orient="bottom", columns=2, labelLimit=360)),
         opacity=alt.condition(clique, alt.value(1), alt.value(0.15)),
         tooltip=[alt.Tooltip("fonte_nome:N", title="Fonte"), alt.Tooltip("ano:O", title="Ano"),
                  alt.Tooltip("registros:N", title="Registros")],
     )
-    grafico = (base.mark_line() + base.mark_point(size=50)).add_params(clique).properties(height=320)
+    grafico = (base.mark_line() + base.mark_point(size=50)).add_params(clique).properties(height=420)
     st.altair_chart(grafico, width="stretch")
     notas = ["Clique numa fonte da legenda para destacá-la."]
     if f.territorio_ativo:

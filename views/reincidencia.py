@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import kpi, leitura
+from src.componentes import fontes, kpi, leitura
 from src.config import AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, cor_suave, nome_categoria, titulo
 from src.dados import tabela
 
@@ -15,6 +15,7 @@ st.markdown("**Repetir não é duplicar.** Boa parte dos pedidos do 156 cai num 
             "problema, não cem.")
 filtros.legenda(f, {"Definição": "156 de 2015 a 2025, só endereços com número; chave = local + serviço "
                                  "(o local é um pseudônimo do endereço, que não aparece no painel)."})
+fontes(['156_EMLURB'])
 
 rep = f.aplicar(tabela("reincidencia_156"))
 if rep.empty:

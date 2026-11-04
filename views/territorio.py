@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import kpi, leitura
+from src.componentes import fontes, kpi, leitura
 from src.config import AZUL, AZUL25, DESTAQUE, RAMPA, SEM_DADO, cor_forte
 from src.dados import malha, tabela
 
@@ -15,6 +15,7 @@ st.markdown("**Há pelo menos dois mapas de prioridade.** O pedido de serviço u
             "grande pede mais só por ser grande; o volume absoluto fica ao lado, no detalhe.")
 filtros.legenda(f, {"Mapas": "RPA e bairro escolhidos ficam em destaque (o resto da cidade continua visível); "
                              "a categoria vale só para o 156."})
+fontes(['156_EMLURB', 'DEFESA_CIVIL', 'SEDEC_CHAMADOS'])
 
 bairros = tabela("bairros").set_index("bairro_oficial")
 demanda = f.aplicar(tabela("demanda"), territorio=False, categoria=False)

@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import kpi, leitura
+from src.componentes import fontes, kpi, leitura
 from src.config import (NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_fechada, cor_forte, cor_fundo,
                         nome_categoria, nome_orgao, titulo)
 from src.dados import tabela
@@ -15,6 +15,7 @@ st.title("Retorno e Fragmentação")
 st.markdown("Depois que a demanda entra, ela **muda de mão** entre órgãos e **raramente volta** com resposta registrada. "
             "A Câmara é a única fonte pública que mostra o caminho inteiro, do pedido do vereador até a resposta da Prefeitura.")
 filtros.legenda(f, {"Ouvidoria": "não tem bairro nem a mesma classificação de serviço; o último bloco segue só o período."})
+fontes(['CAMARA_REQUERIMENTOS', 'OUVIDORIA'])
 
 ind = f.aplicar(tabela("camara_indicacoes"))
 if ind.empty:

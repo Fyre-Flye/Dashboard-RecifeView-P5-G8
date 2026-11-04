@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, filtros, metricas
-from src.componentes import kpi, leitura
+from src.componentes import fontes, kpi, leitura
 from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero, nome_categoria,
                         nome_orgao)
 from src.dados import malha, resumo_preparacao, tabela
@@ -27,6 +27,7 @@ st.info("Os julgamentos que vêm carregados são uma **proposta inicial do grupo
 filtros.legenda(f, {"Período": "fixo em 2021–2025 (estoque aberto: arquivos 2025–2026), como na EDA.",
                     "Território": "RPA e bairro destacam o mapa e filtram a lista; a posição é sempre na cidade toda.",
                     "Categoria": "vale só para os pedidos da seção 4."})
+fontes(['156_EMLURB', 'DEFESA_CIVIL', 'CAMARA_REQUERIMENTOS', 'OUVIDORIA'])
 
 # --- Critérios ----------------------------------------------------------------------------------------
 st.subheader("Os Quatro Critérios e Como Cada Um É Medido")

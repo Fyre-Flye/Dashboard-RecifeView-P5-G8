@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import kpi, leitura
+from src.componentes import fontes, kpi, leitura
 from src.config import (AZUL25, TEXTO_TEMA, cor_forte, cor_fundo, cor_suave, eixo_numero, nome_categoria, par_comparacao,
                         rampa_prazo)
 from src.dados import tabela
@@ -16,6 +16,7 @@ st.markdown("**Quem demora está demorando mais.** A maioria dos pedidos do 156 
             "cauda longa cresceu. Por isso o prazo aparece em percentis e por categoria: a média engana "
             "(no 156 ela é cerca de dez vezes a mediana).")
 filtros.legenda(f, {"Base": "pedidos ATENDIDOS do 156; os abertos não têm tempo final e entram só no estoque, no fim da página."})
+fontes(['156_EMLURB'])
 
 praz = f.aplicar(tabela("prazos_156"))
 sem_mesmo_dia = st.toggle(
