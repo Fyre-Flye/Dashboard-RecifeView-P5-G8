@@ -32,6 +32,8 @@ fluxo = tabela("fluxo_diario_156")
 por_dia = fluxo.groupby("data")[["entradas", "atendidos"]].sum()
 entradas_fontes = tabela("entradas_diarias").pivot_table(index="data", columns="fonte", values="n", fill_value=0)
 PRIMEIRO, ULTIMO = por_dia.index.min(), por_dia.index.max()
+ULTIMO_156 = tabela("linha_do_tempo_156")["data_abertura"].max()
+ULTIMO_OUVIDORIA = tabela("linha_do_tempo_ouvidoria")["data_abertura"].max()
 ind = tabela("indicadores_bairro").set_index("bairro_oficial")
 nomes_bairro = tabela("bairros").set_index("bairro_oficial")["nome"]
 chaves = [c.chave for c in ahp.CRITERIOS]
@@ -109,7 +111,7 @@ def quadro() -> None:
         passo = (dia - pd.Timestamp(e["wr_inicio"])).days + 1
         selo = f"SIMULAÇÃO · dia {passo} de {DIAS_SIMULADOS}" + (" · encerrada" if modo == "fim" else "")
     else:
-        selo = "HOJE · último retrato das bases" if modo == "hoje" else "DIA SORTEADO"
+        selo = f"HOJE · bases baixadas em {HOJE:%d/%m/%Y}" if modo == "hoje" else "DIA SORTEADO"
     cor_selo = DESTAQUE if modo in ("simulacao", "fim") else AZUL
     st.markdown(f"<div style='display:flex;gap:16px;align-items:baseline;flex-wrap:wrap'>"
                 f"<div style='font-size:2.2rem;font-weight:700'>{data_longa(dia)}</div>"
@@ -118,6 +120,12 @@ def quadro() -> None:
                 unsafe_allow_html=True)
     if modo in ("simulacao", "fim"):
         st.progress(passo / DIAS_SIMULADOS)
+    if modo == "hoje":
+        st.caption(f"{HOJE:%d/%m/%Y} é o dia em que as bases foram baixadas dos portais, não o do registro mais recente: "
+                   "o estoque é o que os arquivos baixados mostram em aberto naquele dia. Registro mais recente de cada "
+                   f"fonte: 156 em {ULTIMO_156:%d/%m/%Y} · Câmara: indicações apresentadas até dezembro de 2025, com o "
+                   f"envio e a resposta acompanhados até {HOJE:%d/%m/%Y} · Ouvidoria em {ULTIMO_OUVIDORIA:%d/%m/%Y} · "
+                   "Defesa Civil em dezembro de 2024.")
 
     abertos, fila, camara, ouvidoria = estado_em(dia)
 
