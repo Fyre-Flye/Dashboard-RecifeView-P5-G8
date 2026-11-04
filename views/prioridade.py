@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src import ahp, filtros, metricas
+from src import ahp, ajuda, filtros, metricas
 from src.componentes import fontes, kpi, leitura
 from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero, nome_categoria,
                         nome_orgao)
@@ -30,7 +30,8 @@ filtros.legenda(f, {"Período": "fixo em 2021–2025 (estoque aberto: arquivos 2
 fontes(['156_EMLURB', 'DEFESA_CIVIL', 'CAMARA_REQUERIMENTOS', 'OUVIDORIA'])
 
 # --- Critérios ----------------------------------------------------------------------------------------
-st.subheader("Os Quatro Critérios e Como Cada Um É Medido")
+st.subheader("Os Quatro Critérios e Como Cada Um É Medido",
+             help="O que entra no índice de prioridade, de onde vem cada número e por que ele importa.")
 st.table(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao}
                        for c in ahp.CRITERIOS]).set_index("Critério"))
 leitura("Cada bairro recebe, em cada critério, a sua posição relativa entre os 89 bairros com 1.000 moradores ou mais "
@@ -67,7 +68,8 @@ for (a, b), v in ahp.JULGAMENTOS_PADRAO.items():
 
 c1, c2 = st.columns([1.15, 1], gap="large")
 with c1:
-    st.subheader("1. Compare os Critérios Dois a Dois")
+    st.subheader("1. Compare os Critérios Dois a Dois",
+                 help="Para cada par, arraste para o critério que pesa mais. O número diz quantas vezes mais.")
     st.caption("Para cada par, quanto um critério é mais importante que o outro para decidir onde agir primeiro "
                "(escala de Saaty: 1 = igual, 3 = moderadamente, 5 = fortemente, 7 = muito, 9 = extremamente).")
     julgamentos = {}
@@ -79,16 +81,19 @@ with c1:
                 return "igual importância"
             return f"{na} {o}× mais" if o > 0 else f"{nb} {-o}× mais"
 
-        op = st.select_slider(f"{na} × {nb}", OPCOES, key=chave_estado(a, b), format_func=rotulo)
+        op = st.select_slider(f"{na} × {nb}", OPCOES, key=chave_estado(a, b), format_func=rotulo,
+                              help=f"Para a esquerda, {nb} pesa mais; para a direita, {na}. No meio, os dois valem igual.")
         julgamentos[(a, b)] = para_valor(op)
-    st.button("Voltar à proposta inicial do grupo", icon=":material/restart_alt:", on_click=restaurar_julgamentos)
+    st.button("Voltar à proposta inicial do grupo", icon=":material/restart_alt:", on_click=restaurar_julgamentos,
+              help="Desfaz as suas comparações e volta aos julgamentos propostos pelo grupo.")
 
 m = ahp.matriz_de_comparacao(julgamentos, CHAVES)
 w = dict(zip(CHAVES, ahp.pesos(m)))
 rc = ahp.razao_consistencia(m)
 
 with c2:
-    st.subheader("2. Pesos Resultantes")
+    st.subheader("2. Pesos Resultantes",
+                 help="Quanto cada critério vale no índice, calculado pelo AHP a partir das comparações ao lado.")
     pesos = pd.DataFrame({"criterio": [CRIT[k].nome for k in CHAVES], "chave": CHAVES, "peso": [w[k] * 100 for k in CHAVES]})
     pesos["rotulo"] = pesos["peso"].map(lambda v: metricas.porcentagem(v, 1))
     base = alt.Chart(pesos).encode(
@@ -122,7 +127,8 @@ r["indice_txt"] = r["indice"].map(lambda v: metricas.numero(v, 1))
 for k in CHAVES:
     r[f"{k}_txt"] = r[CRIT[k].coluna].map(lambda v: metricas.numero(v, 1))
 
-st.subheader("3. Onde Agir Primeiro")
+st.subheader("3. Onde Agir Primeiro",
+             help="O índice de prioridade de cada bairro, de 0 a 10, com os pesos acima. Passe o mouse no mapa.")
 c1, c2 = st.columns([1, 1.15], gap="large")
 with c1:
     tabela_mapa = r.reset_index()
@@ -153,7 +159,8 @@ with c2:
     longo["indice_txt"] = longo["indice"].map(lambda v: metricas.numero(v, 1))
     ordem = (lista["posicao"].astype(str) + "º · " + lista["nome"]).tolist()
     titulo_lista = "Os 15 Bairros com Maior Índice" + (" no Recorte" if f.territorio_ativo else "")
-    st.markdown(f"**{titulo_lista}** · quanto cada critério contribui")
+    st.markdown(f"**{titulo_lista}** · quanto cada critério contribui",
+                help="Cada barra é a nota do bairro; as cores mostram quantos pontos vieram de cada critério.")
     st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
         f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES) + "</div>", unsafe_allow_html=True)
     barras = alt.Chart(longo).mark_bar(stroke=cor_fundo(), strokeWidth=1).encode(
@@ -313,13 +320,13 @@ def tabela_exibicao(linhas: pd.DataFrame, fonte: str, notas: bool = True) -> pd.
 
 
 def mostrar_tabela(t: pd.DataFrame) -> None:
-    st.dataframe(t, hide_index=True, width="stretch", column_config={
-        "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized"),
-        **{CRIT[k].nome: st.column_config.TextColumn(CRIT[k].nome, help=f"Nota de 0 a 10 no critério {CRIT[k].nome}")
-           for k in CHAVES if CRIT[k].nome in t}})
+    st.dataframe(t, hide_index=True, width="stretch", column_config=ajuda.colunas(
+        t.columns, Nota=st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized",
+                                                        help=ajuda.texto("Nota"))))
 
 
-st.subheader("4. Exemplo de Ocorrências Classificadas")
+st.subheader("4. Exemplo de Ocorrências Classificadas",
+             help="Registros reais em aberto recebendo a nota de 0 a 10 do AHP, com os pesos acima.")
 demanda_total = tabela("demanda").groupby("fonte")["n"].sum()
 TOTAIS = {F156: (demanda_total.get("156_EMLURB", 0), "pedidos no 156 (2012–2026)"),
           CAMARA: (len(tabela("camara_indicacoes")), "indicações de vereadores (2021–2025)"),
@@ -348,7 +355,8 @@ else:
     oc["fila"] = oc["indice"].rank(ascending=False, method="min").astype(int)
     st.session_state.setdefault(SORTEIO, 2026)
     b1, b2 = st.columns([1, 3], vertical_alignment="center")
-    b1.button("Sortear Ocorrências", icon=":material/casino:", on_click=sortear, width="stretch")
+    b1.button("Sortear Ocorrências", icon=":material/casino:", on_click=sortear, width="stretch",
+              help="Mostra outros três registros em aberto, sorteados da fonte escolhida.")
     recorte = "do recorte" if fonte != OUVIDORIA and (f.territorio_ativo or f.categorias) else "da cidade"
     fora = len(tabela(info["tabela"])) - len(oc) if fonte == CAMARA and not (f.territorio_ativo or f.categorias) else 0
     g = info["genero"]
@@ -373,7 +381,8 @@ else:
             for _, linha in amostra.iterrows():
                 cartao(linha, len(oc), fonte)
         with c2:
-            st.markdown("**Onde Cada um Cai na Fila**")
+            st.markdown("**Onde Cada um Cai na Fila**",
+                        help="Quantos registros em aberto há em cada faixa de nota. Os traços laranja são os sorteados.")
             faixas = np.arange(0, ahp.NOTA_MAXIMA + 0.5, 0.5)
             dist = pd.cut(oc["indice"], faixas, include_lowest=True).value_counts(sort=False)
             dist = pd.DataFrame({"inicio": faixas[:-1], "fim": faixas[1:], "registros": dist.to_numpy()})
@@ -419,14 +428,17 @@ else:
 
 
 # --- Sensibilidade --------------------------------------------------------------------------------------
-st.subheader("5. O Resultado Depende Muito dos Pesos?")
+st.subheader("5. O Resultado Depende Muito dos Pesos?",
+             help="Testa se o ranking muda quando o peso de um critério sobe ou desce.")
 sens = ahp.sensibilidade(ind, w, top=10)
 quadro = sens.pivot(index="criterio", columns="fator", values="mantidos_no_top").reindex([CRIT[k].nome for k in CHAVES])
 quadro.columns = [f"peso × {str(c).replace('.', ',')}" for c in quadro.columns]
 quadro.index.name = "Critério"
 st.dataframe(quadro, width="stretch",
-             column_config={c: st.column_config.ProgressColumn(c, min_value=0, max_value=10, format="%d de 10")
-                            for c in quadro.columns})
+             column_config={c: st.column_config.ProgressColumn(
+                 c, min_value=0, max_value=10, format="%d de 10",
+                 help=f"Quantos dos 10 primeiros bairros continuam no top 10 se o peso do critério for multiplicado "
+                      f"por {c.split('× ')[1]}.") for c in quadro.columns})
 pior = sens.loc[sens["mantidos_no_top"].idxmin()]
 leitura(f"Cada célula muda o peso de um critério (metade, três quartos, uma vez e um quarto, uma vez e meia), "
         f"redistribui o resto e conta quantos dos 10 primeiros continuam no top 10. Com os pesos atuais, o caso "

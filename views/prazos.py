@@ -52,7 +52,8 @@ linhas = por_ano.melt(id_vars="ano", value_vars=["mediana", "p90"], var_name="me
 linhas["medida"] = linhas["medida"].map({"mediana": "mediana", "p90": "p90 (1 em cada 10 leva mais)"})
 linhas["rotulo"] = linhas["dias"].map(metricas.dias)
 with c1:
-    st.markdown("**O Prazo Piorou na Cauda (H4)**")
+    st.markdown("**O Prazo Piorou na Cauda (H4)**",
+    help='Mediana (metade dos pedidos sai antes) e p90 (9 em cada 10 saem antes) dos dias até atender, por ano.')
     base = alt.Chart(linhas).encode(
         x=alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)),
         y=alt.Y("dias:Q", title="dias até atender"),
@@ -73,7 +74,8 @@ dist["pct"] = dist["n"] / dist["n"].sum() * 100
 dist["rotulo"] = dist["pct"].map(lambda v: metricas.porcentagem(v, 1))
 ordem = [r for _, _, r in FAIXAS]
 with c2:
-    st.markdown("**Em Quanto Tempo os Pedidos São Atendidos**")
+    st.markdown("**Em Quanto Tempo os Pedidos São Atendidos**",
+    help='% dos pedidos atendidos em cada faixa de dias.')
     b = alt.Chart(dist).encode(
         x=alt.X("faixa:N", sort=ordem, title=None, axis=alt.Axis(labelAngle=0, labelLimit=90, labelOverlap=False)),
         y=alt.Y("pct:Q", title="% dos atendidos"),
@@ -87,7 +89,8 @@ with c2:
             "meses ou anos (obras como escadaria e macrodrenagem).")
 
 # --- Por categoria ------------------------------------------------------------------------------------
-st.subheader("Cada Categoria Tem o Seu Prazo")
+st.subheader("Cada Categoria Tem o Seu Prazo",
+    help='Mediana e p90 dos dias até atender em cada categoria. Escala log: cada marca é muito maior que a anterior.')
 por_cat = metricas.percentis_por_grupo(praz, ["categoria"])
 minimo = 1000 if total > 200_000 else 30
 por_cat = por_cat[por_cat["pedidos"] >= minimo].copy()
@@ -116,7 +119,8 @@ leitura(f"Em cada categoria, o ponto da esquerda é a mediana e o da direita é 
         "semáforo de prazo precisa de referência por categoria: 10 dias é atraso em iluminação e é rápido em drenagem.")
 
 # --- Estoque aberto -----------------------------------------------------------------------------------
-st.subheader("A Fila de Hoje: Pedidos Abertos que Já Passaram do Prazo Típico")
+st.subheader("A Fila de Hoje: Pedidos Abertos que Já Passaram do Prazo Típico",
+    help='Pedidos ainda abertos e quantos já passaram do p90 da própria categoria.')
 estoque = f.aplicar(tabela("estoque_156"), ano=False)
 if estoque.empty:
     st.caption("Sem pedidos abertos para o território ou a categoria escolhidos.")

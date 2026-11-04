@@ -72,7 +72,8 @@ with st.container(border=True):
     c5.caption("Um índice com critérios explícitos e ajustáveis.")
 
 # --- Volume por fonte -------------------------------------------------------------------------------
-st.subheader("Quanto Chega por Cada Porta")
+st.subheader("Quanto Chega por Cada Porta",
+    help='Registros por ano em cada fonte. Clique numa fonte da legenda para destacá-la.')
 serie = d.groupby(["ano", "fonte_nome"], as_index=False)["n"].sum()
 serie["registros"] = serie["n"].map(metricas.numero)
 if serie.empty:

@@ -41,7 +41,8 @@ kpi(k4, "Tempo até a resposta", metricas.dias(mediana_resposta), "mediana",
     "Mediana dos dias entre a apresentação da indicação e a resposta registrada, só para as que têm resposta.")
 
 # --- Funil e canal de envio --------------------------------------------------------------------------
-st.subheader("A Perda Está Toda Depois da Entrada")
+st.subheader("A Perda Está Toda Depois da Entrada",
+    help='Onde o pedido do vereador se perde: entra, vai para a Prefeitura e raramente volta com resposta.')
 c1, c2 = st.columns([1, 1.25], gap="large")
 
 etapas = pd.DataFrame({
@@ -58,7 +59,8 @@ funil = alt.Chart(etapas).encode(
 barras = funil.mark_bar(height=34).encode(
     color=alt.Color("etapa:N", scale=alt.Scale(domain=list(etapas["etapa"]), range=[AZUL40, AZUL, cor_forte()]), legend=None))
 with c1:
-    st.markdown("**Funil das Indicações**")
+    st.markdown("**Funil das Indicações**",
+    help='Das indicações apresentadas na Câmara, quantas chegaram à Prefeitura e quantas voltaram com resposta.')
     st.altair_chart((barras + funil.mark_text(align="left", dx=6, fontSize=12, color=TEXTO_TEMA).encode(text="rotulo:N"))
                     .properties(height=200), width="stretch")
     leitura("Quase tudo sai da Câmara em poucos dias. A queda acontece dentro da Prefeitura, no caminho de volta: "
@@ -81,7 +83,8 @@ canal = alt.Chart(por_ano).encode(
              alt.Tooltip("rotulo:N", title="Com resposta")],
 )
 with c2:
-    st.markdown("**Quando o Envio Vira Sistema, a Resposta Aparece**")
+    st.markdown("**Quando o Envio Vira Sistema, a Resposta Aparece**",
+    help='% das indicações com resposta registrada por ano, com o canal de envio mais usado em cada ano.')
     st.altair_chart((canal.mark_bar(size=46, color=AZUL) + canal.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N"))
                     .properties(height=260), width="stretch")
     leitura("De ofício e protocolo em papel para lote e sistema da SEGOV, a parte com resposta registrada sobe de "
@@ -89,7 +92,8 @@ with c2:
             "reduz a perda. Anos recentes ainda podem receber resposta.")
 
 # --- Para quem vai cada tipo de pedido --------------------------------------------------------------
-st.subheader("O Mesmo Tipo de Pedido Vai para Órgãos Diferentes")
+st.subheader("O Mesmo Tipo de Pedido Vai para Órgãos Diferentes",
+    help='Para onde vão as indicações de cada categoria. Clique numa linha do mapa de calor para ver o caminho dela.')
 x = ind.dropna(subset=["categoria", "orgao"])
 top_cat = x["categoria"].value_counts().head(9).index
 top_org = x["orgao"].value_counts().head(7).index
@@ -172,7 +176,8 @@ with c2:
             "risco se espalham.")
 
 # --- Ouvidoria ----------------------------------------------------------------------------------------
-st.subheader(f"Ouvidoria ({registros('OUVIDORIA')}): Por Onde a Manifestação Entra".replace("registros", "Registros"))
+st.subheader(f"Ouvidoria ({registros('OUVIDORIA')}): Por Onde a Manifestação Entra".replace("registros", "Registros"),
+    help='Por quais canais as manifestações chegam à Ouvidoria a cada ano.')
 ouv = f.aplicar(tabela("ouvidoria"), territorio=False, categoria=False)
 ouv = ouv[ouv["canal_entrada"].notna()]
 if ouv.empty:

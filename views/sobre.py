@@ -2,7 +2,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from src import metricas
+from src import ajuda, metricas
 from src.config import RAMPA, TEXTO, cor_fundo
 from src.dados import resumo_preparacao, tabela
 
@@ -11,7 +11,8 @@ st.markdown("O painel lê um retrato agregado do **dataset do RecifeView** (vers
             "registros de cinco portas de entrada, 2012 a 2026, só o município do Recife. O mesmo dataset foi usado na "
             "EDA (entrega N3), e os números do painel batem com os dela.")
 
-st.subheader("Fontes")
+st.subheader("Fontes",
+    help='As cinco portas de entrada do dataset e o que cada registro representa.')
 st.dataframe(pd.DataFrame([
     ["Central 156 / Emlurb", "2012–2026", "1.377.158", "solicitação de serviço urbano", "Portal de Dados Abertos do Recife (ODbL)"],
     ["Defesa Civil", "2014–2024", "886.263", "ação (vistoria, lona, monitoramento), não pedido", "Portal de Dados Abertos do Recife"],
@@ -19,9 +20,12 @@ st.dataframe(pd.DataFrame([
     ["SEDEC (áreas de risco)", "2012–2024", "90.659", "chamado em área de risco", "cópia de 09/03/2024 no Internet Archive"],
     ["Câmara Municipal", "2021–2025", "66.546", "indicação ou requerimento de vereador", "sistema público SAGL da Câmara"],
     ["IBGE, Censo 2022", "2022", "94 bairros", "população, domicílios e % em favela", "SIDRA, tabelas 9922, 9923 e 10206"],
-], columns=["Fonte", "Período", "Registros", "Uma linha é", "Origem"]), hide_index=True, width="stretch")
+], columns=["Fonte", "Período", "Registros", "Uma linha é", "Origem"]), hide_index=True, width="stretch",
+    column_config=ajuda.colunas(["Fonte", "Período", "Registros", "Uma linha é", "Origem"],
+                                Período=st.column_config.Column("Período", help="Anos cobertos por essa fonte no dataset.")))
 
-st.subheader("Cobertura: Registros por Fonte e Ano")
+st.subheader("Cobertura: Registros por Fonte e Ano",
+    help='Quantos registros cada fonte tem em cada ano. Célula vazia: a fonte não publica aquele ano.')
 d = tabela("demanda")
 cob = d[d["ano"] >= 2012].groupby(["fonte_nome", "ano"])["n"].sum().reset_index()
 cob["n_txt"] = cob["n"].map(metricas.numero)
@@ -39,7 +43,8 @@ st.altair_chart((mapa.mark_rect(stroke=cor_fundo(), strokeWidth=2).encode(
 st.caption("Células vazias: a fonte não publica aquele ano. 2025 e 2026 são parciais (a Ouvidoria de 2025 só traz parte "
            "do ano; o arquivo de 2025 da Defesa Civil foi publicado vazio; 2026 vai até o download, em 07/10/2026).")
 
-st.subheader("Cuidados de Leitura")
+st.subheader("Cuidados de Leitura",
+    help='O que pode enganar na leitura dos números.')
 st.markdown("""
 - **Não há chave comum entre as fontes.** O mesmo problema registrado no 156 e na Ouvidoria vira duas linhas que não se ligam; o cruzamento é por bairro, serviço e período. Por isso a fragmentação é medida de forma indireta (pela Câmara), e o pedido de acesso à informação (LAI) ao SGDE, protocolado em 08/10, pode mudar isso.
 - **Mais pedido não é mais problema.** O painel mostra taxa por habitante ao lado do volume e trata bairros com menos de 1.000 moradores à parte.
@@ -50,22 +55,27 @@ st.markdown("""
 - **Coordenadas não são usadas:** faltam em boa parte do 156, e não ao acaso; o recorte territorial é o bairro oficial (94 bairros) e a RPA.
 """)
 
-st.subheader("O que Foi Corrigido Antes de Agregar")
+st.subheader("O que Foi Corrigido Antes de Agregar",
+    help='Ajustes aplicados aos dados antes de montar o painel, com quantos registros cada um afetou.')
 log = resumo_preparacao()
 st.dataframe(pd.DataFrame([{"Correção": k, "Registros": metricas.numero(v)} for k, v in log["correcoes"].items()]),
-             hide_index=True, width="content")
+             hide_index=True, width="content", column_config={
+                 "Correção": st.column_config.Column("Correção", help=ajuda.texto("Correção")),
+                 "Registros": st.column_config.Column("Registros", help="Quantos registros essa correção afetou.")})
 st.caption("As mesmas correções da EDA (N3, seção 1), agora no pipeline do painel (pipeline/correcoes.py), mais a marca "
            f"de prazo zero. Tabelas geradas em {log['gerado_em']} a partir de {metricas.numero(log['linhas_no_dataset'])} "
            "registros.")
 
-st.subheader("Privacidade")
+st.subheader("Privacidade",
+    help='O que fica fora do repositório público e por quê.')
 st.markdown("O repositório público só tem **contagens e indicadores agregados** por ano, bairro, RPA, categoria e órgão. "
             "Não saem do Drive do grupo: o texto livre da SEDEC (mascarado por heurística, uso só interno), as ementas, "
             "o pseudônimo de endereço (`id_local`), as coordenadas e a autoria das indicações. A lista de pontos "
             "crônicos mostra bairro e serviço, nunca o endereço. Um teste automático confere que nenhuma tabela "
             "publicada tem essas colunas.")
 
-st.subheader("Glossário")
+st.subheader("Glossário",
+    help='Termos usados no painel, em uma linha.')
 st.table(pd.DataFrame([
     ("RPA", "Região Político-Administrativa: as 6 regiões em que a Prefeitura divide os 94 bairros."),
     ("Mediana", "O valor do meio: metade dos pedidos leva menos que isso."),
@@ -77,7 +87,8 @@ st.table(pd.DataFrame([
     ("AHP", "Método que transforma comparações par a par entre critérios em pesos, com teste de coerência."),
 ], columns=["Termo", "Significado"]).set_index("Termo"))
 
-st.subheader("Uso de IA")
+st.subheader("Uso de IA",
+    help='Como a IA ajudou nesta entrega.')
 st.markdown("Este painel foi construído pelo grupo com auxílio do Claude (Anthropic): código, testes e textos foram "
             "gerados a partir das entregas N1 a N3 e revisados pelo grupo. A declaração completa está em "
             "`prompts/declaracao-uso-ia.md` no repositório.")

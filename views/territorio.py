@@ -2,7 +2,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from src import filtros, metricas
+from src import ajuda, filtros, metricas
 from src.componentes import fontes, kpi, leitura
 from src.config import registros, AZUL, AZUL25, DESTAQUE, RAMPA, SEM_DADO, cor_forte
 from src.dados import malha, tabela
@@ -93,10 +93,12 @@ def mapa(t: pd.DataFrame, titulo_legenda: str, chave: str) -> alt.Chart:
 t156, tdc = taxas("156"), taxas("dc")
 c1, c2 = st.columns(2, gap="medium")
 with c1:
-    st.markdown(f"**{FONTES['156'][1]}** ({registros('156_EMLURB')}) · {FONTES['156'][2]}")
+    st.markdown(f"**{FONTES['156'][1]}** ({registros('156_EMLURB')}) · {FONTES['156'][2]}",
+    help='Pedidos ao 156 por mil moradores, por ano. Mais escuro = mais pedidos por habitante. Clique num bairro.')
     ev1 = st.altair_chart(mapa(t156, FONTES["156"][2], "156"), width="stretch", on_select="rerun", key="mapa_156")
 with c2:
-    st.markdown(f"**{FONTES['dc'][1]}** ({registros('DEFESA_CIVIL')}) · {FONTES['dc'][2]}")
+    st.markdown(f"**{FONTES['dc'][1]}** ({registros('DEFESA_CIVIL')}) · {FONTES['dc'][2]}",
+    help='Ações da Defesa Civil pedidas pelo cidadão por mil moradores, por ano. Clique num bairro.')
     ev2 = st.altair_chart(mapa(tdc, FONTES["dc"][2], "dc"), width="stretch", on_select="rerun", key="mapa_dc")
     if tdc["volume"].sum() == 0:
         st.caption("A Defesa Civil publica dados de 2014 a 2024; não há registros no período escolhido.")
@@ -135,7 +137,8 @@ if escolhido:
                  icon=":material/arrow_forward:")
 
 # --- Vulnerabilidade x demanda ------------------------------------------------------------------------
-st.subheader("Mais Pedido Não Quer Dizer Mais Problema")
+st.subheader("Mais Pedido Não Quer Dizer Mais Problema",
+    help='Cada ponto é um bairro: % da população em favela contra pedidos por habitante.')
 def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> alt.Chart:
     d = t[t["taxa"].notna()]
     pontos = alt.Chart(d).mark_circle(size=70, opacity=0.85, stroke="white", strokeWidth=1).encode(
@@ -152,10 +155,12 @@ def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> 
 
 c1, c2 = st.columns(2, gap="large")
 with c1:
-    st.markdown(f"**{FONTES['156'][1]}** ({registros('156_EMLURB')})")
+    st.markdown(f"**{FONTES['156'][1]}** ({registros('156_EMLURB')})",
+    help='Cada ponto é um bairro. A linha mostra a tendência.')
     st.altair_chart(dispersao(t156, FONTES["156"][2], alt.Scale(zero=True)), width="stretch")
 with c2:
-    st.markdown(f"**{FONTES['dc'][1]}** ({registros('DEFESA_CIVIL')})")
+    st.markdown(f"**{FONTES['dc'][1]}** ({registros('DEFESA_CIVIL')})",
+    help='Cada ponto é um bairro. A linha mostra a tendência (escala log).')
     st.altair_chart(dispersao(tdc, FONTES["dc"][2] + " (escala log)", alt.Scale(type="symlog", constant=1),
                               valores=[0, 1, 3, 10, 30, 100]),
                     width="stretch")
@@ -172,10 +177,15 @@ with st.expander("Tabela por Bairro (para Conferir e Exportar)"):
         left_on=t156["bairro_oficial"], right_on="bairro_oficial").drop(columns=["bairro_oficial"])
     st.dataframe(tabela_b.sort_values("taxa", ascending=False), hide_index=True, width="stretch",
                  column_config={
-                     "nome": "Bairro", "rpa": "RPA", "populacao": st.column_config.NumberColumn("População", format="localized"),
-                     "pct_favela": st.column_config.NumberColumn("% em favela", format="%.1f"),
-                     "volume": st.column_config.NumberColumn("Pedidos 156", format="localized"),
-                     "taxa": st.column_config.NumberColumn("156 / mil hab. / ano", format="%.1f"),
-                     "volume_dc": st.column_config.NumberColumn("Ações Def. Civil", format="localized"),
-                     "taxa_dc": st.column_config.NumberColumn("Def. Civil / mil hab. / ano", format="%.1f"),
+                     "nome": st.column_config.Column("Bairro", help=ajuda.texto("Bairro")),
+                     "rpa": st.column_config.Column("RPA", help=ajuda.texto("RPA")),
+                     "populacao": st.column_config.NumberColumn("População", format="localized", help=ajuda.texto("População")),
+                     "pct_favela": st.column_config.NumberColumn("% em favela", format="%.1f", help=ajuda.texto("% em favela")),
+                     "volume": st.column_config.NumberColumn("Pedidos 156", format="localized", help=ajuda.texto("Pedidos 156")),
+                     "taxa": st.column_config.NumberColumn("156 / mil hab. / ano", format="%.1f",
+                                                           help=ajuda.texto("156 / mil hab. / ano")),
+                     "volume_dc": st.column_config.NumberColumn("Ações Def. Civil", format="localized",
+                                                                help=ajuda.texto("Ações Def. Civil")),
+                     "taxa_dc": st.column_config.NumberColumn("Def. Civil / mil hab. / ano", format="%.1f",
+                                                              help=ajuda.texto("Def. Civil / mil hab. / ano")),
                  })

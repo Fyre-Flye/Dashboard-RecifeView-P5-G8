@@ -13,7 +13,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from src import ahp, metricas, retrato
+from src import ahp, ajuda, metricas, retrato
 from src.componentes import fontes, leitura
 from src.config import AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria
 from src.dados import malha, resumo_preparacao, tabela
@@ -68,11 +68,13 @@ def data_longa(d: pd.Timestamp) -> str:
     return f"{DIAS_SEMANA[d.weekday()].capitalize()}, {d.day} de {MESES[d.month - 1]} de {d.year}"
 
 
-def painel(rotulo: str, valor: str, detalhe: str, alerta: bool = False) -> None:
-    """Placa grande de sala de operações: rótulo, número e uma linha de contexto. Borda laranja = atenção."""
+def painel(rotulo: str, valor: str, detalhe: str, alerta: bool = False, ajuda_txt: str = "") -> None:
+    """Placa grande de sala de operações: rótulo, número e uma linha de contexto. Borda laranja = atenção.
+    `ajuda_txt` aparece ao passar o mouse sobre a placa."""
     cor = DESTAQUE if alerta else AZUL
+    dica = ajuda_txt.replace("'", "&#39;")
     st.markdown(
-        f"<div style='border:1px solid {cor}55;border-left:6px solid {cor};border-radius:10px;padding:12px 16px;"
+        f"<div title='{dica}' style='cursor:help;border:1px solid {cor}55;border-left:6px solid {cor};border-radius:10px;padding:12px 16px;"
         f"min-height:118px'><div style='font-size:.85rem;opacity:.75'>{rotulo}</div>"
         f"<div style='font-size:2.4rem;font-weight:700;line-height:1.1'>{valor}</div>"
         f"<div style='font-size:.85rem;opacity:.8'>{detalhe}</div></div>", unsafe_allow_html=True)
@@ -85,10 +87,13 @@ st.markdown("Protótipo de tela de operações: o que está parado, o que não v
             "A página inteira mostra o estado de **um dia**: hoje, um dia sorteado ou um mês simulado.")
 simulando = st.session_state["wr_modo"] == "simulacao"
 b = st.columns([1.2, 1.1, 1.1, 2.2])
-b[0].button("Simular um Mês", icon=":material/play_arrow:", on_click=simular_mes, type="primary", width="stretch")
-b[1].button("Dia Aleatório", icon=":material/casino:", on_click=dia_aleatorio, width="stretch")
+b[0].button("Simular um Mês", icon=":material/play_arrow:", on_click=simular_mes, type="primary", width="stretch",
+            help="Sorteia um dia e avança um dia a cada 2,5 s, por 30 dias. A página inteira acompanha.")
+b[1].button("Dia Aleatório", icon=":material/casino:", on_click=dia_aleatorio, width="stretch",
+            help="Mostra a página inteira num dia sorteado, parado.")
 b[2].button("Parar e Voltar para Hoje" if simulando else "Voltar para Hoje", icon=":material/today:",
-            on_click=voltar_para_hoje, width="stretch", disabled=st.session_state["wr_modo"] == "hoje")
+            on_click=voltar_para_hoje, width="stretch", disabled=st.session_state["wr_modo"] == "hoje",
+            help=f"Volta para {HOJE:%d/%m/%Y}, o dia em que as bases foram baixadas.")
 b[3].caption(f"A simulação sorteia um dia real entre {PRIMEIRO:%d/%m/%Y} e {ULTIMO:%d/%m/%Y} e avança um dia a cada "
              f"{str(SEGUNDOS_POR_DIA).replace('.', ',')} s, por {DIAS_SIMULADOS} dias. As bases só têm a data, sem "
              "horário. Para a sala, recolha a barra lateral e use tela cheia (F11).")
@@ -138,16 +143,22 @@ def quadro() -> None:
         outras = entradas_fontes.loc[dia] if dia in entradas_fontes.index else pd.Series(dtype=float)
         q = st.columns(4, gap="small")
         with q[0]:
-            painel("Entraram no 156 neste dia", num(hoje["entradas"]),
+            painel("Entraram no 156 neste dia", num(hoje["entradas"]), ajuda_txt="Pedidos registrados no 156 nesta data.",
+                   detalhe=
                    f"{'+' if diferenca >= 0 else ''}{metricas.porcentagem(diferenca)} sobre a média de "
                    f"{DIAS_SEMANA[dia.weekday()]}", alerta=diferenca > 25)
         with q[1]:
-            painel("Atendidos no 156 neste dia", num(hoje["atendidos"]), "pela data do último movimento")
+            painel("Atendidos no 156 neste dia", num(hoje["atendidos"]), "pela data do último movimento",
+                   ajuda_txt="Pedidos marcados como atendidos nesta data, de qualquer data de entrada.")
         with q[2]:
             painel("Saldo do dia", f"{'+' if saldo > 0 else ''}{num(saldo)}",
+                   ajuda_txt="Entradas menos atendimentos: positivo, a fila cresceu.",
+                   detalhe=
                    "a fila cresceu" if saldo > 0 else "a fila diminuiu", alerta=saldo > 0)
         with q[3]:
             painel("Outras portas neste dia", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
+                   ajuda_txt="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
+                   detalhe=
                    " · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
     else:
         st.caption(f"Sem entradas registradas neste dia: o fluxo diário vai até {ULTIMO:%d/%m/%Y}. Os números de "
@@ -164,20 +175,30 @@ def quadro() -> None:
     p = st.columns(5, gap="small")
     with p[0]:
         painel("Pedidos abertos no 156", num(len(abertos)),
+               ajuda_txt="Pedidos que já tinham entrado e ainda não tinham sido atendidos nesta data. Laranja: além do prazo típico da categoria.",
+               detalhe=
                f"<b>{metricas.porcentagem(atrasados / len(abertos) * 100 if len(abertos) else 0)}</b> além do prazo típico",
                alerta=True)
     with p[1]:
         painel(f"Fila prioritária (nota ≥ {NOTA_ALTA})", num(prioritarios),
+               ajuda_txt="Pedidos abertos com nota de prioridade 7 ou mais no AHP: o primeiro lote a atender.",
+               detalhe=
                f"{metricas.porcentagem(prioritarios / len(fila) * 100 if len(fila) else 0, 1)} dos classificáveis")
     with p[2]:
         painel("Indicações sem resposta", num(len(camara)),
+               ajuda_txt="Indicações de vereadores já enviadas à Prefeitura e ainda sem resposta registrada nesta data.",
+               detalhe=
                f"mediana de <b>{num(camara['idade_dias'].median())} dias</b> desde o envio", alerta=True)
     with p[3]:
         painel("Ouvidoria além do prazo", num(len(ouvidoria)),
+               ajuda_txt="Manifestações abertas cujo prazo legal de resposta (10 dias úteis) já tinha passado.",
+               detalhe=
                f"mediana de {num(ouvidoria['dias_alem_do_prazo'].median())} dias além do prazo legal", alerta=True)
     with p[4]:
         variacao = (ultimos30 / anteriores30 - 1) * 100 if anteriores30 else None
         painel(f"Entrada no 156 · 30 dias até {fim_janela:%d/%m}", num(ultimos30),
+               ajuda_txt="Pedidos que entraram no 156 nos 30 dias até a data, comparados com os 30 dias antes.",
+               detalhe=
                "sem os 30 dias anteriores para comparar" if variacao is None else
                f"{'+' if variacao >= 0 else ''}{metricas.porcentagem(variacao)} sobre os 30 dias anteriores",
                alerta=variacao is not None and variacao > 10)
@@ -185,7 +206,8 @@ def quadro() -> None:
     st.write("")
     c1, c2 = st.columns([1, 1.25], gap="large")
     with c1:
-        st.markdown("**Onde o Estoque Atrasado Está** · pedidos do 156 abertos além do prazo típico")
+        st.markdown("**Onde o Estoque Atrasado Está** · pedidos do 156 abertos além do prazo típico",
+                    help="Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria.")
         por_bairro = abertos[abertos["atrasado"]].groupby("bairro_oficial", observed=True).size().rename("atrasados").reset_index()
         por_bairro["nome"] = por_bairro["bairro_oficial"].map(nomes_bairro)
         por_bairro["txt"] = por_bairro["atrasados"].map(num)
@@ -199,7 +221,8 @@ def quadro() -> None:
                                 tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("txt:N", title="Atrasados")])
                         .project(type="mercator").properties(height=430), width="stretch")
     with c2:
-        st.markdown(f"**Fila do Dia** · os 12 pedidos abertos de maior nota (de {num(len(fila))})")
+        st.markdown(f"**Fila do Dia** · os 12 pedidos abertos de maior nota (de {num(len(fila))})",
+                    help="Os pedidos abertos nesta data, em ordem de prioridade pela nota do AHP. Por onde começar.")
         topo = fila.head(12)
         st.dataframe(pd.DataFrame({
             "Nota": topo["indice"].round(1),
@@ -208,21 +231,25 @@ def quadro() -> None:
             "Aberto há": topo["idade_dias"].map(lambda v: f"{num(v)} dias"),
             "Anteriores no local": topo["pedidos_anteriores"].map(lambda v: "—" if pd.isna(v) else num(v)),
         }), hide_index=True, width="stretch", height=455, column_config={
-            "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized", width="small"),
-            "Serviço": st.column_config.TextColumn("Serviço", width="medium"),
-            "Bairro": st.column_config.TextColumn("Bairro", width="small"),
-            "Aberto há": st.column_config.TextColumn("Aberto há", width="small"),
-            "Anteriores no local": st.column_config.TextColumn("Anteriores no local", width="small")})
+            "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized", width="small",
+                                                    help=ajuda.texto("Nota")),
+            "Serviço": st.column_config.TextColumn("Serviço", width="medium", help=ajuda.texto("Serviço")),
+            "Bairro": st.column_config.TextColumn("Bairro", width="small", help=ajuda.texto("Bairro")),
+            "Aberto há": st.column_config.TextColumn("Aberto há", width="small", help=ajuda.texto("Aberto há")),
+            "Anteriores no local": st.column_config.TextColumn("Anteriores no local", width="small",
+                                                              help=ajuda.texto("Anteriores no local"))})
 
     c1, c2, c3 = st.columns([1.3, 1, 1], gap="large")
     with c1:
         if modo in ("simulacao", "fim"):
             inicio = pd.Timestamp(e["wr_inicio"])
             janela = pd.date_range(inicio, inicio + pd.to_timedelta(DIAS_SIMULADOS - 1, unit="D"))
-            st.markdown("**O Mês da Simulação até Agora** · 156, por dia")
+            st.markdown("**O Mês da Simulação até Agora** · 156, por dia",
+                        help="Azul: pedidos que entraram em cada dia. Laranja: pedidos atendidos. Os dias seguintes ainda vazios.")
         else:
             janela = pd.date_range(fim_janela - pd.to_timedelta(29, unit="D"), fim_janela)
-            st.markdown(f"**Os 30 Dias até {fim_janela:%d/%m/%Y}** · 156, por dia")
+            st.markdown(f"**Os 30 Dias até {fim_janela:%d/%m/%Y}** · 156, por dia",
+                        help="Azul: pedidos que entraram em cada dia. Laranja: pedidos atendidos.")
         serie = por_dia.reindex(janela, fill_value=0)
         serie.loc[serie.index > dia] = 0                                   # o futuro ainda não aconteceu
         serie = serie.rename_axis("data").reset_index().melt(id_vars="data", var_name="tipo", value_name="n")
@@ -240,7 +267,8 @@ def quadro() -> None:
                      alt.Tooltip("n:Q", title="Pedidos", format=",")],
         ).properties(height=260), width="stretch")
     with c2:
-        st.markdown("**Categorias com Mais Atraso** · abertos no 156")
+        st.markdown("**Categorias com Mais Atraso** · abertos no 156",
+                    help="Pedidos abertos além do prazo típico, por categoria · % dos abertos da categoria que já atrasaram.")
         cat = (abertos.groupby("categoria", observed=True).agg(abertos=("atrasado", "size"), atrasados=("atrasado", "sum"))
                .nlargest(7, "atrasados").reset_index())
         cat["nome"] = cat["categoria"].map(nome_categoria)
@@ -251,7 +279,8 @@ def quadro() -> None:
         st.altair_chart((base.mark_bar(color=DESTAQUE) + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=11)
                          .encode(text="rotulo:N")).properties(height=260), width="stretch")
     with c3:
-        st.markdown("**O que Mais Entrou Neste Dia** · 156")
+        st.markdown("**O que Mais Entrou Neste Dia** · 156",
+                    help="Categorias e bairros com mais pedidos registrados nesta data. Entre parênteses, quantos.")
         do_dia = fluxo[fluxo["data"] == dia]
         if do_dia.empty:
             st.caption("Sem entradas registradas neste dia.")
@@ -260,10 +289,12 @@ def quadro() -> None:
             bairros = do_dia.groupby("bairro_oficial")["entradas"].sum().nlargest(5)
             st.dataframe(pd.DataFrame({"Categoria": [f"{nome_categoria(c)} ({num(n)})" for c, n in cats.items()],
                                        "Bairro": [f"{nomes_bairro.get(b, b)} ({num(n)})" for b, n in bairros.items()]}),
-                         hide_index=True, width="stretch")
+                         hide_index=True, width="stretch", column_config={
+                             "Categoria": st.column_config.Column("Categoria", help="Categorias com mais entradas neste dia (pedidos)."),
+                             "Bairro": st.column_config.Column("Bairro", help="Bairros com mais entradas neste dia (pedidos).")})
 
     # Alertas
-    st.markdown("**Alertas do Dia**")
+    st.markdown("**Alertas do Dia**", help="Frases geradas automaticamente a partir dos números desta data.")
     alertas = []
     if not cat.empty:
         alertas.append(f"<b>{cat.iloc[0]['nome']}</b> tem {num(cat.iloc[0]['atrasados'])} pedidos abertos além do prazo "

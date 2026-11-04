@@ -2,7 +2,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from src import filtros, metricas
+from src import ajuda, filtros, metricas
 from src.componentes import fontes, kpi, leitura
 from src.config import registros, AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, cor_suave, nome_categoria, titulo
 from src.dados import tabela
@@ -48,7 +48,8 @@ kpi(k4, "Pontos crônicos", metricas.numero((cron["pedidos"] >= 10).sum()), "loc
     "Locais + serviço com 10 pedidos ou mais na janela 2015–2025, ativos no período escolhido.")
 
 # --- Por categoria (clique) e tipo de repetição ------------------------------------------------------
-st.subheader("Onde Mais se Repete, e Como")
+st.subheader("Onde Mais se Repete, e Como",
+    help='Que categorias mais repetem pedido no mesmo local e quanto tempo passa entre um pedido e outro.')
 por_cat = rep.groupby("categoria").agg(pedidos=("registros", "sum"), repetidos=("rep_contados", "sum"),
                                        dup=("intervalo_duplicidade", "sum"), inter=("intervalo_intermediario", "sum"),
                                        reinc=("intervalo_reincidencia", "sum")).reset_index()
@@ -61,7 +62,8 @@ por_cat["pedidos_txt"] = por_cat["pedidos"].map(metricas.numero)
 
 c1, c2 = st.columns([1.25, 1], gap="large")
 with c1:
-    st.markdown("**% dos Pedidos em Local Repetido, por Categoria**")
+    st.markdown("**% dos Pedidos em Local Repetido, por Categoria**",
+    help='% dos pedidos que caem num endereço + serviço que já teve pedido. Clique numa barra para ver o intervalo dela.')
     clique = alt.selection_point(fields=["nome"], name="cat")
     base = alt.Chart(por_cat).encode(
         y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
@@ -87,7 +89,8 @@ faixas = pd.DataFrame({
 faixas["pct"] = faixas["n"] / faixas["n"].sum() * 100 if faixas["n"].sum() else 0
 faixas["rotulo"] = faixas["pct"].map(lambda v: metricas.porcentagem(v))
 with c2:
-    st.markdown(f"**{titulo('Intervalo até o pedido anterior no mesmo local · ' + recorte_cat)}**")
+    st.markdown(f"**{titulo('Intervalo até o pedido anterior no mesmo local · ' + recorte_cat)}**",
+    help='Dias entre um pedido e o anterior no mesmo local: até 7 é pedido em dobro; 30 ou mais, o problema voltou.')
     b = alt.Chart(faixas).encode(
         x=alt.X("tipo:N", sort=list(faixas["tipo"]), title=None,
                 axis=alt.Axis(labelAngle=0, labelExpr="split(datum.value, ' · ')")),
@@ -101,7 +104,8 @@ with c2:
             "e não durou, ou não foi feito. Em quase todas as categorias, a reincidência é a maior parte.")
 
 # --- Pontos crônicos ----------------------------------------------------------------------------------
-st.subheader("Pontos Crônicos")
+st.subheader("Pontos Crônicos",
+    help='Endereços com muitos pedidos do mesmo serviço. O endereço não é mostrado, por privacidade.')
 nomes = dict(zip(tabela("bairros")["bairro_oficial"], tabela("bairros")["nome"]))
 lista = cron.head(300).assign(
     bairro=lambda d: d["bairro_oficial"].map(nomes),
@@ -113,11 +117,13 @@ st.dataframe(
     lista[["bairro", "categoria_nome", "servico_nome", "pedidos", "dias_distintos", "anos"]].head(50),
     hide_index=True, width="stretch", height=380,
     column_config={
-        "bairro": "Bairro", "categoria_nome": "Categoria", "servico_nome": "Serviço",
-        "pedidos": st.column_config.ProgressColumn("Pedidos", format="%d", min_value=0,
+        "bairro": st.column_config.Column("Bairro", help=ajuda.texto("Bairro")),
+        "categoria_nome": st.column_config.Column("Categoria", help=ajuda.texto("Categoria")),
+        "servico_nome": st.column_config.Column("Serviço", help=ajuda.texto("Serviço")),
+        "pedidos": st.column_config.ProgressColumn("Pedidos", format="%d", min_value=0, help=ajuda.texto("Pedidos"),
                                                    max_value=int(lista["pedidos"].max()) if len(lista) else 1),
-        "dias_distintos": st.column_config.NumberColumn("Dias com pedido", format="%d"),
-        "anos": "Período",
+        "dias_distintos": st.column_config.NumberColumn("Dias com pedido", format="%d", help=ajuda.texto("Dias com pedido")),
+        "anos": st.column_config.Column("Período", help=ajuda.texto("Período")),
     },
 )
 leitura("Cada linha é um endereço com muitos pedidos do mesmo serviço; o endereço não é mostrado (privacidade: no "

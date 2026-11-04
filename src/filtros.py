@@ -57,7 +57,8 @@ def desenhar_barra_lateral() -> None:
         st.multiselect("Categoria de serviço", categorias_156(), key="f_categorias", placeholder="Todas",
                        format_func=nome_categoria,
                        help="Grupos de serviço do 156. Na Câmara, a categoria foi inferida da ementa.")
-        st.button("Limpar filtros", width="stretch", on_click=limpar)
+        st.button("Limpar filtros", width="stretch", on_click=limpar,
+                  help="Volta período, RPA, bairro e categoria ao padrão.")
 
 
 def limpar() -> None:
