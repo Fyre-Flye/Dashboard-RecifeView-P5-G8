@@ -204,6 +204,16 @@ def estoque_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame
     return t.groupby(["rpa", "bairro_oficial", "categoria", "situacao"], dropna=False).sum().reset_index()
 
 
+def _pedidos_anteriores_156(s156: pd.DataFrame) -> pd.Series:
+    """Pedidos do mesmo endereço e serviço abertos ANTES de cada pedido (vazio se o endereço não tem número).
+
+    O mesmo dia não conta: costuma ser o próprio pedido repetido em dois arquivos anuais, ou um pedido em dobro.
+    """
+    historico = s156[(s156["numero_informado"].astype(str) == "True") & s156["id_local"].notna()]
+    chave = [historico["id_local"], _texto(historico["servico_codigo"])]
+    return historico.groupby(chave, dropna=False)["data_abertura"].rank(method="min") - 1
+
+
 def ocorrencias_abertas_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
     """Uma linha por pedido aberto do 156 (arquivos 2025 e 2026), para o exemplo de classificação do AHP.
 
@@ -214,12 +224,7 @@ def ocorrencias_abertas_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> 
     Pedido sem número no endereço fica com `pedidos_anteriores` vazio: não dá para saber.
     """
     s = df[df["fonte"] == "156_EMLURB"]
-    historico = s[(s["numero_informado"].astype(str) == "True") & s["id_local"].notna()]
-    chave = [historico["id_local"], _texto(historico["servico_codigo"])]
-    # Pedidos do mesmo endereço e serviço abertos ANTES deste (o mesmo dia não conta: costuma ser o próprio
-    # pedido repetido em dois arquivos anuais, ou um pedido em dobro).
-    antes = historico.groupby(chave, dropna=False)["data_abertura"].rank(method="min") - 1
-
+    antes = _pedidos_anteriores_156(s)
     abertos = _abertos_recentes(s)
     t = pd.DataFrame({
         "data_abertura": abertos["data_abertura"].dt.normalize(),
@@ -326,6 +331,85 @@ def entradas_diarias(df: pd.DataFrame) -> pd.DataFrame:
     t = df.groupby([_texto(df["fonte"]), df["data_abertura"].dt.normalize()]).size().rename("n").reset_index()
     t.columns = ["fonte", "data", "n"]
     return t[t["data"].between(*JANELA_SIMULACAO)].reset_index(drop=True)
+
+
+def linha_do_tempo_156(df: pd.DataFrame) -> pd.DataFrame:
+    """Um pedido do 156 por linha, com a data em que entrou e a data em que saiu da fila (War Room).
+
+    Permite reconstruir o estoque aberto em qualquer dia desde 2022. Só entram pedidos com desfecho conhecido:
+    os atendidos (saem na data do último movimento) e os ainda abertos nos arquivos de 2025 e 2026 (sem data de
+    saída). Pedidos que ficaram "abertos" em arquivos antigos têm destino desconhecido e ficam de fora, então o
+    estoque reconstruído em datas antigas é um piso. Mesmos campos de `ocorrencias_abertas_156`.
+    """
+    s = df[df["fonte"] == "156_EMLURB"]
+    atendido = (s["situacao"] == "ATENDIDA") & s["data_ult_movimento"].notna()
+    ainda_aberto = s.index.isin(_abertos_recentes(s).index)
+    fim = s["data_ult_movimento"].where(atendido)
+    entra = (atendido & (fim >= JANELA_SIMULACAO[0])) | ainda_aberto
+    sel = s[entra]
+    t = pd.DataFrame({
+        "data_abertura": sel["data_abertura"].dt.normalize(),
+        "data_fim": fim[entra].dt.normalize(),
+        "rpa": _texto(sel["rpa"]),
+        "bairro_oficial": _texto(sel["bairro_oficial"]),
+        "categoria": _texto(sel["categoria"]),
+        "servico": _texto(sel["servico"]),
+        "prazo_tipico_dias": _texto(sel["categoria"]).map(_prazo_tipico(s)).astype("float32"),
+        "pedidos_anteriores": _pedidos_anteriores_156(s).reindex(sel.index).astype("Int32"),
+    })
+    for c in ["rpa", "bairro_oficial", "categoria", "servico"]:
+        t[c] = t[c].astype("category")
+    return t.sort_values("data_abertura").reset_index(drop=True)
+
+
+def linha_do_tempo_camara(df: pd.DataFrame) -> pd.DataFrame:
+    """Uma indicação enviada à Prefeitura por linha, com as datas de envio e de resposta (War Room).
+
+    Mesmos campos de `indicacoes_sem_resposta`, para as indicações respondidas a partir de 2022 e as ainda sem resposta.
+    """
+    base = indicacoes_sem_resposta(df, JANELA_SIMULACAO[0])          # reaproveita prazo e repetição
+    ind = df[(df["fonte"] == "CAMARA_REQUERIMENTOS") & (df["tipo_registro"] == "INDICACAO")
+             & df["camara_data_envio_prefeitura"].notna()
+             & _texto(df["camara_desfecho"]).isin(["ENVIADO, SEM RESPOSTA REGISTRADA", "ENVIADO E COM RESPOSTA REGISTRADA"])]
+    ind = ind[ind["camara_data_resposta"].isna() | (ind["camara_data_resposta"] >= JANELA_SIMULACAO[0])]
+    prazo = base.groupby("categoria")["prazo_tipico_dias"].first()
+    com_bairro = df[(df["fonte"] == "CAMARA_REQUERIMENTOS") & (df["tipo_registro"] == "INDICACAO") & df["bairro_oficial"].notna()]
+    repeticao = _anteriores_na_janela(com_bairro["data_abertura"],
+                                      [_texto(com_bairro["bairro_oficial"]), _texto(com_bairro["categoria"])],
+                                      JANELA_REPETICAO_CAMARA_DIAS)
+    t = pd.DataFrame({
+        "data_envio": ind["camara_data_envio_prefeitura"].dt.normalize(),
+        "data_resposta": ind["camara_data_resposta"].dt.normalize(),
+        "rpa": _texto(ind["rpa"]),
+        "bairro_oficial": _texto(ind["bairro_oficial"]),
+        "categoria": _texto(ind["categoria"]),
+        "orgao": _texto(ind["orgao"]),
+        "prazo_tipico_dias": _texto(ind["categoria"]).map(prazo).fillna(base["prazo_tipico_dias"].max()).astype(float),
+        "pedidos_anteriores": repeticao.reindex(ind.index).astype("Int64"),
+    })
+    return t.sort_values("data_envio").reset_index(drop=True)
+
+
+def linha_do_tempo_ouvidoria(df: pd.DataFrame) -> pd.DataFrame:
+    """Uma manifestação por linha, com registro, prazo legal e data de conclusão (War Room).
+
+    Entram as concluídas a partir de 2022 e as ainda abertas nos arquivos de 2024 e 2025; as "abertas" de
+    arquivos antigos têm destino desconhecido e ficam de fora. Sem protocolo e sem texto.
+    """
+    o = df[df["fonte"] == "OUVIDORIA"]
+    concluida = (_texto(o["situacao"]) == "CONCLUIDO") & o["data_ult_movimento"].notna()
+    aberta = _texto(o["arquivo_origem"]).isin(ARQUIVOS_RECENTES_OUVIDORIA) & (_texto(o["situacao"]) == "ABERTO")
+    fim = o["data_ult_movimento"].where(concluida)
+    entra = (concluida & (fim >= JANELA_SIMULACAO[0])) | aberta
+    sel = o[entra]
+    t = pd.DataFrame({
+        "data_abertura": sel["data_abertura"].dt.normalize(),
+        "data_prazo": pd.to_datetime(sel["ouv_data_prazo"], errors="coerce").dt.normalize(),
+        "data_fim": fim[entra].dt.normalize(),
+        "orgao": _texto(sel["orgao"]),
+        "assunto": _texto(sel["servico"]),
+    })
+    return t.sort_values("data_abertura").reset_index(drop=True)
 
 
 def _taxa_por_mil(base: pd.DataFrame, anos: int, populacao: pd.Series, por: int = 1000) -> pd.Series:

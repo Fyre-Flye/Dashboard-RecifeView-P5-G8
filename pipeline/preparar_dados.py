@@ -109,6 +109,9 @@ def main() -> None:
         "manifestacoes_abertas_ouvidoria": agregados.manifestacoes_abertas_ouvidoria(df, DATA_REFERENCIA),
         "fluxo_diario_156": agregados.fluxo_diario_156(df),
         "entradas_diarias": agregados.entradas_diarias(df),
+        "linha_do_tempo_156": agregados.linha_do_tempo_156(df),
+        "linha_do_tempo_camara": agregados.linha_do_tempo_camara(df),
+        "linha_do_tempo_ouvidoria": agregados.linha_do_tempo_ouvidoria(df),
         "indicadores_bairro": agregados.indicadores_bairro(df, bairros, estoque),
     }
     for nome, tabela in tabelas.items():
