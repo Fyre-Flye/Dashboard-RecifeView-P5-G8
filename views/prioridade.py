@@ -319,10 +319,21 @@ def mostrar_tabela(t: pd.DataFrame) -> None:
 
 
 st.subheader("4. Exemplo de Ocorrências Classificadas")
+demanda_total = tabela("demanda").groupby("fonte")["n"].sum()
+TOTAIS = {F156: (demanda_total.get("156_EMLURB", 0), "pedidos no 156 (2012–2026)"),
+          CAMARA: (len(tabela("camara_indicacoes")), "indicações de vereadores (2021–2025)"),
+          OUVIDORIA: (demanda_total.get("OUVIDORIA", 0), "manifestações na Ouvidoria (2018–2025)")}
+EM_ABERTO = {nome: len(tabela(cfg["tabela"])) for nome, cfg in FONTES_EXEMPLO.items()}
+contagem = {nome: f"{metricas.numero(TOTAIS[nome][0])} registros · {metricas.numero(EM_ABERTO[nome])} em aberto"
+            for nome in FONTES_EXEMPLO}
 fonte = st.radio("Fonte", list(FONTES_EXEMPLO), horizontal=True, key="fonte_exemplo",
-                 help="Fontes abertas com registros ainda em aberto. Defesa Civil e SEDEC ficam de fora: não têm "
-                      "situação confiável de aberto/fechado na base aberta.")
+                 captions=[contagem[n] for n in FONTES_EXEMPLO],
+                 help="Registros de cada fonte na base aberta e quantos estão em aberto:  \n"
+                      + "  \n".join(f"**{n}:** {contagem[n]}" for n in FONTES_EXEMPLO)
+                      + "  \nDefesa Civil e SEDEC ficam de fora: não têm situação confiável de aberto/fechado.")
 info = FONTES_EXEMPLO[fonte]
+st.markdown(f"**{fonte}** tem **{metricas.numero(TOTAIS[fonte][0])}** {TOTAIS[fonte][1]} na base aberta; "
+            f"**{metricas.numero(EM_ABERTO[fonte])}** estão em aberto e podem ser classificados abaixo.")
 st.markdown("O índice acima é do **bairro**. Aqui o mesmo AHP, com os mesmos pesos, dá uma nota de 0 a 10 a "
             + info["explica"] + ("" if fonte == OUVIDORIA else " Mude as comparações lá em cima e as notas mudam aqui."))
 if fonte == OUVIDORIA and (f.territorio_ativo or f.categorias):
