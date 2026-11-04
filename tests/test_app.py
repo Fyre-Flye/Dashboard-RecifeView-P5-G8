@@ -6,7 +6,7 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 APP = str(Path(__file__).resolve().parents[1] / "app.py")
-PAGINAS = ["views/inicio.py", "views/retorno.py", "views/reincidencia.py", "views/prazos.py",
+PAGINAS = ["views/inicio.py", "views/war_room.py", "views/retorno.py", "views/reincidencia.py", "views/prazos.py",
            "views/territorio.py", "views/prioridade.py", "views/sobre.py"]
 FILTROS = [
     {},                                                        # padrão: 2021–2025, cidade inteira

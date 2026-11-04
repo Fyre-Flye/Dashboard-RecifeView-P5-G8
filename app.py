@@ -10,6 +10,7 @@ st.logo("assets/recifeview_wordmark.png", icon_image="assets/recifeview_icone.pn
 pagina = st.navigation({
     "Visão Geral": [
         st.Page("views/inicio.py", title="Início", icon=":material/home:", default=True),
+        st.Page("views/war_room.py", title="War Room", icon=":material/monitor_heart:"),
     ],
     "Onde o Pedido se Perde": [
         st.Page("views/retorno.py", title="Retorno e Fragmentação", icon=":material/call_split:"),
