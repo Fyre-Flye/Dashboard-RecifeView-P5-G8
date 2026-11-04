@@ -4,14 +4,14 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import fontes, kpi, leitura
-from src.config import AZUL, AZUL25, DESTAQUE, RAMPA, SEM_DADO, cor_forte
+from src.config import registros, AZUL, AZUL25, DESTAQUE, RAMPA, SEM_DADO, cor_forte
 from src.dados import malha, tabela
 
 f = filtros.atuais()
 
 st.title("Território")
-st.markdown("**Há pelo menos dois mapas de prioridade.** O pedido de serviço urbano (156) e a demanda de emergência "
-            "(Defesa Civil) apontam para bairros diferentes. A demanda aparece por mil habitantes, porque bairro "
+st.markdown("**Há pelo menos dois mapas de prioridade.** O pedido de serviço urbano "
+            f"(156, {registros('156_EMLURB')}) e a demanda de emergência (Defesa Civil, {registros('DEFESA_CIVIL')}) apontam para bairros diferentes. A demanda aparece por mil habitantes, porque bairro "
             "grande pede mais só por ser grande; o volume absoluto fica ao lado, no detalhe.")
 filtros.legenda(f, {"Mapas": "RPA e bairro escolhidos ficam em destaque (o resto da cidade continua visível); "
                              "a categoria vale só para o 156."})
@@ -93,10 +93,10 @@ def mapa(t: pd.DataFrame, titulo_legenda: str, chave: str) -> alt.Chart:
 t156, tdc = taxas("156"), taxas("dc")
 c1, c2 = st.columns(2, gap="medium")
 with c1:
-    st.markdown(f"**{FONTES['156'][1]}** · {FONTES['156'][2]}")
+    st.markdown(f"**{FONTES['156'][1]}** ({registros('156_EMLURB')}) · {FONTES['156'][2]}")
     ev1 = st.altair_chart(mapa(t156, FONTES["156"][2], "156"), width="stretch", on_select="rerun", key="mapa_156")
 with c2:
-    st.markdown(f"**{FONTES['dc'][1]}** · {FONTES['dc'][2]}")
+    st.markdown(f"**{FONTES['dc'][1]}** ({registros('DEFESA_CIVIL')}) · {FONTES['dc'][2]}")
     ev2 = st.altair_chart(mapa(tdc, FONTES["dc"][2], "dc"), width="stretch", on_select="rerun", key="mapa_dc")
     if tdc["volume"].sum() == 0:
         st.caption("A Defesa Civil publica dados de 2014 a 2024; não há registros no período escolhido.")
@@ -152,10 +152,10 @@ def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> 
 
 c1, c2 = st.columns(2, gap="large")
 with c1:
-    st.markdown(f"**{FONTES['156'][1]}**")
+    st.markdown(f"**{FONTES['156'][1]}** ({registros('156_EMLURB')})")
     st.altair_chart(dispersao(t156, FONTES["156"][2], alt.Scale(zero=True)), width="stretch")
 with c2:
-    st.markdown(f"**{FONTES['dc'][1]}**")
+    st.markdown(f"**{FONTES['dc'][1]}** ({registros('DEFESA_CIVIL')})")
     st.altair_chart(dispersao(tdc, FONTES["dc"][2] + " (escala log)", alt.Scale(type="symlog", constant=1),
                               valores=[0, 1, 3, 10, 30, 100]),
                     width="stretch")

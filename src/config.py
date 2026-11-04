@@ -45,6 +45,11 @@ TOTAL_REGISTROS = {
 }
 
 
+def registros(codigo: str) -> str:
+    """'156_EMLURB' -> '1.377.158 registros'."""
+    return f"{TOTAL_REGISTROS[codigo]:,}".replace(",", ".") + " registros"
+
+
 def rotulo_fonte(codigo: str) -> str:
     """'156_EMLURB' -> 'Central 156 / Emlurb (1.377.158 registros)'."""
     total = f"{TOTAL_REGISTROS[codigo]:,}".replace(",", ".")

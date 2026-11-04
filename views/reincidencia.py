@@ -4,13 +4,13 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import fontes, kpi, leitura
-from src.config import AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, cor_suave, nome_categoria, titulo
+from src.config import registros, AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, cor_suave, nome_categoria, titulo
 from src.dados import tabela
 
 f = filtros.atuais()
 
 st.title("Reincidência")
-st.markdown("**Repetir não é duplicar.** Boa parte dos pedidos do 156 cai num local + serviço que já teve pedido, "
+st.markdown(f"**Repetir não é duplicar.** Boa parte dos pedidos do 156 ({registros('156_EMLURB')}) cai num local + serviço que já teve pedido, "
             "e na maioria das vezes o problema **voltou** semanas ou meses depois. Um ponto com 100 pedidos é um "
             "problema, não cem.")
 filtros.legenda(f, {"Definição": "156 de 2015 a 2025, só endereços com número; chave = local + serviço "

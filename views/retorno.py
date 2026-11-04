@@ -5,7 +5,7 @@ import streamlit as st
 
 from src import filtros, metricas
 from src.componentes import fontes, kpi, leitura
-from src.config import (NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_fechada, cor_forte, cor_fundo,
+from src.config import (registros, NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_fechada, cor_forte, cor_fundo,
                         nome_categoria, nome_orgao, titulo)
 from src.dados import tabela
 
@@ -13,7 +13,7 @@ f = filtros.atuais()
 
 st.title("Retorno e Fragmentação")
 st.markdown("Depois que a demanda entra, ela **muda de mão** entre órgãos e **raramente volta** com resposta registrada. "
-            "A Câmara é a única fonte pública que mostra o caminho inteiro, do pedido do vereador até a resposta da Prefeitura.")
+            f"A Câmara ({registros('CAMARA_REQUERIMENTOS')}) é a única fonte pública que mostra o caminho inteiro, do pedido do vereador até a resposta da Prefeitura.")
 filtros.legenda(f, {"Ouvidoria": "não tem bairro nem a mesma classificação de serviço; o último bloco segue só o período."})
 fontes(['CAMARA_REQUERIMENTOS', 'OUVIDORIA'])
 
@@ -172,7 +172,7 @@ with c2:
             "risco se espalham.")
 
 # --- Ouvidoria ----------------------------------------------------------------------------------------
-st.subheader("Ouvidoria: Por Onde a Manifestação Entra")
+st.subheader(f"Ouvidoria ({registros('OUVIDORIA')}): Por Onde a Manifestação Entra".replace("registros", "Registros"))
 ouv = f.aplicar(tabela("ouvidoria"), territorio=False, categoria=False)
 ouv = ouv[ouv["canal_entrada"].notna()]
 if ouv.empty:
