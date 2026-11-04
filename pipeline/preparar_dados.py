@@ -107,6 +107,8 @@ def main() -> None:
         "ocorrencias_abertas_156": agregados.ocorrencias_abertas_156(df, DATA_REFERENCIA),
         "indicacoes_sem_resposta": agregados.indicacoes_sem_resposta(df, DATA_REFERENCIA),
         "manifestacoes_abertas_ouvidoria": agregados.manifestacoes_abertas_ouvidoria(df, DATA_REFERENCIA),
+        "fluxo_diario_156": agregados.fluxo_diario_156(df),
+        "entradas_diarias": agregados.entradas_diarias(df),
         "indicadores_bairro": agregados.indicadores_bairro(df, bairros, estoque),
     }
     for nome, tabela in tabelas.items():

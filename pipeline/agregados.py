@@ -14,7 +14,8 @@ import pandas as pd
 ANOS = (2012, 2026)
 JANELA_INDICADORES = (2021, 2025)
 JANELA_REPETICAO_CAMARA_DIAS = 90      # indicações do mesmo tema no mesmo bairro, nos 90 dias antes
-ARQUIVOS_RECENTES_OUVIDORIA = ("ouvidoria_2024", "ouvidoria_2025")      # mesmo recorte da EDA (N3) para os indicadores por bairro
+ARQUIVOS_RECENTES_OUVIDORIA = ("ouvidoria_2024", "ouvidoria_2025")
+JANELA_SIMULACAO = (pd.Timestamp("2022-01-01"), pd.Timestamp("2026-05-31"))   # dias com as fontes completas      # mesmo recorte da EDA (N3) para os indicadores por bairro
 JANELA_REINCIDENCIA = (2015, 2025)     # definição padronizada de reincidência da N3 (seção 4.4)
 POPULACAO_MINIMA = 1000                # bairros menores distorcem a taxa por habitante (N3, 3.8)
 DUPLICIDADE_MAX_DIAS = 7
@@ -302,6 +303,29 @@ def manifestacoes_abertas_ouvidoria(df: pd.DataFrame, data_referencia: pd.Timest
         "dias_alem_do_prazo": (data_referencia - prazo).dt.days.astype("Int64"),
     })
     return t.sort_values("data_abertura").reset_index(drop=True)
+
+
+def fluxo_diario_156(df: pd.DataFrame) -> pd.DataFrame:
+    """Por dia, categoria e bairro: quantos pedidos do 156 entraram e quantos foram atendidos (simulação da War Room).
+
+    As bases só têm a data, sem horário. "Atendidos" usa a data do último movimento dos pedidos atendidos.
+    """
+    s = df[df["fonte"] == "156_EMLURB"]
+    chaves = [_texto(s["categoria"]), _texto(s["bairro_oficial"])]
+    entradas = s.groupby([s["data_abertura"].dt.normalize()] + chaves, dropna=False).size().rename("entradas")
+    at = s[(s["situacao"] == "ATENDIDA") & s["data_ult_movimento"].notna()]
+    atendidos = at.groupby([at["data_ult_movimento"].dt.normalize(), _texto(at["categoria"]), _texto(at["bairro_oficial"])],
+                           dropna=False).size().rename("atendidos")
+    entradas.index.names = atendidos.index.names = ["data", "categoria", "bairro_oficial"]
+    t = pd.concat([entradas, atendidos], axis=1).fillna(0).astype(int).reset_index()
+    return t[t["data"].between(*JANELA_SIMULACAO)].sort_values("data").reset_index(drop=True)
+
+
+def entradas_diarias(df: pd.DataFrame) -> pd.DataFrame:
+    """Registros por fonte e dia de abertura, na janela da simulação da War Room."""
+    t = df.groupby([_texto(df["fonte"]), df["data_abertura"].dt.normalize()]).size().rename("n").reset_index()
+    t.columns = ["fonte", "data", "n"]
+    return t[t["data"].between(*JANELA_SIMULACAO)].reset_index(drop=True)
 
 
 def _taxa_por_mil(base: pd.DataFrame, anos: int, populacao: pd.Series, por: int = 1000) -> pd.Series:
