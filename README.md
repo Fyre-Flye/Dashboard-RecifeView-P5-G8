@@ -14,7 +14,7 @@ repetem, demoram ou ficam sem resposta. A narrativa segue os insights da EDA (N3
 | Página | Mensagem | Principais visuais |
 |---|---|---|
 | Início | A porta de entrada funciona; a perda está depois dela | 4 KPIs, volume por fonte e ano |
-| War Room | Protótipo de tela de operações: o retrato para bater o olho | 5 placas (estoque aberto, fila prioritária, indicações sem resposta, Ouvidoria além do prazo, entrada do mês), mapa do atraso, fila do dia, categorias, ritmo de entrada, bairros prioritários e alertas |
+| War Room | Protótipo de tela de operações: o retrato para bater o olho | simulação de uma semana real (um dia a cada 7 segundos), 5 placas (estoque aberto, fila prioritária, indicações sem resposta, Ouvidoria além do prazo, entrada do mês), mapa do atraso, fila do dia, categorias, ritmo de entrada, bairros prioritários e alertas |
 | Retorno e fragmentação | Quase tudo chega à Prefeitura, 1 em cada 5 volta com resposta | funil, resposta por canal de envio, mapa de calor categoria × órgão ligado a um Sankey, canais da Ouvidoria |
 | Reincidência | Repetir não é duplicar: o problema volta | % em local repetido por categoria, intervalo entre pedidos, pontos crônicos |
 | Prazos | Quem demora está demorando mais | mediana e p90 por ano, faixas de prazo, prazo por categoria, estoque aberto fora do prazo |

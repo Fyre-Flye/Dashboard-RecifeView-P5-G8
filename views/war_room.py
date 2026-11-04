@@ -5,6 +5,9 @@ onde o atraso se concentra e o ritmo de entrada. Usa o último retrato das bases
 cidade inteira, com os pesos padrão do AHP.
 """
 
+import random
+import time
+
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -46,6 +49,119 @@ st.caption("Cidade inteira (os filtros da barra lateral não valem aqui) e pesos
            "até junho de 2026; a Câmara e a Ouvidoria, até dezembro de 2025. Para a sala, recolha a barra lateral e use "
            "o navegador em tela cheia (F11).")
 fontes(["156_EMLURB", "DEFESA_CIVIL", "CAMARA_REQUERIMENTOS", "OUVIDORIA"])
+
+# --- Simulação: uma semana em tempo acelerado ---------------------------------------------------------
+SEGUNDOS_POR_DIA = 7
+DIAS_SIMULADOS = 7
+DIAS_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro",
+                "novembro", "dezembro"]
+OUTRAS_PORTAS = {"CAMARA_REQUERIMENTOS": "Câmara", "OUVIDORIA": "Ouvidoria", "DEFESA_CIVIL": "Defesa Civil"}
+fluxo = tabela("fluxo_diario_156")
+por_dia = fluxo.groupby("data")[["entradas", "atendidos"]].sum()
+entradas_fontes = tabela("entradas_diarias").pivot_table(index="data", columns="fonte", values="n", fill_value=0)
+
+
+def iniciar_simulacao() -> None:
+    dias = por_dia.index[:-DIAS_SIMULADOS]
+    st.session_state["sim_inicio"] = pd.Timestamp(random.choice(list(dias)))
+    st.session_state["sim_dia"] = 0
+    st.session_state["sim_ultimo_passo"] = time.time()
+    st.session_state["sim_rodando"] = True
+
+
+def parar_simulacao() -> None:
+    st.session_state["sim_rodando"] = False
+
+
+def data_longa(d: pd.Timestamp) -> str:
+    return f"{DIAS_SEMANA[d.weekday()].capitalize()}, {d.day} de {MESES_LONGOS[d.month - 1]} de {d.year}"
+
+
+def quadro_simulacao() -> None:
+    estado = st.session_state
+    if estado.get("sim_rodando") and time.time() - estado.get("sim_ultimo_passo", 0) >= SEGUNDOS_POR_DIA - 0.5:
+        if estado["sim_dia"] < DIAS_SIMULADOS - 1:
+            estado["sim_dia"] += 1
+            estado["sim_ultimo_passo"] = time.time()
+        else:
+            estado["sim_rodando"] = False
+            st.rerun()                                   # para o relógio da página
+    inicio, dia = pd.Timestamp(estado["sim_inicio"]), int(estado["sim_dia"])
+    hoje = inicio + pd.to_timedelta(dia, unit="D")
+    semana = por_dia.loc[inicio:inicio + pd.to_timedelta(DIAS_SIMULADOS - 1, unit="D")].copy()
+    hoje_156 = por_dia.loc[hoje] if hoje in por_dia.index else pd.Series({"entradas": 0, "atendidos": 0})
+    media_dia = por_dia[por_dia.index.weekday == hoje.weekday()]["entradas"].mean()
+
+    situacao = "em andamento" if estado.get("sim_rodando") else "encerrada"
+    st.markdown(f"<div style='font-size:1.9rem;font-weight:700;line-height:1.2'>{data_longa(hoje)}</div>"
+                f"<div style='opacity:.75'>Dia {dia + 1} de {DIAS_SIMULADOS} da simulação ({situacao}) · semana de "
+                f"{inicio:%d/%m/%Y} a {inicio + pd.to_timedelta(DIAS_SIMULADOS - 1, unit='D'):%d/%m/%Y}</div>",
+                unsafe_allow_html=True)
+    st.progress((dia + 1) / DIAS_SIMULADOS)
+
+    saldo = int(hoje_156["entradas"] - hoje_156["atendidos"])
+    outras = entradas_fontes.loc[hoje] if hoje in entradas_fontes.index else pd.Series(dtype=float)
+    q = st.columns(4, gap="small")
+    with q[0]:
+        diferenca = (hoje_156["entradas"] / media_dia - 1) * 100 if media_dia else 0
+        painel("Entraram no 156 hoje", num(hoje_156["entradas"]),
+               f"{'+' if diferenca >= 0 else ''}{metricas.porcentagem(diferenca)} sobre a média de "
+               f"{DIAS_SEMANA[hoje.weekday()]}", alerta=diferenca > 25)
+    with q[1]:
+        painel("Atendidos no 156 hoje", num(hoje_156["atendidos"]), "pela data do último movimento")
+    with q[2]:
+        painel("Saldo do dia", f"{'+' if saldo > 0 else ''}{num(saldo)}",
+               "a fila cresceu" if saldo > 0 else "a fila diminuiu", alerta=saldo > 0)
+    with q[3]:
+        painel("Outras portas hoje", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
+               " · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
+
+    c1, c2, c3 = st.columns([1.3, 1, 1], gap="large")
+    with c1:
+        st.markdown("**A Semana até Agora** · 156, entradas e atendimentos por dia")
+        semana = semana.reset_index().melt(id_vars="data", var_name="tipo", value_name="n")
+        semana["dia"] = semana["data"].map(lambda d: f"{DIAS_SEMANA[d.weekday()][:3]} {d:%d/%m}")
+        semana.loc[semana["data"] > hoje, "n"] = 0                     # o futuro ainda não aconteceu
+        semana["tipo"] = semana["tipo"].map({"entradas": "entraram", "atendidos": "atendidos"})
+        ordem = semana.drop_duplicates("data")["dia"].tolist()
+        st.altair_chart(alt.Chart(semana).mark_bar().encode(
+            x=alt.X("dia:N", sort=ordem, title=None, axis=alt.Axis(labelAngle=0)),
+            xOffset=alt.XOffset("tipo:N", sort=["entraram", "atendidos"]),
+            y=alt.Y("n:Q", axis=eixo_numero(None)),
+            color=alt.Color("tipo:N", scale=alt.Scale(domain=["entraram", "atendidos"], range=[AZUL, DESTAQUE]),
+                            legend=alt.Legend(orient="top", title=None)),
+            tooltip=[alt.Tooltip("dia:N", title="Dia"), alt.Tooltip("tipo:N", title=" "), alt.Tooltip("n:Q", title="Pedidos")],
+        ).properties(height=250), width="stretch")
+    do_dia = fluxo[fluxo["data"] == hoje]
+    with c2:
+        st.markdown("**O que Mais Entrou Hoje** · categorias")
+        cats = do_dia.groupby("categoria")["entradas"].sum().nlargest(6)
+        st.dataframe(pd.DataFrame({"Categoria": cats.index.map(nome_categoria), "Pedidos": cats.map(num).values}),
+                     hide_index=True, width="stretch")
+    with c3:
+        st.markdown("**Onde Mais Entrou Hoje** · bairros")
+        bairros_dia = do_dia.groupby("bairro_oficial")["entradas"].sum().nlargest(6)
+        nomes = tabela("bairros").set_index("bairro_oficial")["nome"]
+        st.dataframe(pd.DataFrame({"Bairro": bairros_dia.index.map(lambda b: nomes.get(b, b)),
+                                   "Pedidos": bairros_dia.map(num).values}), hide_index=True, width="stretch")
+
+
+st.subheader("Simulação: Uma Semana em Tempo Acelerado")
+st.caption(f"Sorteia um dia real entre {por_dia.index.min():%d/%m/%Y} e {por_dia.index.max():%d/%m/%Y} e avança "
+           f"um dia a cada {SEGUNDOS_POR_DIA} segundos, por {DIAS_SIMULADOS} dias, com o que de fato entrou e foi "
+           "atendido em cada um. As bases só têm a data, sem horário, por isso a simulação anda de dia em dia.")
+b1, b2, _ = st.columns([1.4, 0.8, 3])
+b1.button("Iniciar Simulação com Dia Aleatório", icon=":material/play_arrow:", on_click=iniciar_simulacao,
+          type="primary", width="stretch")
+b2.button("Parar", icon=":material/stop:", on_click=parar_simulacao, width="stretch",
+          disabled=not st.session_state.get("sim_rodando"))
+if "sim_inicio" in st.session_state:
+    with st.container(border=True):
+        intervalo = SEGUNDOS_POR_DIA if st.session_state.get("sim_rodando") else None
+        st.fragment(quadro_simulacao, run_every=intervalo)()
+st.divider()
+st.subheader(f"Retrato de {data_ref:%d/%m/%Y}")
 
 # --- Placas ----------------------------------------------------------------------------------------------
 abertos, atrasados = int(estoque["abertos"].sum()), int(estoque["acima_prazo_tipico"].sum())
