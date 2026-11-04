@@ -18,7 +18,7 @@ from src.componentes import fontes, leitura
 from src.config import AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria
 from src.dados import malha, resumo_preparacao, tabela
 
-SEGUNDOS_POR_DIA = 3.5
+SEGUNDOS_POR_DIA = 2.5
 DIAS_SIMULADOS = 30
 NOTA_ALTA = 7
 DIAS_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
