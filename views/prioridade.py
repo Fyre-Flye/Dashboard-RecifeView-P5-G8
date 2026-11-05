@@ -7,8 +7,8 @@ import streamlit as st
 
 from src import ahp, ajuda, filtros, metricas
 from src.componentes import fontes, kpi, leitura
-from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero, nome_categoria,
-                        nome_orgao)
+from src.config import (AZUL25, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
+                        nome_categoria, nome_orgao)
 from src.dados import malha, resumo_preparacao, tabela
 
 f = filtros.atuais()
@@ -333,40 +333,9 @@ with c1:
         tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("posicao:Q", title="Posição"),
                  alt.Tooltip("indice_txt:N", title="Índice")]
                 + [alt.Tooltip(f"{k}_txt:N", title=f"{CRIT[k].nome} ({CRIT[k].unidade})") for k in CHAVES],
-    )
-    marcar = st.toggle("Mostrar as ocorrências sorteadas no mapa", value=True, key="mapa_sorteadas",
-                       help="Liga e desliga as cruzes dos três registros sorteados na seção 4.")
-    pontos = onde_marcar(amostra, fonte_atual) if marcar else amostra.iloc[0:0]
-    camadas = [mapa]
-    if len(pontos):
-        xs = [c[0] for f_ in malha()["features"] for anel in (f_["geometry"]["coordinates"] if f_["geometry"]["type"] == "Polygon"
-              else [a for p_ in f_["geometry"]["coordinates"] for a in p_]) for c in anel]
-        ys = [c[1] for f_ in malha()["features"] for anel in (f_["geometry"]["coordinates"] if f_["geometry"]["type"] == "Polygon"
-              else [a for p_ in f_["geometry"]["coordinates"] for a in p_]) for c in anel]
-        pts = pontos.assign(x0=min(xs), x1=max(xs), y0=min(ys), y1=max(ys), rotulo=pontos["ordem"].astype(str) + "º",
-                            nota_txt=pontos["indice"].map(lambda v: metricas.numero(v, 1)))
-        cor = alt.Color("rotulo:N", scale=alt.Scale(domain=pts["rotulo"].tolist(), range=pts["cor"].tolist()), legend=None)
-        dica = [alt.Tooltip("rotulo:N", title="Sorteado"), alt.Tooltip("nota_txt:N", title="Nota"),
-                alt.Tooltip("como:N", title="Posição")]
-        camadas += [
-            alt.Chart(pts).mark_rule(strokeWidth=1.6, opacity=0.9).encode(
-                longitude="lon:Q", latitude="y0:Q", longitude2="lon:Q", latitude2="y1:Q", color=cor, tooltip=dica),
-            alt.Chart(pts).mark_rule(strokeWidth=1.6, opacity=0.9).encode(
-                longitude="x0:Q", latitude="lat:Q", longitude2="x1:Q", latitude2="lat:Q", color=cor, tooltip=dica),
-            alt.Chart(pts).mark_point(shape="circle", size=170, filled=True, stroke="white", strokeWidth=1.5, opacity=1)
-            .encode(longitude="lon:Q", latitude="lat:Q", color=cor, tooltip=dica),
-        ]
-    st.altair_chart(alt.layer(*camadas).resolve_scale(color="independent").project(type="mercator").properties(height=520),
-                    width="stretch")
+    ).project(type="mercator").properties(height=520)
+    st.altair_chart(mapa, width="stretch")
     leitura("Quanto mais escuro, maior a prioridade. Cinza: bairros com menos de 1.000 moradores, fora do índice.")
-    if marcar and fonte_atual == OUVIDORIA:
-        st.caption("Os sorteados agora são da Ouvidoria, que não tem lugar na base aberta: nada a marcar.")
-    elif len(pontos):
-        st.markdown("<div style='font-size:.85rem'>" + " &nbsp; ".join(
-            f"<span style='color:{p_.cor};font-weight:700'>✚ {p_.ordem}º</span> nota {metricas.numero(p_.indice, 1)} "
-            f"<span style='opacity:.7'>({p_.como})</span>" for p_ in pontos.itertuples()) + "</div>",
-            unsafe_allow_html=True, help="Os três registros sorteados na seção 4. Pedidos do 156 aparecem na coordenada "
-                                         "arredondada a ~100 m; sem coordenada, e na Câmara, no centro do bairro.")
 
 with c2:
     lista = r[r["destaque"]].head(15)
@@ -396,6 +365,41 @@ with c2:
     st.altair_chart(barras, width="stretch")
     leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
             "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
+
+def limites_do_recife() -> tuple[float, float, float, float]:
+    xs, ys = [], []
+    for f_ in malha()["features"]:
+        geo = f_["geometry"]
+        poligonos = [geo["coordinates"]] if geo["type"] == "Polygon" else geo["coordinates"]
+        for anel in (a for p_ in poligonos for a in p_):
+            xs += [c[0] for c in anel]
+            ys += [c[1] for c in anel]
+    return min(xs), max(xs), min(ys), max(ys)
+
+
+def mapa_sorteados(pontos: pd.DataFrame) -> alt.LayerChart:
+    """Bairros em tom neutro e uma cruz atravessando o mapa em cada sorteado, na cor do cartão."""
+    base = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(
+        fill=AZUL25, fillOpacity=0.55, stroke=cor_fundo(), strokeWidth=0.7).encode(
+        tooltip=[alt.Tooltip("properties.nome:N", title="Bairro")])
+    camadas = [base]
+    if len(pontos):
+        x0, x1, y0, y1 = limites_do_recife()
+        pts = pontos.assign(x0=x0, x1=x1, y0=y0, y1=y1, rotulo=pontos["ordem"].astype(str) + "º",
+                            nota_txt=pontos["indice"].map(lambda v: metricas.numero(v, 1)))
+        cor = alt.Color("rotulo:N", scale=alt.Scale(domain=pts["rotulo"].tolist(), range=pts["cor"].tolist()), legend=None)
+        dica = [alt.Tooltip("rotulo:N", title="Sorteado"), alt.Tooltip("nota_txt:N", title="Nota"),
+                alt.Tooltip("como:N", title="Posição")]
+        camadas += [
+            alt.Chart(pts).mark_rule(strokeWidth=1.8, opacity=0.9).encode(
+                longitude="lon:Q", latitude="y0:Q", longitude2="lon:Q", latitude2="y1:Q", color=cor, tooltip=dica),
+            alt.Chart(pts).mark_rule(strokeWidth=1.8, opacity=0.9).encode(
+                longitude="x0:Q", latitude="lat:Q", longitude2="x1:Q", latitude2="lat:Q", color=cor, tooltip=dica),
+            alt.Chart(pts).mark_point(shape="circle", size=190, filled=True, stroke="white", strokeWidth=1.5, opacity=1)
+            .encode(longitude="lon:Q", latitude="lat:Q", color=cor, tooltip=dica),
+        ]
+    return alt.layer(*camadas).project(type="mercator").properties(height=380)
+
 
 st.subheader("4. Exemplo de Ocorrências Classificadas",
              help="Registros reais em aberto recebendo a nota de 0 a 10 do AHP, com os pesos acima.")
@@ -449,6 +453,22 @@ else:
             for _, linha in amostra.iterrows():
                 cartao(linha, len(oc), fonte)
         with c2:
+            st.markdown("**Onde Ficam os Sorteados**",
+                        help="Cada cruz marca um sorteado, na cor do cartão. Clique em Sortear e as cruzes se movem.")
+            marcar = st.toggle("Mostrar as ocorrências no mapa", value=True, key="mapa_sorteadas",
+                               help="Liga e desliga as cruzes dos sorteados.")
+            if fonte == OUVIDORIA:
+                st.caption("A Ouvidoria não tem bairro, endereço nem coordenadas na base aberta: nada a marcar.")
+            pontos = onde_marcar(amostra, fonte) if marcar else amostra.iloc[0:0]
+            st.altair_chart(mapa_sorteados(pontos), width="stretch")
+            if len(pontos):
+                st.markdown("<div style='font-size:.85rem'>" + "<br>".join(
+                    f"<span style='color:{p_.cor};font-weight:700'>✚ {p_.ordem}º</span> nota "
+                    f"{metricas.numero(p_.indice, 1)} <span style='opacity:.7'>· {p_.como}</span>"
+                    for p_ in pontos.itertuples()) + "</div>", unsafe_allow_html=True,
+                    help="Pedidos do 156 na coordenada arredondada a ~100 m; sem coordenada, e na Câmara, no centro "
+                         "do bairro.")
+            st.write("")
             st.markdown("**Onde Cada um Cai na Fila**",
                         help="Quantos registros em aberto há em cada faixa de nota. Os traços laranja são os sorteados.")
             faixas = np.arange(0, ahp.NOTA_MAXIMA + 0.5, 0.5)
@@ -462,11 +482,14 @@ else:
                 x=alt.X("inicio:Q", bin="binned", title="nota de prioridade (0 a 10)", scale=alt.Scale(domain=[0, 10])),
                 x2="fim:Q", y=alt.Y("registros:Q", axis=eixo_numero(info["registro"])),
                 tooltip=[alt.Tooltip("faixa:N", title="Nota"), alt.Tooltip("registros:Q", title="Registros", format=",")])
-            linhas = alt.Chart(marcas).mark_rule(color=DESTAQUE, strokeWidth=2).encode(
-                x="indice:Q", tooltip=[alt.Tooltip("nota_txt:N", title="Nota")])
-            rotulos = alt.Chart(marcas).mark_text(color=DESTAQUE, align="left", dx=4, fontWeight="bold", fontSize=12).encode(
-                x="indice:Q", y=alt.Y("altura:Q", scale=None), text="rotulo:N")
-            st.altair_chart((barras_fila + linhas + rotulos).properties(height=260), width="stretch")
+            cor_marca = alt.Color("rotulo:N", scale=alt.Scale(domain=marcas["rotulo"].tolist(),
+                                                              range=marcas["cor"].tolist()), legend=None)
+            linhas = alt.Chart(marcas).mark_rule(strokeWidth=2.5).encode(
+                x="indice:Q", color=cor_marca, tooltip=[alt.Tooltip("nota_txt:N", title="Nota")])
+            rotulos = alt.Chart(marcas).mark_text(align="left", dx=4, fontWeight="bold", fontSize=12).encode(
+                x="indice:Q", y=alt.Y("altura:Q", scale=None), text="rotulo:N", color=cor_marca)
+            st.altair_chart((barras_fila + linhas + rotulos).resolve_scale(color="independent").properties(height=260),
+                            width="stretch")
             alta = (oc["indice"] >= NOTA_ALTA).mean() * 100
             kpi(st, f"Com nota {NOTA_ALTA} ou mais", metricas.porcentagem(alta, 1),
                 f"{metricas.numero((oc['indice'] >= NOTA_ALTA).sum())} de {metricas.numero(len(oc))} {info['registro']}",
