@@ -68,7 +68,8 @@ Três tabelas têm uma linha por registro em aberto, para o exemplo de classific
 `ocorrencias_abertas_156`, `indicacoes_sem_resposta` (Câmara) e `manifestacoes_abertas_ouvidoria`. Elas levam só o
 que as fontes já publicam nos dados abertos (datas, bairro, RPA, categoria ou assunto, órgão, canal e situação) e
 números calculados no pipeline (idade, prazo típico e repetições), sem endereço, `id_local`, protocolo, ementa ou
-autoria. A Ouvidoria não tem bairro nem coordenadas na base aberta.
+autoria. A tabela do 156 leva a coordenada **arredondada a 3 casas (~110 m)**, que marca a quadra e não a casa de
+quem fez o pedido; nunca a exata. A Ouvidoria não tem bairro nem coordenadas na base aberta.
 
 ## Estrutura
 

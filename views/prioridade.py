@@ -127,56 +127,6 @@ r["indice_txt"] = r["indice"].map(lambda v: metricas.numero(v, 1))
 for k in CHAVES:
     r[f"{k}_txt"] = r[CRIT[k].coluna].map(lambda v: metricas.numero(v, 1))
 
-st.subheader("3. Onde Agir Primeiro",
-             help="O índice de prioridade de cada bairro, de 0 a 10, com os pesos acima. Passe o mouse no mapa.")
-c1, c2 = st.columns([1, 1.15], gap="large")
-with c1:
-    tabela_mapa = r.reset_index()
-    campos = ["nome", "rpa", "indice", "indice_txt", "posicao", "destaque"] + [f"{k}_txt" for k in CHAVES]
-    mapa = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(stroke="white", strokeWidth=0.7).transform_lookup(
-        lookup="properties.bairro_oficial", from_=alt.LookupData(tabela_mapa, "bairro_oficial", campos),
-    ).encode(
-        color=alt.condition("isValid(datum.indice)", alt.Color(
-            "indice:Q", title="índice de prioridade (0 a 10)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
-            legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
-            alt.value(SEM_DADO)),
-        opacity=alt.condition("datum.destaque", alt.value(1), alt.value(0.25)),
-        tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("posicao:Q", title="Posição"),
-                 alt.Tooltip("indice_txt:N", title="Índice")]
-                + [alt.Tooltip(f"{k}_txt:N", title=f"{CRIT[k].nome} ({CRIT[k].unidade})") for k in CHAVES],
-    ).project(type="mercator").properties(height=520)
-    st.altair_chart(mapa, width="stretch")
-    leitura("Quanto mais escuro, maior a prioridade. Cinza: bairros com menos de 1.000 moradores, fora do índice.")
-
-with c2:
-    lista = r[r["destaque"]].head(15)
-    longo = lista.reset_index().melt(id_vars=["bairro_oficial", "nome", "posicao", "indice"],
-                                     value_vars=[f"contrib_{k}" for k in CHAVES], var_name="crit", value_name="pontos")
-    longo["chave"] = longo["crit"].str.replace("contrib_", "")
-    longo["criterio"] = longo["chave"].map(lambda k: CRIT[k].nome)
-    longo["rotulo_bairro"] = longo["posicao"].astype(str) + "º · " + longo["nome"]
-    longo["pontos_txt"] = longo["pontos"].map(lambda v: metricas.numero(v, 1))
-    longo["indice_txt"] = longo["indice"].map(lambda v: metricas.numero(v, 1))
-    ordem = (lista["posicao"].astype(str) + "º · " + lista["nome"]).tolist()
-    titulo_lista = "Os 15 Bairros com Maior Índice" + (" no Recorte" if f.territorio_ativo else "")
-    st.markdown(f"**{titulo_lista}** · quanto cada critério contribui",
-                help="Cada barra é a nota do bairro; as cores mostram quantos pontos vieram de cada critério.")
-    st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
-        f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES) + "</div>", unsafe_allow_html=True)
-    barras = alt.Chart(longo).mark_bar(stroke=cor_fundo(), strokeWidth=1).encode(
-        y=alt.Y("rotulo_bairro:N", sort=ordem, title=None, axis=alt.Axis(labelLimit=220, labelOverlap=False)),
-        x=alt.X("pontos:Q", title="pontos do índice (0 a 10)", stack="zero", scale=alt.Scale(domain=[0, ahp.NOTA_MAXIMA])),
-        color=alt.Color("criterio:N", title=None,
-                        scale=alt.Scale(domain=[CRIT[k].nome for k in CHAVES], range=[CORES[k] for k in CHAVES]),
-                        legend=None),
-        order=alt.Order("ordem_crit:Q"),
-        tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("criterio:N", title="Critério"),
-                 alt.Tooltip("pontos_txt:N", title="Pontos"), alt.Tooltip("indice_txt:N", title="Índice total")],
-    ).transform_calculate(ordem_crit=f"indexof({CHAVES}, datum.chave)").properties(height=alt.Step(24))
-    st.altair_chart(barras, width="stretch")
-    leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
-            "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
-
 # --- Exemplo de ocorrências classificadas ----------------------------------------------------------------
 SITUACAO = {"CADASTRADA": "cadastrado", "PREPARACAO": "em preparação", "EXECUCAO": "em execução",
             "PENDENCIA": "com pendência", "FISCALIZACAO": "em fiscalização", "MONITORAMENTO": "em monitoramento"}
@@ -186,6 +136,7 @@ CANAL_ENVIO = {"OFICIO": "ofício", "PROTOCOLO NA PREFEITURA": "protocolo na Pre
                "ENVIADO AO EXECUTIVO": "envio ao Executivo", "E-MAIL": "e-mail",
                "CIENCIA AOS INTERESSADOS": "ciência aos interessados"}
 NOTA_ALTA = 7
+CORES_SORTEIO = ["#D7263D", "#FFB000", "#7CB518"]      # 1º, 2º e 3º sorteados: cartão e cruz no mapa
 F156, CAMARA, OUVIDORIA = "Central 156 / Emlurb", "Indicações da Câmara", "Ouvidoria"
 FONTES_EXEMPLO = {
     F156: {"tabela": "ocorrencias_abertas_156", "registro": "pedidos abertos", "genero": "o",
@@ -276,7 +227,9 @@ def cartao(linha: pd.Series, total: int, fonte: str) -> None:
     titulo_cartao, contexto, tempo, repeticao = textos(linha, fonte)
     with st.container(border=True):
         a, b = st.columns([1, 3.4], vertical_alignment="center")
-        a.markdown(f"<div style='font-size:.78rem;opacity:.7'>nota</div>"
+        selo = (f"<div style='color:{linha['cor']};font-weight:700;font-size:.85rem'>✚ {linha['ordem']}º sorteado</div>"
+                if "cor" in linha else "")
+        a.markdown(selo + f"<div style='font-size:.78rem;opacity:.7'>nota</div>"
                    f"<div style='font-weight:700;line-height:1.05;white-space:nowrap'>"
                    f"<span style='font-size:2.4rem'>{metricas.numero(linha['indice'], 1)}</span>"
                    f"<span style='font-size:1.05rem'> de 10</span></div>"
@@ -325,6 +278,125 @@ def mostrar_tabela(t: pd.DataFrame) -> None:
                                                         help=ajuda.texto("Nota"))))
 
 
+@st.cache_data
+def centroides() -> pd.DataFrame:
+    """Centro aproximado de cada bairro (média dos vértices do maior anel), para marcar quem não tem coordenada."""
+    linhas = []
+    for f_ in malha()["features"]:
+        geo = f_["geometry"]
+        aneis = [geo["coordinates"][0]] if geo["type"] == "Polygon" else [p_[0] for p_ in geo["coordinates"]]
+        anel = max(aneis, key=len)
+        linhas.append({"bairro_oficial": f_["properties"]["bairro_oficial"],
+                       "lon_c": sum(c[0] for c in anel) / len(anel), "lat_c": sum(c[1] for c in anel) / len(anel)})
+    return pd.DataFrame(linhas).set_index("bairro_oficial")
+
+
+def onde_marcar(amostra: pd.DataFrame, fonte: str) -> pd.DataFrame:
+    """Ponto de cada sorteado no mapa: coordenada aproximada (156) ou centro do bairro; Ouvidoria não tem lugar."""
+    if fonte == OUVIDORIA or amostra.empty:
+        return amostra.iloc[0:0].assign(lon=[], lat=[], como=[])
+    c = centroides().reindex(amostra["bairro_oficial"])
+    lon = amostra.get("lon_aprox", pd.Series(index=amostra.index, dtype=float))
+    lat = amostra.get("lat_aprox", pd.Series(index=amostra.index, dtype=float))
+    tem = lon.notna() & lat.notna()
+    return amostra.assign(
+        lon=lon.where(tem, c["lon_c"].to_numpy()), lat=lat.where(tem, c["lat_c"].to_numpy()),
+        como=["coordenada aproximada (~100 m)" if t else "centro do bairro" for t in tem])
+
+
+# Sorteio feito aqui, antes do mapa da seção 3, que marca os sorteados; a seção 4 mostra os mesmos.
+st.session_state.setdefault(SORTEIO, 2026)
+fonte_atual = st.session_state.get("fonte_exemplo", F156)
+oc = classificar(fonte_atual)
+if not oc.empty:
+    oc["fila"] = oc["indice"].rank(ascending=False, method="min").astype(int)
+    amostra = oc.sample(min(3, len(oc)), random_state=st.session_state[SORTEIO]).sort_values("indice", ascending=False)
+    amostra = amostra.assign(ordem=range(1, len(amostra) + 1), cor=CORES_SORTEIO[:len(amostra)])
+else:
+    amostra = oc
+
+
+st.subheader("3. Onde Agir Primeiro",
+             help="O índice de prioridade de cada bairro, de 0 a 10, com os pesos acima. Passe o mouse no mapa.")
+c1, c2 = st.columns([1, 1.15], gap="large")
+with c1:
+    tabela_mapa = r.reset_index()
+    campos = ["nome", "rpa", "indice", "indice_txt", "posicao", "destaque"] + [f"{k}_txt" for k in CHAVES]
+    mapa = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(stroke="white", strokeWidth=0.7).transform_lookup(
+        lookup="properties.bairro_oficial", from_=alt.LookupData(tabela_mapa, "bairro_oficial", campos),
+    ).encode(
+        color=alt.condition("isValid(datum.indice)", alt.Color(
+            "indice:Q", title="índice de prioridade (0 a 10)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
+            legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
+            alt.value(SEM_DADO)),
+        opacity=alt.condition("datum.destaque", alt.value(1), alt.value(0.25)),
+        tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("posicao:Q", title="Posição"),
+                 alt.Tooltip("indice_txt:N", title="Índice")]
+                + [alt.Tooltip(f"{k}_txt:N", title=f"{CRIT[k].nome} ({CRIT[k].unidade})") for k in CHAVES],
+    )
+    marcar = st.toggle("Mostrar as ocorrências sorteadas no mapa", value=True, key="mapa_sorteadas",
+                       help="Liga e desliga as cruzes dos três registros sorteados na seção 4.")
+    pontos = onde_marcar(amostra, fonte_atual) if marcar else amostra.iloc[0:0]
+    camadas = [mapa]
+    if len(pontos):
+        xs = [c[0] for f_ in malha()["features"] for anel in (f_["geometry"]["coordinates"] if f_["geometry"]["type"] == "Polygon"
+              else [a for p_ in f_["geometry"]["coordinates"] for a in p_]) for c in anel]
+        ys = [c[1] for f_ in malha()["features"] for anel in (f_["geometry"]["coordinates"] if f_["geometry"]["type"] == "Polygon"
+              else [a for p_ in f_["geometry"]["coordinates"] for a in p_]) for c in anel]
+        pts = pontos.assign(x0=min(xs), x1=max(xs), y0=min(ys), y1=max(ys), rotulo=pontos["ordem"].astype(str) + "º",
+                            nota_txt=pontos["indice"].map(lambda v: metricas.numero(v, 1)))
+        cor = alt.Color("rotulo:N", scale=alt.Scale(domain=pts["rotulo"].tolist(), range=pts["cor"].tolist()), legend=None)
+        dica = [alt.Tooltip("rotulo:N", title="Sorteado"), alt.Tooltip("nota_txt:N", title="Nota"),
+                alt.Tooltip("como:N", title="Posição")]
+        camadas += [
+            alt.Chart(pts).mark_rule(strokeWidth=1.6, opacity=0.9).encode(
+                longitude="lon:Q", latitude="y0:Q", longitude2="lon:Q", latitude2="y1:Q", color=cor, tooltip=dica),
+            alt.Chart(pts).mark_rule(strokeWidth=1.6, opacity=0.9).encode(
+                longitude="x0:Q", latitude="lat:Q", longitude2="x1:Q", latitude2="lat:Q", color=cor, tooltip=dica),
+            alt.Chart(pts).mark_point(shape="circle", size=170, filled=True, stroke="white", strokeWidth=1.5, opacity=1)
+            .encode(longitude="lon:Q", latitude="lat:Q", color=cor, tooltip=dica),
+        ]
+    st.altair_chart(alt.layer(*camadas).resolve_scale(color="independent").project(type="mercator").properties(height=520),
+                    width="stretch")
+    leitura("Quanto mais escuro, maior a prioridade. Cinza: bairros com menos de 1.000 moradores, fora do índice.")
+    if marcar and fonte_atual == OUVIDORIA:
+        st.caption("Os sorteados agora são da Ouvidoria, que não tem lugar na base aberta: nada a marcar.")
+    elif len(pontos):
+        st.markdown("<div style='font-size:.85rem'>" + " &nbsp; ".join(
+            f"<span style='color:{p_.cor};font-weight:700'>✚ {p_.ordem}º</span> nota {metricas.numero(p_.indice, 1)} "
+            f"<span style='opacity:.7'>({p_.como})</span>" for p_ in pontos.itertuples()) + "</div>",
+            unsafe_allow_html=True, help="Os três registros sorteados na seção 4. Pedidos do 156 aparecem na coordenada "
+                                         "arredondada a ~100 m; sem coordenada, e na Câmara, no centro do bairro.")
+
+with c2:
+    lista = r[r["destaque"]].head(15)
+    longo = lista.reset_index().melt(id_vars=["bairro_oficial", "nome", "posicao", "indice"],
+                                     value_vars=[f"contrib_{k}" for k in CHAVES], var_name="crit", value_name="pontos")
+    longo["chave"] = longo["crit"].str.replace("contrib_", "")
+    longo["criterio"] = longo["chave"].map(lambda k: CRIT[k].nome)
+    longo["rotulo_bairro"] = longo["posicao"].astype(str) + "º · " + longo["nome"]
+    longo["pontos_txt"] = longo["pontos"].map(lambda v: metricas.numero(v, 1))
+    longo["indice_txt"] = longo["indice"].map(lambda v: metricas.numero(v, 1))
+    ordem = (lista["posicao"].astype(str) + "º · " + lista["nome"]).tolist()
+    titulo_lista = "Os 15 Bairros com Maior Índice" + (" no Recorte" if f.territorio_ativo else "")
+    st.markdown(f"**{titulo_lista}** · quanto cada critério contribui",
+                help="Cada barra é a nota do bairro; as cores mostram quantos pontos vieram de cada critério.")
+    st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
+        f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES) + "</div>", unsafe_allow_html=True)
+    barras = alt.Chart(longo).mark_bar(stroke=cor_fundo(), strokeWidth=1).encode(
+        y=alt.Y("rotulo_bairro:N", sort=ordem, title=None, axis=alt.Axis(labelLimit=220, labelOverlap=False)),
+        x=alt.X("pontos:Q", title="pontos do índice (0 a 10)", stack="zero", scale=alt.Scale(domain=[0, ahp.NOTA_MAXIMA])),
+        color=alt.Color("criterio:N", title=None,
+                        scale=alt.Scale(domain=[CRIT[k].nome for k in CHAVES], range=[CORES[k] for k in CHAVES]),
+                        legend=None),
+        order=alt.Order("ordem_crit:Q"),
+        tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("criterio:N", title="Critério"),
+                 alt.Tooltip("pontos_txt:N", title="Pontos"), alt.Tooltip("indice_txt:N", title="Índice total")],
+    ).transform_calculate(ordem_crit=f"indexof({CHAVES}, datum.chave)").properties(height=alt.Step(24))
+    st.altair_chart(barras, width="stretch")
+    leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
+            "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
+
 st.subheader("4. Exemplo de Ocorrências Classificadas",
              help="Registros reais em aberto recebendo a nota de 0 a 10 do AHP, com os pesos acima.")
 demanda_total = tabela("demanda").groupby("fonte")["n"].sum()
@@ -347,13 +419,10 @@ st.markdown("O índice acima é do **bairro**. Aqui o mesmo AHP, com os mesmos p
 if fonte == OUVIDORIA and (f.territorio_ativo or f.categorias):
     st.caption("Os filtros de território e de categoria não valem aqui: a Ouvidoria não tem bairro nem a mesma "
                "classificação de serviço.")
-oc = classificar(fonte)
 if oc.empty:
     st.caption(f"Nenhum registro em aberto no recorte escolhido (ou o bairro está fora do índice, com menos de "
                f"1.000 moradores).")
 else:
-    oc["fila"] = oc["indice"].rank(ascending=False, method="min").astype(int)
-    st.session_state.setdefault(SORTEIO, 2026)
     b1, b2 = st.columns([1, 3], vertical_alignment="center")
     b1.button("Sortear Ocorrências", icon=":material/casino:", on_click=sortear, width="stretch",
               help="Mostra outros três registros em aberto, sorteados da fonte escolhida.")
@@ -365,7 +434,6 @@ else:
                "pela nota."
                + (f" {metricas.numero(fora)} indicações ficam de fora: sem bairro identificado na ementa ou em bairro "
                   "com menos de 1.000 moradores." if fora else ""))
-    amostra = oc.sample(min(3, len(oc)), random_state=st.session_state[SORTEIO]).sort_values("indice", ascending=False)
 
     st.markdown("<div style='font-size:0.85rem'>" + " &nbsp; ".join(
         f"<span style='color:{CORES[k]}'>■</span> {CRIT[k].nome}" for k in CHAVES)
