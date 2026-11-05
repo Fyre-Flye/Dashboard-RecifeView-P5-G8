@@ -3,7 +3,8 @@
 Regra de privacidade: nenhuma tabela daqui leva texto livre (SEDEC ou ementa), `id_local`,
 coordenadas, autoria de vereador ou identificador de registro. O que sai é contagem ou indicador
 por ano, bairro, RPA, categoria e órgão, a partir de dados abertos da Prefeitura e da Câmara.
-As exceções são as tabelas com uma linha por registro em aberto (`ocorrencias_abertas_156`,
+As exceções são as tabelas com uma linha por registro em aberto (a do 156 leva a coordenada arredondada
+a ~110 m, nunca a exata) (`ocorrencias_abertas_156`,
 `indicacoes_sem_resposta` e `manifestacoes_abertas_ouvidoria`), usadas no exemplo de classificação
 do AHP: levam só campos que as fontes já publicam, sem endereço, `id_local`, protocolo, ementa ou autoria.
 """
@@ -15,7 +16,9 @@ ANOS = (2012, 2026)
 JANELA_INDICADORES = (2021, 2025)
 JANELA_REPETICAO_CAMARA_DIAS = 90      # indicações do mesmo tema no mesmo bairro, nos 90 dias antes
 ARQUIVOS_RECENTES_OUVIDORIA = ("ouvidoria_2024", "ouvidoria_2025")
-JANELA_SIMULACAO = (pd.Timestamp("2022-01-01"), pd.Timestamp("2026-05-31"))   # dias com as fontes completas      # mesmo recorte da EDA (N3) para os indicadores por bairro
+JANELA_SIMULACAO = (pd.Timestamp("2022-01-01"), pd.Timestamp("2026-05-31"))   # dias com as fontes completas
+CASAS_COORDENADA = 3                   # ~110 m: marca a quadra, não a casa de quem pediu
+CAIXA_RECIFE = (-35.02, -34.85, -8.16, -7.92)   # lon mín., lon máx., lat mín., lat máx.      # mesmo recorte da EDA (N3) para os indicadores por bairro
 JANELA_REINCIDENCIA = (2015, 2025)     # definição padronizada de reincidência da N3 (seção 4.4)
 POPULACAO_MINIMA = 1000                # bairros menores distorcem a taxa por habitante (N3, 3.8)
 DUPLICIDADE_MAX_DIAS = 7
@@ -214,6 +217,18 @@ def _pedidos_anteriores_156(s156: pd.DataFrame) -> pd.Series:
     return historico.groupby(chave, dropna=False)["data_abertura"].rank(method="min") - 1
 
 
+def coordenada_aproximada(lon: pd.Series, lat: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Coordenadas arredondadas a 3 casas (~110 m); fora do Recife ou inválidas ficam vazias.
+
+    O 156 publica a coordenada exata, mas um ponto exato com data e serviço pode apontar para a casa de quem
+    fez o pedido. Arredondada, ela marca a quadra.
+    """
+    lon, lat = pd.to_numeric(lon, errors="coerce"), pd.to_numeric(lat, errors="coerce")
+    x0, x1, y0, y1 = CAIXA_RECIFE
+    dentro = lon.between(x0, x1) & lat.between(y0, y1)
+    return lon.where(dentro).round(CASAS_COORDENADA), lat.where(dentro).round(CASAS_COORDENADA)
+
+
 def ocorrencias_abertas_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> pd.DataFrame:
     """Uma linha por pedido aberto do 156 (arquivos 2025 e 2026), para o exemplo de classificação do AHP.
 
@@ -237,6 +252,8 @@ def ocorrencias_abertas_156(df: pd.DataFrame, data_referencia: pd.Timestamp) -> 
         "prazo_tipico_dias": _texto(abertos["categoria"]).map(_prazo_tipico(s)).astype(float),
         "pedidos_anteriores": antes.reindex(abertos.index).astype("Int64"),
     })
+    if {"lon", "lat"} <= set(abertos.columns):
+        t["lon_aprox"], t["lat_aprox"] = coordenada_aproximada(abertos["lon"], abertos["lat"])
     return t.sort_values("data_abertura").reset_index(drop=True)
 
 

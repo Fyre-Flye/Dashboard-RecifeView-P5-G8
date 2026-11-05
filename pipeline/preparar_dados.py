@@ -37,7 +37,7 @@ COLUNAS = [
     "id_local", "numero_informado", "texto", "ouv_no_prazo", "camara_data_envio_prefeitura", "camara_canal_envio",
     "camara_data_resposta", "camara_dias_ate_envio", "camara_dias_ate_resposta", "camara_desfecho",
     "bairro_populacao_2022", "bairro_domicilios_2022", "bairro_pct_pop_favela_2022", "arquivo_origem",
-    "ouv_data_prazo",
+    "ouv_data_prazo", "lat", "lon",
 ]
 CATEGORICAS = ["fonte", "categoria", "servico_codigo", "servico", "tipo_registro", "orgao", "canal_entrada",
                "bairro_oficial", "rpa", "situacao", "iniciativa", "numero_informado", "texto", "ouv_no_prazo",

@@ -162,3 +162,16 @@ def test_manifestacoes_abertas_usam_so_arquivos_recentes_e_situacao_aberta():
     assert len(t) == 1
     assert t["dias_alem_do_prazo"].item() == 30
     assert not COLUNAS_PROIBIDAS & set(t.columns)
+
+
+def test_coordenada_aproximada_arredonda_e_descarta_fora_do_recife():
+    lon, lat = agregados.coordenada_aproximada(pd.Series([-34.912345, -40.0, None]), pd.Series([-8.054321, -8.05, -8.05]))
+    assert lon.iloc[0] == -34.912 and lat.iloc[0] == -8.054
+    assert lon.iloc[1:].isna().all() and lat.iloc[1:].isna().all()
+
+
+def test_coordenada_publicada_tem_no_maximo_tres_casas():
+    t = pd.read_parquet(CLEAN / "ocorrencias_abertas_156.parquet")
+    for coluna in ["lon_aprox", "lat_aprox"]:
+        valores = t[coluna].dropna()
+        assert ((valores * 1000).round() - valores * 1000).abs().max() < 1e-6
