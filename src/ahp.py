@@ -28,21 +28,35 @@ class Criterio:
     coluna: str          # coluna de indicadores_bairro.parquet
     unidade: str
     descricao: str
+    nota_bairro: str     # como o indicador vira nota de 0 a 1 no índice dos bairros
+    nota_pedido: str     # como vira nota de 0 a 1 na classificação de um pedido aberto
 
 
 CRITERIOS = [
     Criterio("risco", "Risco", "taxa_defesa_civil", "ações / mil hab. / ano",
              "Demanda do cidadão à Defesa Civil (vistoria, lona) por habitante, 2021–2024. "
-             "Mede exposição a risco em encostas e áreas alagáveis."),
+             "Mede exposição a risco em encostas e áreas alagáveis.",
+             "Posição relativa da taxa entre os bairros: r = posição ÷ N.",
+             "Herda a nota do bairro do pedido."),
     Criterio("vulnerabilidade", "Vulnerabilidade", "pct_favela", "% da população",
              "Parcela da população do bairro em favelas e comunidades urbanas (Censo 2022). "
-             "O mesmo problema pesa mais onde a capacidade de se recuperar é menor, e o volume de pedidos não mostra isso."),
+             "O mesmo problema pesa mais onde a capacidade de se recuperar é menor, e o volume de pedidos não mostra isso.",
+             "Posição relativa do percentual entre os bairros: r = posição ÷ N.",
+             "Herda a nota do bairro do pedido."),
     Criterio("atraso", "Atraso", "pct_atraso_156", "% do estoque aberto",
              "Parcela dos pedidos do 156 ainda abertos (arquivos 2025–2026) que já passaram do prazo "
-             "típico da categoria (p90 dos atendidos de 2021–2025)."),
+             "típico da categoria (p90 dos atendidos de 2021–2025).",
+             "Posição relativa do percentual entre os bairros: r = posição ÷ N.",
+             "Idade do pedido ÷ prazo típico da categoria, limitado a 2 e dividido por 2: "
+             "0,5 = chegou ao prazo típico; 1 = o dobro do prazo ou mais. Na Câmara, o prazo típico é o p90 "
+             "dos dias até a resposta no mesmo tema."),
     Criterio("reincidencia", "Reincidência", "pct_reincidencia_156", "% dos pedidos",
              "Parcela dos pedidos do 156 (2021–2025, com número no endereço) que caem num local + serviço "
-             "que se repete. O problema que volta pesa mais que o problema novo."),
+             "que se repete. O problema que volta pesa mais que o problema novo.",
+             "Posição relativa do percentual entre os bairros: r = posição ÷ N.",
+             "Pedidos anteriores no mesmo endereço e serviço, em escala logarítmica: ln(1 + m) ÷ ln(11). "
+             "1 anterior ≈ 0,29; 3 ≈ 0,58; 10 ou mais = 1. Sem número no endereço: 0. Na Câmara, m são as "
+             "indicações do mesmo tema no bairro nos 90 dias antes."),
 ]
 
 # Escala de Saaty: o valor diz quantas vezes o primeiro critério é mais importante que o segundo.

@@ -32,11 +32,53 @@ fontes(['156_EMLURB', 'DEFESA_CIVIL', 'CAMARA_REQUERIMENTOS', 'OUVIDORIA'])
 # --- Critérios ----------------------------------------------------------------------------------------
 st.subheader("Os Quatro Critérios e Como Cada Um É Medido",
              help="O que entra no índice de prioridade, de onde vem cada número e por que ele importa.")
-st.table(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao}
+st.table(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede e por quê": c.descricao,
+                        "Como vira nota (0 a 1): bairro": c.nota_bairro,
+                        "Como vira nota (0 a 1): pedido": c.nota_pedido}
                        for c in ahp.CRITERIOS]).set_index("Critério"))
-leitura("Cada bairro recebe, em cada critério, a sua posição relativa entre os 89 bairros com 1.000 moradores ou mais "
-        "(0 = menor valor, 1 = maior). O índice é a soma ponderada dessas posições, uma nota de 0 a 10. Usar a posição, "
-        "e não o valor bruto, evita que poucos bairros extremos achatem os outros. Os pesos saem das comparações abaixo.")
+leitura("No índice dos bairros, cada critério vira a posição relativa do bairro entre os 89 bairros com 1.000 moradores "
+        "ou mais (perto de 0 = menor valor, 1 = maior; bairro sem dado = 0). Usar a posição, e não o valor bruto, evita "
+        "que poucos bairros extremos achatem os outros. Na classificação de um pedido (seção 4), risco e vulnerabilidade "
+        "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo.")
+
+st.subheader("A Fórmula da Nota de Prioridade",
+             help="Como os pesos e as notas de cada critério se juntam na nota de 0 a 10.")
+st.markdown("**Pesos (AHP).** As comparações da seção 1 formam a matriz $A$. Os pesos são o autovetor principal "
+            "dela, normalizado para somar 1, e a razão de consistência diz se os julgamentos são coerentes:")
+st.latex(r"A\,w = \lambda_{\max}\,w,\qquad \sum_{k} w_k = 1,\qquad "
+         r"RC = \frac{(\lambda_{\max} - n)\,/\,(n - 1)}{IA_n} \le 0{,}10")
+st.markdown("**Nota de um bairro** $b$ (seção 3):")
+st.latex(r"P_b = 10 \cdot \big(\, w_R\, r_R(b) + w_V\, r_V(b) + w_A\, r_A(b) + w_E\, r_E(b) \,\big),"
+         r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N}")
+st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
+st.latex(r"P_p = 10 \cdot \Big(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
+         r"+ w_A\, \frac{\min\!\big(d_p / T_{c_p},\; 2\big)}{2} "
+         r"+ w_E\, \frac{\ln(1 + m_p)}{\ln 11} \,\Big)")
+st.markdown("**Manifestação da Ouvidoria** $o$ (seção 4): a base aberta não tem lugar, então só o atraso conta, "
+            "pela posição entre as abertas. Essa nota não é comparável com as outras:")
+st.latex(r"P_o = 10 \cdot \frac{\text{posição}(D_o)}{N_O}")
+st.markdown("""
+| Símbolo | O que é |
+|---|---|
+| $A$ | Matriz 4 × 4 das comparações par a par: $a_{ij}$ diz quantas vezes o critério $i$ pesa mais que o $j$ (escala de 1 a 9 de Saaty), e $a_{ji} = 1/a_{ij}$ |
+| $w_R, w_V, w_A, w_E$ | Pesos de risco, vulnerabilidade, atraso e reincidência, entre 0 e 1 e somando 1 (os valores atuais estão no gráfico da seção 2) |
+| $\\lambda_{\\max}$ | Maior autovalor de $A$; quanto mais perto de $n$, mais coerentes os julgamentos |
+| $n$ | Número de critérios (4) |
+| $IA_n$ | Índice aleatório de Saaty para $n$ critérios (0,90 para $n = 4$) |
+| $RC$ | Razão de consistência; acima de 0,10 os julgamentos devem ser revistos |
+| $b$ | Bairro; no índice, os 89 com 1.000 moradores ou mais |
+| $N$ | Número de bairros comparados (89) |
+| $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média) |
+| $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
+| $b_p$ | Bairro do pedido $p$ |
+| $d_p$ | Dias desde a abertura do pedido (no 156) ou desde o envio à Prefeitura (na Câmara) até a data das bases |
+| $T_{c_p}$ | Prazo típico da categoria do pedido: p90 dos dias até atender no 156 (2021–2025) ou até a resposta no mesmo tema na Câmara |
+| $m_p$ | Pedidos anteriores no mesmo endereço e serviço (156) ou indicações do mesmo tema no bairro nos 90 dias antes (Câmara); sem número no endereço, o termo vale 0 |
+| $D_o$, $N_O$ | Dias além do prazo legal da manifestação $o$ e número de manifestações abertas da Ouvidoria |
+| $P_b, P_p, P_o$ | Nota de prioridade, de 0 a 10 |
+""")
+leitura("O fator 10 só muda a escala para uma nota que o gestor lê fácil. Cada parcela da soma é a contribuição do "
+        "critério, em pontos, e é ela que aparece nas barras coloridas do mapa e dos cartões.")
 
 # --- Comparações par a par ----------------------------------------------------------------------------
 OPCOES = [-9, -8, -7, -6, -5, -4, -3, -2, 1, 2, 3, 4, 5, 6, 7, 8, 9]
