@@ -77,6 +77,64 @@ st.latex(r"P_o = 10 \cdot \frac{\text{posição}(D_o)}{N_O}")
 legenda_formula(["$P_o$ = nota da manifestação (0 a 10)", "$o$ = manifestação aberta da Ouvidoria",
                  "$D_o$ = dias além do prazo legal", "$\\text{posição}(D_o)$ = posição entre as abertas, da menos à mais atrasada",
                  "$N_O$ = número de manifestações abertas"])
+@st.cache_data(show_spinner=False)
+def exemplo_de_calculo() -> tuple[pd.Series, dict[str, float], dict[str, float]]:
+    """Um pedido aberto real do 156 que usa todos os termos da fórmula, classificado com os pesos padrão.
+
+    A regra de escolha é fixa para o exemplo não mudar a cada visita: entre os pedidos com 2 a 5 pedidos
+    anteriores e de 1,2 a 1,8 vez o prazo típico, o de nota mais perto do 3º quartil desse grupo.
+    """
+    indicadores = tabela("indicadores_bairro").set_index("bairro_oficial")
+    pesos_padrao = dict(zip(CHAVES, ahp.pesos(ahp.matriz_de_comparacao(ahp.JULGAMENTOS_PADRAO, CHAVES))))
+    todos = ahp.indice_ocorrencias(tabela("ocorrencias_abertas_156"), indicadores, pesos_padrao)
+    vezes = todos["idade_dias"] / todos["prazo_tipico_dias"]
+    grupo = todos[todos["pedidos_anteriores"].between(2, 5) & vezes.between(1.2, 1.8)]
+    escolhido = grupo.loc[(grupo["indice"] - grupo["indice"].quantile(0.75)).abs().idxmin()].copy()
+    escolhido["nome"] = indicadores.loc[escolhido["bairro_oficial"], "nome"]
+    posicoes = {c.chave: float(indicadores[c.coluna].rank(method="average")[escolhido["bairro_oficial"]])
+                for c in ahp.CRITERIOS if c.chave in ("risco", "vulnerabilidade")}
+    return escolhido, pesos_padrao, posicoes
+
+
+def n_tex(valor: float, casas: int) -> str:
+    casas = 0 if float(valor).is_integer() else casas
+    return metricas.numero(valor, casas).replace(",", "{,}")
+
+
+st.markdown("**Exemplo com um pedido real.** Um pedido aberto do 156, calculado com os pesos padrão "
+            "(se você mudar as comparações na seção 1, as notas da seção 4 mudam, mas o exemplo fica fixo):")
+ex, wp, pos = exemplo_de_calculo()
+nota = {k: ex[f"nota_{k}"] / ahp.NOTA_MAXIMA for k in CHAVES}
+st.markdown(
+    f"- **Pedido:** {nome_categoria(ex['servico'])} ({nome_categoria(ex['categoria']).lower()}), no bairro "
+    f"**{ex['nome']}**, aberto há **{metricas.numero(ex['idade_dias'])} dias**; o prazo típico da categoria é "
+    f"**{metricas.numero(ex['prazo_tipico_dias'])} dias**; o endereço já teve **{metricas.numero(ex['pedidos_anteriores'])}** "
+    f"pedidos do mesmo serviço antes.\n"
+    f"- **Pesos padrão:** risco {metricas.numero(wp['risco'] * 100, 1)}%, vulnerabilidade "
+    f"{metricas.numero(wp['vulnerabilidade'] * 100, 1)}%, atraso {metricas.numero(wp['atraso'] * 100, 1)}% e "
+    f"reincidência {metricas.numero(wp['reincidencia'] * 100, 1)}%.")
+st.markdown("Nota de cada critério, de 0 a 1:")
+st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}"
+         rf"\qquad r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
+st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"
+         rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}"
+         rf"\qquad \text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
+         rf" = {n_tex(nota['reincidencia'], 3)}")
+st.markdown("Soma ponderada e escala de 0 a 10:")
+st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco'], 3)} "
+         rf"+ {n_tex(wp['vulnerabilidade'], 3)} \cdot {n_tex(nota['vulnerabilidade'], 3)} "
+         rf"+ {n_tex(wp['atraso'], 3)} \cdot {n_tex(nota['atraso'], 3)} "
+         rf"+ {n_tex(wp['reincidencia'], 3)} \cdot {n_tex(nota['reincidencia'], 3)}\big)")
+st.latex(rf"P_p = {n_tex(ex['contrib_risco'], 2)} + {n_tex(ex['contrib_vulnerabilidade'], 2)} "
+         rf"+ {n_tex(ex['contrib_atraso'], 2)} + {n_tex(ex['contrib_reincidencia'], 2)} = \mathbf{{{n_tex(ex['indice'], 1)}}}")
+do_lugar = (ex["contrib_risco"] + ex["contrib_vulnerabilidade"]) / ex["indice"] * 100
+leitura(f"Com nota {metricas.numero(ex['indice'], 1)}, esse pedido empata ou supera "
+        f"{metricas.numero(ex['percentil'], 0)}% dos pedidos abertos do 156 classificados com os pesos padrão. "
+        f"{metricas.numero(do_lugar, 0)}% da nota vieram do lugar (risco e vulnerabilidade do bairro {ex['nome']}) e "
+        f"{metricas.numero(100 - do_lugar, 0)}% do próprio pedido (atraso e repetição no endereço). Cada parcela da "
+        f"última linha é a contribuição do critério, em pontos.")
+
+st.write("")
 st.markdown("**Cada variável em detalhe:**")
 st.markdown("""
 | Símbolo | O que é |
