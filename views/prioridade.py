@@ -625,31 +625,30 @@ st.markdown(
 st.markdown("Nota de cada critério, de 0 a 1:")
 pos_r = metricas.numero(pos["risco"], 1 if pos["risco"] % 1 else 0)
 pos_v = metricas.numero(pos["vulnerabilidade"], 1 if pos["vulnerabilidade"] % 1 else 0)
-col_r, col_v = st.columns(2)
+_, col_r, col_v, _ = st.columns([1, 2, 2, 1])
 with col_r:
     st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}")
-    legenda_formula([f"$r_R(b_p)$ = nota de risco do bairro {ex['nome']}",
-                     f"{pos_r} = $\\text{{posição}}_R(b_p)$, posição do {ex['nome']} do menor para o maior risco",
-                     "89 = $N$, número de bairros comparados"])
+    legenda_formula([f"$r_R(b_p)$ = nota de risco do {ex['nome']}",
+                     f"{pos_r} = $\\text{{posição}}_R(b_p)$, posição do {ex['nome']} em risco",
+                     "89 = $N$, bairros comparados"])
 with col_v:
     st.latex(rf"r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
-    legenda_formula([f"$r_V(b_p)$ = nota de vulnerabilidade do bairro {ex['nome']}",
-                     f"{pos_v} = $\\text{{posição}}_V(b_p)$, posição do {ex['nome']} da menor para a maior "
-                     "parcela em favelas",
-                     "89 = $N$, número de bairros comparados"])
-col_a, col_e = st.columns(2)
+    legenda_formula([f"$r_V(b_p)$ = nota de vulnerabilidade do {ex['nome']}",
+                     f"{pos_v} = $\\text{{posição}}_V(b_p)$, posição do {ex['nome']} em vulnerabilidade",
+                     "89 = $N$, bairros comparados"])
+_, col_a, col_e, _ = st.columns([0.3, 2.5, 2.5, 0.3])
 with col_a:
     st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"
              rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}")
-    legenda_formula(["atraso = nota do pedido no critério atraso (0 a 1)",
+    legenda_formula(["atraso = nota de atraso do pedido",
                      f"{metricas.numero(ex['idade_dias'])} = $d_p$, dias em aberto",
                      f"{metricas.numero(ex['prazo_tipico_dias'])} = $T_{{c_p}}$, prazo típico da categoria do pedido",
                      "2 = teto: o dobro do prazo típico ou mais vale nota 1"])
 with col_e:
     st.latex(rf"\text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
              rf" = {n_tex(nota['reincidencia'], 3)}")
-    legenda_formula(["reincidência = nota do pedido no critério reincidência (0 a 1)",
-                     f"{metricas.numero(ex['pedidos_anteriores'])} = $m_p$, pedidos anteriores no mesmo endereço e serviço",
+    legenda_formula(["reincidência = nota de reincidência do pedido",
+                     f"{metricas.numero(ex['pedidos_anteriores'])} = $m_p$, pedidos anteriores no endereço",
                      "11 = 1 + 10: com 10 pedidos anteriores ou mais, a nota é 1"])
 st.markdown("Soma ponderada e escala de 0 a 10:")
 st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco'], 3)} "
