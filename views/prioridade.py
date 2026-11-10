@@ -41,22 +41,42 @@ leitura("No índice dos bairros, cada critério vira a posição relativa do bai
         "que poucos bairros extremos achatem os outros. Na classificação de um pedido (seção 4), risco e vulnerabilidade "
         "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo.")
 
+def legenda_formula(itens: list[str]) -> None:
+    st.caption("Onde: " + " · ".join(itens) + ".")
+
+
 st.subheader("A Fórmula da Nota de Prioridade",
              help="Como os pesos e as notas de cada critério se juntam na nota de 0 a 10.")
 st.markdown("**Pesos (AHP).** As comparações da seção 1 formam a matriz $A$. Os pesos são o autovetor principal "
             "dela, normalizado para somar 1, e a razão de consistência diz se os julgamentos são coerentes:")
 st.latex(r"A\,w = \lambda_{\max}\,w,\qquad \sum_{k} w_k = 1,\qquad "
          r"RC = \frac{(\lambda_{\max} - n)\,/\,(n - 1)}{IA_n} \le 0{,}10")
+legenda_formula(["$A$ = matriz das comparações par a par", "$w$ = vetor de pesos", "$w_k$ = peso do critério $k$",
+                 "$\\lambda_{\\max}$ = maior autovalor de $A$", "$n$ = número de critérios (4)",
+                 "$IA_n$ = índice aleatório de Saaty", "$RC$ = razão de consistência"])
 st.markdown("**Nota de um bairro** $b$ (seção 3):")
 st.latex(r"P_b = 10 \cdot \big(\, w_R\, r_R(b) + w_V\, r_V(b) + w_A\, r_A(b) + w_E\, r_E(b) \,\big),"
          r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N}")
+legenda_formula(["$P_b$ = nota de prioridade do bairro (0 a 10)", "$b$ = bairro",
+                 "$w_R, w_V, w_A, w_E$ = pesos de risco, vulnerabilidade, atraso e reincidência",
+                 "$r_k(b)$ = nota do bairro no critério $k$ (0 a 1)",
+                 "$\\text{posição}_k(b)$ = posição do bairro do menor para o maior valor no critério $k$",
+                 "$N$ = número de bairros comparados (89)"])
 st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
 st.latex(r"P_p = 10 \cdot \Big(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
          r"+ w_A\, \frac{\min\!\big(d_p / T_{c_p},\; 2\big)}{2} "
          r"+ w_E\, \frac{\ln(1 + m_p)}{\ln 11} \,\Big)")
+legenda_formula(["$P_p$ = nota de prioridade do pedido (0 a 10)", "$p$ = pedido aberto", "$b_p$ = bairro do pedido",
+                 "$w_R, w_V, w_A, w_E$ = pesos dos critérios", "$r_R(b_p), r_V(b_p)$ = notas de risco e vulnerabilidade do bairro",
+                 "$d_p$ = dias em aberto", "$T_{c_p}$ = prazo típico da categoria do pedido",
+                 "$m_p$ = pedidos anteriores no mesmo endereço e serviço"])
 st.markdown("**Manifestação da Ouvidoria** $o$ (seção 4): a base aberta não tem lugar, então só o atraso conta, "
             "pela posição entre as abertas. Essa nota não é comparável com as outras:")
 st.latex(r"P_o = 10 \cdot \frac{\text{posição}(D_o)}{N_O}")
+legenda_formula(["$P_o$ = nota da manifestação (0 a 10)", "$o$ = manifestação aberta da Ouvidoria",
+                 "$D_o$ = dias além do prazo legal", "$\\text{posição}(D_o)$ = posição entre as abertas, da menos à mais atrasada",
+                 "$N_O$ = número de manifestações abertas"])
+st.markdown("**Cada variável em detalhe:**")
 st.markdown("""
 | Símbolo | O que é |
 |---|---|
