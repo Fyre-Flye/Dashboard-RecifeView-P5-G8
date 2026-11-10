@@ -548,7 +548,7 @@ st.caption("AHP não é aprendizado de máquina e não substitui o bônus de mod
 
 # --- Fórmula ---------------------------------------------------------------------------------------
 def legenda_formula(itens: list[str]) -> None:
-    st.caption("Onde: " + " · ".join(itens) + ".")
+    st.caption("Onde:\n" + "\n".join(f"- {item}" for item in itens))
 
 
 st.subheader("6. A Fórmula da Nota de Prioridade",
@@ -623,22 +623,34 @@ st.markdown(
     f"{metricas.numero(wp['vulnerabilidade'] * 100, 1)}%, atraso {metricas.numero(wp['atraso'] * 100, 1)}% e "
     f"reincidência {metricas.numero(wp['reincidencia'] * 100, 1)}%.")
 st.markdown("Nota de cada critério, de 0 a 1:")
-st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}"
-         rf"\qquad r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
-st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"
-         rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}"
-         rf"\qquad \text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
-         rf" = {n_tex(nota['reincidencia'], 3)}")
-legenda_formula([f"$r_R(b_p)$ = nota de risco do bairro {ex['nome']}",
-                 f"$r_V(b_p)$ = nota de vulnerabilidade do bairro {ex['nome']}",
-                 f"{metricas.numero(pos['risco'], 1 if pos['risco'] % 1 else 0)} e "
-                 f"{metricas.numero(pos['vulnerabilidade'], 1 if pos['vulnerabilidade'] % 1 else 0)} = "
-                 "$\\text{posição}_k(b_p)$, a posição do bairro do menor para o maior valor em cada critério",
-                 "89 = $N$, número de bairros comparados",
-                 f"{metricas.numero(ex['idade_dias'])} = $d_p$, dias em aberto",
-                 f"{metricas.numero(ex['prazo_tipico_dias'])} = $T_{{c_p}}$, prazo típico da categoria do pedido",
-                 f"{metricas.numero(ex['pedidos_anteriores'])} = $m_p$, pedidos anteriores no mesmo endereço e serviço",
-                 "atraso e reincidência = notas do pedido nesses critérios, de 0 a 1"])
+pos_r = metricas.numero(pos["risco"], 1 if pos["risco"] % 1 else 0)
+pos_v = metricas.numero(pos["vulnerabilidade"], 1 if pos["vulnerabilidade"] % 1 else 0)
+col_r, col_v = st.columns(2)
+with col_r:
+    st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}")
+    legenda_formula([f"$r_R(b_p)$ = nota de risco do bairro {ex['nome']}",
+                     f"{pos_r} = $\\text{{posição}}_R(b_p)$, posição do {ex['nome']} do menor para o maior risco",
+                     "89 = $N$, número de bairros comparados"])
+with col_v:
+    st.latex(rf"r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
+    legenda_formula([f"$r_V(b_p)$ = nota de vulnerabilidade do bairro {ex['nome']}",
+                     f"{pos_v} = $\\text{{posição}}_V(b_p)$, posição do {ex['nome']} da menor para a maior "
+                     "parcela em favelas",
+                     "89 = $N$, número de bairros comparados"])
+col_a, col_e = st.columns(2)
+with col_a:
+    st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"
+             rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}")
+    legenda_formula(["atraso = nota do pedido no critério atraso (0 a 1)",
+                     f"{metricas.numero(ex['idade_dias'])} = $d_p$, dias em aberto",
+                     f"{metricas.numero(ex['prazo_tipico_dias'])} = $T_{{c_p}}$, prazo típico da categoria do pedido",
+                     "2 = teto: o dobro do prazo típico ou mais vale nota 1"])
+with col_e:
+    st.latex(rf"\text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
+             rf" = {n_tex(nota['reincidencia'], 3)}")
+    legenda_formula(["reincidência = nota do pedido no critério reincidência (0 a 1)",
+                     f"{metricas.numero(ex['pedidos_anteriores'])} = $m_p$, pedidos anteriores no mesmo endereço e serviço",
+                     "11 = 1 + 10: com 10 pedidos anteriores ou mais, a nota é 1"])
 st.markdown("Soma ponderada e escala de 0 a 10:")
 st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco'], 3)} "
          rf"+ {n_tex(wp['vulnerabilidade'], 3)} \cdot {n_tex(nota['vulnerabilidade'], 3)} "
@@ -647,11 +659,13 @@ st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco
 st.latex(rf"P_p = {n_tex(ex['contrib_risco'], 2)} + {n_tex(ex['contrib_vulnerabilidade'], 2)} "
          rf"+ {n_tex(ex['contrib_atraso'], 2)} + {n_tex(ex['contrib_reincidencia'], 2)} = \mathbf{{{n_tex(ex['indice'], 1)}}}")
 legenda_formula(["$P_p$ = nota de prioridade do pedido (0 a 10)",
-                 f"{peso_txt(wp['risco'])}, {peso_txt(wp['vulnerabilidade'])}, {peso_txt(wp['atraso'])} e "
-                 f"{peso_txt(wp['reincidencia'])} = $w_R, w_V, w_A, w_E$, pesos padrão de risco, vulnerabilidade, "
-                 "atraso e reincidência",
-                 "cada produto = peso × nota do critério; na última linha, já multiplicado por 10, é a contribuição "
-                 "do critério em pontos"])
+                 f"{peso_txt(wp['risco'])} = $w_R$, peso padrão do risco",
+                 f"{peso_txt(wp['vulnerabilidade'])} = $w_V$, peso padrão da vulnerabilidade",
+                 f"{peso_txt(wp['atraso'])} = $w_A$, peso padrão do atraso",
+                 f"{peso_txt(wp['reincidencia'])} = $w_E$, peso padrão da reincidência",
+                 f"{peso_txt(nota['risco'])}, {peso_txt(nota['vulnerabilidade'])}, {peso_txt(nota['atraso'])} e "
+                 f"{peso_txt(nota['reincidencia'])} = notas do pedido em cada critério, calculadas acima",
+                 "cada parcela da última linha = peso × nota × 10, a contribuição do critério em pontos"])
 do_lugar = (ex["contrib_risco"] + ex["contrib_vulnerabilidade"]) / ex["indice"] * 100
 leitura(f"Com nota {metricas.numero(ex['indice'], 1)}, esse pedido empata ou supera "
         f"{metricas.numero(ex['percentil'], 0)}% dos pedidos abertos do 156 classificados com os pesos padrão. "
