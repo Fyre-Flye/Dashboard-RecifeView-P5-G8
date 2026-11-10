@@ -601,6 +601,10 @@ def exemplo_de_calculo() -> tuple[pd.Series, dict[str, float], dict[str, float]]
     return escolhido, pesos_padrao, posicoes
 
 
+def peso_txt(valor: float) -> str:
+    return metricas.numero(valor, 3)
+
+
 def n_tex(valor: float, casas: int) -> str:
     casas = 0 if float(valor).is_integer() else casas
     return metricas.numero(valor, casas).replace(",", "{,}")
@@ -625,6 +629,16 @@ st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{m
          rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}"
          rf"\qquad \text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
          rf" = {n_tex(nota['reincidencia'], 3)}")
+legenda_formula([f"$r_R(b_p)$ = nota de risco do bairro {ex['nome']}",
+                 f"$r_V(b_p)$ = nota de vulnerabilidade do bairro {ex['nome']}",
+                 f"{metricas.numero(pos['risco'], 1 if pos['risco'] % 1 else 0)} e "
+                 f"{metricas.numero(pos['vulnerabilidade'], 1 if pos['vulnerabilidade'] % 1 else 0)} = "
+                 "$\\text{posição}_k(b_p)$, a posição do bairro do menor para o maior valor em cada critério",
+                 "89 = $N$, número de bairros comparados",
+                 f"{metricas.numero(ex['idade_dias'])} = $d_p$, dias em aberto",
+                 f"{metricas.numero(ex['prazo_tipico_dias'])} = $T_{{c_p}}$, prazo típico da categoria do pedido",
+                 f"{metricas.numero(ex['pedidos_anteriores'])} = $m_p$, pedidos anteriores no mesmo endereço e serviço",
+                 "atraso e reincidência = notas do pedido nesses critérios, de 0 a 1"])
 st.markdown("Soma ponderada e escala de 0 a 10:")
 st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco'], 3)} "
          rf"+ {n_tex(wp['vulnerabilidade'], 3)} \cdot {n_tex(nota['vulnerabilidade'], 3)} "
@@ -632,12 +646,17 @@ st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco
          rf"+ {n_tex(wp['reincidencia'], 3)} \cdot {n_tex(nota['reincidencia'], 3)}\big)")
 st.latex(rf"P_p = {n_tex(ex['contrib_risco'], 2)} + {n_tex(ex['contrib_vulnerabilidade'], 2)} "
          rf"+ {n_tex(ex['contrib_atraso'], 2)} + {n_tex(ex['contrib_reincidencia'], 2)} = \mathbf{{{n_tex(ex['indice'], 1)}}}")
+legenda_formula(["$P_p$ = nota de prioridade do pedido (0 a 10)",
+                 f"{peso_txt(wp['risco'])}, {peso_txt(wp['vulnerabilidade'])}, {peso_txt(wp['atraso'])} e "
+                 f"{peso_txt(wp['reincidencia'])} = $w_R, w_V, w_A, w_E$, pesos padrão de risco, vulnerabilidade, "
+                 "atraso e reincidência",
+                 "cada produto = peso × nota do critério; na última linha, já multiplicado por 10, é a contribuição "
+                 "do critério em pontos"])
 do_lugar = (ex["contrib_risco"] + ex["contrib_vulnerabilidade"]) / ex["indice"] * 100
 leitura(f"Com nota {metricas.numero(ex['indice'], 1)}, esse pedido empata ou supera "
         f"{metricas.numero(ex['percentil'], 0)}% dos pedidos abertos do 156 classificados com os pesos padrão. "
         f"{metricas.numero(do_lugar, 0)}% da nota vieram do lugar (risco e vulnerabilidade do bairro {ex['nome']}) e "
-        f"{metricas.numero(100 - do_lugar, 0)}% do próprio pedido (atraso e repetição no endereço). Cada parcela da "
-        f"última linha é a contribuição do critério, em pontos.")
+        f"{metricas.numero(100 - do_lugar, 0)}% do próprio pedido (atraso e repetição no endereço).")
 
 st.write("")
 st.markdown("**Cada variável em detalhe:**")
