@@ -228,6 +228,46 @@ def barra_contribuicao(linha: pd.Series) -> alt.Chart:
     ).transform_calculate(ordem=f"indexof({CHAVES}, datum.chave)").properties(height=22)
 
 
+def valor_medido(linha: pd.Series, fonte: str, chave: str) -> str:
+    """O dado de origem de cada critério, antes de virar nota."""
+    num = metricas.numero
+    if fonte == OUVIDORIA:
+        return f"{num(linha['dias_alem_do_prazo'])} dias além do prazo legal" if chave == "atraso" else "não se aplica"
+    bairro = ind.loc[linha["bairro_oficial"]]
+    if chave == "risco":
+        return f"{num(bairro['taxa_defesa_civil'], 1)} ações da Defesa Civil por mil hab./ano no bairro"
+    if chave == "vulnerabilidade":
+        return f"{num(bairro['pct_favela'], 1)}% dos moradores do bairro em favelas"
+    if chave == "atraso":
+        if pd.isna(linha["prazo_tipico_dias"]) or not linha["prazo_tipico_dias"]:
+            return "categoria sem prazo típico"
+        vezes = linha["idade_dias"] / linha["prazo_tipico_dias"]
+        return (f"{num(linha['idade_dias'])} dias em aberto ÷ {num(linha['prazo_tipico_dias'])} de prazo típico = "
+                f"{num(vezes, 2)}×")
+    anteriores = linha["pedidos_anteriores"]
+    if pd.isna(anteriores):
+        return "endereço sem número"
+    if fonte == CAMARA:
+        return f"{num(anteriores)} indicaç{'ão' if anteriores == 1 else 'ões'} do mesmo tema no bairro (90 dias)"
+    return f"{num(anteriores)} pedido{'' if anteriores == 1 else 's'} anterior{'' if anteriores == 1 else 'es'} no endereço"
+
+
+def detalhe_da_nota(linha: pd.Series, fonte: str) -> pd.DataFrame:
+    """Uma linha por critério: o dado, a nota de 0 a 1, o peso e os pontos que somou."""
+    num = metricas.numero
+    peso = {k: (1.0 if k == "atraso" else 0.0) for k in CHAVES} if fonte == OUVIDORIA else w
+    linhas = []
+    for k in CHAVES:
+        nota = linha[f"nota_{k}"]
+        linhas.append({"Critério": CRIT[k].nome, "Dado": valor_medido(linha, fonte, k),
+                       "Nota (0 a 1)": num(nota / ahp.NOTA_MAXIMA, 3) if pd.notna(nota) else "—",
+                       "Peso": f"{num(peso[k] * 100, 1)}%" if pd.notna(nota) else "—",
+                       "Pontos": num(linha[f"contrib_{k}"], 2) if pd.notna(nota) else "—"})
+    linhas.append({"Critério": "Total", "Dado": "", "Nota (0 a 1)": "", "Peso": "100%",
+                   "Pontos": num(linha["indice"], 1)})
+    return pd.DataFrame(linhas)
+
+
 def cartao(linha: pd.Series, total: int, fonte: str) -> None:
     titulo_cartao, contexto, tempo, repeticao = textos(linha, fonte)
     with st.container(border=True):
@@ -243,6 +283,13 @@ def cartao(linha: pd.Series, total: int, fonte: str) -> None:
         b.markdown(f"**{titulo_cartao}**  \n<span style='font-size:.88rem'>{contexto}<br>{tempo}<br>{repeticao}</span>",
                    unsafe_allow_html=True)
         b.altair_chart(barra_contribuicao(linha), width="stretch")
+        with st.expander("Ver o valor de cada critério e o cálculo da nota"):
+            st.table(detalhe_da_nota(linha, fonte).set_index("Critério"))
+            st.caption("Nota = soma dos pontos; pontos = nota do critério (0 a 1) × peso × 10. "
+                       + ("Na Ouvidoria só o atraso conta, pela posição entre as manifestações abertas."
+                          if fonte == OUVIDORIA else
+                          "Risco e vulnerabilidade usam a posição do bairro entre os 89; atraso e reincidência, "
+                          "o próprio pedido (fórmula na seção 6)."))
 
 
 def tabela_exibicao(linhas: pd.DataFrame, fonte: str, notas: bool = True) -> pd.DataFrame:
