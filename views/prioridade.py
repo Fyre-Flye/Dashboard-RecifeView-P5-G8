@@ -7,7 +7,7 @@ import streamlit as st
 
 from src import ahp, ajuda, filtros, metricas
 from src.componentes import fontes, kpi, leitura
-from src.config import (AZUL25, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
+from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
                         nome_categoria, nome_orgao)
 from src.dados import malha, resumo_preparacao, tabela
 
@@ -429,11 +429,25 @@ def limites_do_recife() -> tuple[float, float, float, float]:
     return min(xs), max(xs), min(ys), max(ys)
 
 
+OPACIDADE_FUNDO_SORTEADOS = 0.5    # mais claro que o mapa da seção 3, para as cruzes ficarem à frente
+
+
 def mapa_sorteados(pontos: pd.DataFrame) -> alt.LayerChart:
-    """Bairros em tom neutro e uma cruz atravessando o mapa em cada sorteado, na cor do cartão."""
+    """Fundo com o índice dos bairros (o mesmo da seção 3, mais claro) e uma cruz em cada sorteado, na cor do cartão.
+
+    O fundo explica a parte da nota que vem do lugar (risco e vulnerabilidade); a cruz é a ocorrência.
+    """
+    fundo = r.reset_index()[["bairro_oficial", "nome", "indice"]].assign(
+        indice_txt=lambda d: d["indice"].map(lambda v: metricas.numero(v, 1)))
     base = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(
-        fill=AZUL25, fillOpacity=0.55, stroke=cor_fundo(), strokeWidth=0.7).encode(
-        tooltip=[alt.Tooltip("properties.nome:N", title="Bairro")])
+        stroke=cor_fundo(), strokeWidth=0.7, fillOpacity=OPACIDADE_FUNDO_SORTEADOS).transform_lookup(
+        lookup="properties.bairro_oficial", from_=alt.LookupData(fundo, "bairro_oficial", ["nome", "indice", "indice_txt"]),
+    ).encode(
+        color=alt.condition("isValid(datum.indice)", alt.Color(
+            "indice:Q", title="fundo: índice do bairro (seção 3)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
+            legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=160, titleLimit=300)),
+            alt.value(SEM_DADO)),
+        tooltip=[alt.Tooltip("properties.nome:N", title="Bairro"), alt.Tooltip("indice_txt:N", title="Índice do bairro")])
     camadas = [base]
     if len(pontos):
         x0, x1, y0, y1 = limites_do_recife()
@@ -450,7 +464,7 @@ def mapa_sorteados(pontos: pd.DataFrame) -> alt.LayerChart:
             alt.Chart(pts).mark_point(shape="circle", size=190, filled=True, stroke="white", strokeWidth=1.5, opacity=1)
             .encode(longitude="lon:Q", latitude="lat:Q", color=cor, tooltip=dica),
         ]
-    return alt.layer(*camadas).project(type="mercator").properties(height=380)
+    return alt.layer(*camadas).project(type="mercator").properties(height=450)
 
 
 st.subheader("4. Exemplo de Ocorrências Classificadas",
@@ -506,7 +520,9 @@ else:
                 cartao(linha, len(oc), fonte)
         with c2:
             st.markdown("**Onde Ficam os Sorteados**",
-                        help="Cada cruz marca um sorteado, na cor do cartão. Clique em Sortear e as cruzes se movem.")
+                        help="Cada cruz marca um sorteado, na cor do cartão. O fundo é o índice do bairro da seção 3, mais claro: "
+                                 "mostra a parte da nota que vem do lugar (risco e vulnerabilidade). Clique em "
+                                 "Sortear e as cruzes se movem.")
             marcar = st.toggle("Mostrar as ocorrências no mapa", value=True, key="mapa_sorteadas",
                                help="Liga e desliga as cruzes dos sorteados.")
             if fonte == OUVIDORIA:
