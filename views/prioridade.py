@@ -41,6 +41,7 @@ leitura("No índice dos bairros, cada critério vira a posição relativa do bai
         "que poucos bairros extremos achatem os outros. Na classificação de um pedido (seção 4), risco e vulnerabilidade "
         "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo.")
 
+
 def legenda_formula(itens: list[str]) -> None:
     st.caption("Onde: " + " · ".join(itens) + ".")
 
@@ -63,13 +64,13 @@ legenda_formula(["$P_b$ = nota de prioridade do bairro (0 a 10)", "$b$ = bairro"
                  "$\\text{posição}_k(b)$ = posição do bairro do menor para o maior valor no critério $k$",
                  "$N$ = número de bairros comparados (89)"])
 st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
-st.latex(r"P_p = 10 \cdot \Big(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
+st.latex(r"P_p = 10 \cdot \bigg(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
          r"+ w_A\, \frac{\min\!\big(d_p / T_{c_p},\; 2\big)}{2} "
-         r"+ w_E\, \frac{\ln(1 + m_p)}{\ln 11} \,\Big)")
+         r"+ w_E\, \min\!\Big(\frac{\ln(1 + m_p)}{\ln 11},\; 1\Big) \,\bigg)")
 legenda_formula(["$P_p$ = nota de prioridade do pedido (0 a 10)", "$p$ = pedido aberto", "$b_p$ = bairro do pedido",
                  "$w_R, w_V, w_A, w_E$ = pesos dos critérios", "$r_R(b_p), r_V(b_p)$ = notas de risco e vulnerabilidade do bairro",
                  "$d_p$ = dias em aberto", "$T_{c_p}$ = prazo típico da categoria do pedido",
-                 "$m_p$ = pedidos anteriores no mesmo endereço e serviço"])
+                 "$m_p$ = pedidos anteriores no mesmo endereço e serviço (no 156) ou do mesmo tema no bairro (na Câmara)"])
 st.markdown("**Manifestação da Ouvidoria** $o$ (seção 4): a base aberta não tem lugar, então só o atraso conta, "
             "pela posição entre as abertas. Essa nota não é comparável com as outras:")
 st.latex(r"P_o = 10 \cdot \frac{\text{posição}(D_o)}{N_O}")
@@ -90,15 +91,15 @@ st.markdown("""
 | $N$ | Número de bairros comparados (89) |
 | $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média) |
 | $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
-| $b_p$ | Bairro do pedido $p$ |
+| $b_p$ | Bairro do pedido $p$; pedidos dos bairros fora do índice (menos de 1.000 moradores) não são classificados |
 | $d_p$ | Dias desde a abertura do pedido (no 156) ou desde o envio à Prefeitura (na Câmara) até a data das bases |
-| $T_{c_p}$ | Prazo típico da categoria do pedido: p90 dos dias até atender no 156 (2021–2025) ou até a resposta no mesmo tema na Câmara |
-| $m_p$ | Pedidos anteriores no mesmo endereço e serviço (156) ou indicações do mesmo tema no bairro nos 90 dias antes (Câmara); sem número no endereço, o termo vale 0 |
+| $T_{c_p}$ | Prazo típico da categoria do pedido: p90 dos dias até atender no 156 (2021–2025) ou até a resposta no mesmo tema na Câmara; categoria sem prazo típico, o termo de atraso vale 0 |
+| $m_p$ | Pedidos anteriores no mesmo endereço e serviço (156) ou indicações do mesmo tema no bairro nos 90 dias antes (Câmara); sem número no endereço, o termo vale 0; com 10 ou mais, vale 1 |
 | $D_o$, $N_O$ | Dias além do prazo legal da manifestação $o$ e número de manifestações abertas da Ouvidoria |
 | $P_b, P_p, P_o$ | Nota de prioridade, de 0 a 10 |
 """)
 leitura("O fator 10 só muda a escala para uma nota que o gestor lê fácil. Cada parcela da soma é a contribuição do "
-        "critério, em pontos, e é ela que aparece nas barras coloridas do mapa e dos cartões.")
+        "critério, em pontos, e é ela que aparece nas barras coloridas do ranking da seção 3 e dos cartões da seção 4.")
 
 # --- Comparações par a par ----------------------------------------------------------------------------
 OPCOES = [-9, -8, -7, -6, -5, -4, -3, -2, 1, 2, 3, 4, 5, 6, 7, 8, 9]

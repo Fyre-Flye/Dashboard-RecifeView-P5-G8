@@ -48,7 +48,7 @@ CRITERIOS = [
              "típico da categoria (p90 dos atendidos de 2021–2025).",
              "Posição relativa do percentual entre os bairros: r = posição ÷ N.",
              "Idade do pedido ÷ prazo típico da categoria, limitado a 2 e dividido por 2: "
-             "0,5 = chegou ao prazo típico; 1 = o dobro do prazo ou mais. Na Câmara, o prazo típico é o p90 "
+             "0,5 = chegou ao prazo típico; 1 = o dobro do prazo ou mais. Categoria sem prazo típico: 0. Na Câmara, o prazo típico é o p90 "
              "dos dias até a resposta no mesmo tema."),
     Criterio("reincidencia", "Reincidência", "pct_reincidencia_156", "% dos pedidos",
              "Parcela dos pedidos do 156 (2021–2025, com número no endereço) que caem num local + serviço "
