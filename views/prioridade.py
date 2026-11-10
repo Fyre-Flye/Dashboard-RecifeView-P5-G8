@@ -39,125 +39,9 @@ st.table(pd.DataFrame([{"Critério": c.nome, "Indicador": c.unidade, "O que mede
 leitura("No índice dos bairros, cada critério vira a posição relativa do bairro entre os 89 bairros com 1.000 moradores "
         "ou mais (perto de 0 = menor valor, 1 = maior; bairro sem dado = 0). Usar a posição, e não o valor bruto, evita "
         "que poucos bairros extremos achatem os outros. Na classificação de um pedido (seção 4), risco e vulnerabilidade "
-        "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo.")
+        "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo. "
+        "A fórmula completa, com um exemplo de cálculo, está na seção 6, no fim da página.")
 
-
-def legenda_formula(itens: list[str]) -> None:
-    st.caption("Onde: " + " · ".join(itens) + ".")
-
-
-st.subheader("A Fórmula da Nota de Prioridade",
-             help="Como os pesos e as notas de cada critério se juntam na nota de 0 a 10.")
-st.markdown("**Pesos (AHP).** As comparações da seção 1 formam a matriz $A$. Os pesos são o autovetor principal "
-            "dela, normalizado para somar 1, e a razão de consistência diz se os julgamentos são coerentes:")
-st.latex(r"A\,w = \lambda_{\max}\,w,\qquad \sum_{k} w_k = 1,\qquad "
-         r"RC = \frac{(\lambda_{\max} - n)\,/\,(n - 1)}{IA_n} \le 0{,}10")
-legenda_formula(["$A$ = matriz das comparações par a par", "$w$ = vetor de pesos", "$w_k$ = peso do critério $k$",
-                 "$\\lambda_{\\max}$ = maior autovalor de $A$", "$n$ = número de critérios (4)",
-                 "$IA_n$ = índice aleatório de Saaty", "$RC$ = razão de consistência"])
-st.markdown("**Nota de um bairro** $b$ (seção 3):")
-st.latex(r"P_b = 10 \cdot \big(\, w_R\, r_R(b) + w_V\, r_V(b) + w_A\, r_A(b) + w_E\, r_E(b) \,\big),"
-         r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N}")
-legenda_formula(["$P_b$ = nota de prioridade do bairro (0 a 10)", "$b$ = bairro",
-                 "$w_R, w_V, w_A, w_E$ = pesos de risco, vulnerabilidade, atraso e reincidência",
-                 "$r_k(b)$ = nota do bairro no critério $k$ (0 a 1)",
-                 "$\\text{posição}_k(b)$ = posição do bairro do menor para o maior valor no critério $k$",
-                 "$N$ = número de bairros comparados (89)"])
-st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
-st.latex(r"P_p = 10 \cdot \bigg(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
-         r"+ w_A\, \frac{\min\!\big(d_p / T_{c_p},\; 2\big)}{2} "
-         r"+ w_E\, \min\!\Big(\frac{\ln(1 + m_p)}{\ln 11},\; 1\Big) \,\bigg)")
-legenda_formula(["$P_p$ = nota de prioridade do pedido (0 a 10)", "$p$ = pedido aberto", "$b_p$ = bairro do pedido",
-                 "$w_R, w_V, w_A, w_E$ = pesos dos critérios", "$r_R(b_p), r_V(b_p)$ = notas de risco e vulnerabilidade do bairro",
-                 "$d_p$ = dias em aberto", "$T_{c_p}$ = prazo típico da categoria do pedido",
-                 "$m_p$ = pedidos anteriores no mesmo endereço e serviço (no 156) ou do mesmo tema no bairro (na Câmara)"])
-st.markdown("**Manifestação da Ouvidoria** $o$ (seção 4): a base aberta não tem lugar, então só o atraso conta, "
-            "pela posição entre as abertas. Essa nota não é comparável com as outras:")
-st.latex(r"P_o = 10 \cdot \frac{\text{posição}(D_o)}{N_O}")
-legenda_formula(["$P_o$ = nota da manifestação (0 a 10)", "$o$ = manifestação aberta da Ouvidoria",
-                 "$D_o$ = dias além do prazo legal", "$\\text{posição}(D_o)$ = posição entre as abertas, da menos à mais atrasada",
-                 "$N_O$ = número de manifestações abertas"])
-@st.cache_data(show_spinner=False)
-def exemplo_de_calculo() -> tuple[pd.Series, dict[str, float], dict[str, float]]:
-    """Um pedido aberto real do 156 que usa todos os termos da fórmula, classificado com os pesos padrão.
-
-    A regra de escolha é fixa para o exemplo não mudar a cada visita: entre os pedidos com 2 a 5 pedidos
-    anteriores e de 1,2 a 1,8 vez o prazo típico, o de nota mais perto do 3º quartil desse grupo.
-    """
-    indicadores = tabela("indicadores_bairro").set_index("bairro_oficial")
-    pesos_padrao = dict(zip(CHAVES, ahp.pesos(ahp.matriz_de_comparacao(ahp.JULGAMENTOS_PADRAO, CHAVES))))
-    todos = ahp.indice_ocorrencias(tabela("ocorrencias_abertas_156"), indicadores, pesos_padrao)
-    vezes = todos["idade_dias"] / todos["prazo_tipico_dias"]
-    grupo = todos[todos["pedidos_anteriores"].between(2, 5) & vezes.between(1.2, 1.8)]
-    escolhido = grupo.loc[(grupo["indice"] - grupo["indice"].quantile(0.75)).abs().idxmin()].copy()
-    escolhido["nome"] = indicadores.loc[escolhido["bairro_oficial"], "nome"]
-    posicoes = {c.chave: float(indicadores[c.coluna].rank(method="average")[escolhido["bairro_oficial"]])
-                for c in ahp.CRITERIOS if c.chave in ("risco", "vulnerabilidade")}
-    return escolhido, pesos_padrao, posicoes
-
-
-def n_tex(valor: float, casas: int) -> str:
-    casas = 0 if float(valor).is_integer() else casas
-    return metricas.numero(valor, casas).replace(",", "{,}")
-
-
-st.markdown("**Exemplo com um pedido real.** Um pedido aberto do 156, calculado com os pesos padrão "
-            "(se você mudar as comparações na seção 1, as notas da seção 4 mudam, mas o exemplo fica fixo):")
-ex, wp, pos = exemplo_de_calculo()
-nota = {k: ex[f"nota_{k}"] / ahp.NOTA_MAXIMA for k in CHAVES}
-st.markdown(
-    f"- **Pedido:** {nome_categoria(ex['servico'])} ({nome_categoria(ex['categoria']).lower()}), no bairro "
-    f"**{ex['nome']}**, aberto há **{metricas.numero(ex['idade_dias'])} dias**; o prazo típico da categoria é "
-    f"**{metricas.numero(ex['prazo_tipico_dias'])} dias**; o endereço já teve **{metricas.numero(ex['pedidos_anteriores'])}** "
-    f"pedidos do mesmo serviço antes.\n"
-    f"- **Pesos padrão:** risco {metricas.numero(wp['risco'] * 100, 1)}%, vulnerabilidade "
-    f"{metricas.numero(wp['vulnerabilidade'] * 100, 1)}%, atraso {metricas.numero(wp['atraso'] * 100, 1)}% e "
-    f"reincidência {metricas.numero(wp['reincidencia'] * 100, 1)}%.")
-st.markdown("Nota de cada critério, de 0 a 1:")
-st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}"
-         rf"\qquad r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
-st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"
-         rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}"
-         rf"\qquad \text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
-         rf" = {n_tex(nota['reincidencia'], 3)}")
-st.markdown("Soma ponderada e escala de 0 a 10:")
-st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco'], 3)} "
-         rf"+ {n_tex(wp['vulnerabilidade'], 3)} \cdot {n_tex(nota['vulnerabilidade'], 3)} "
-         rf"+ {n_tex(wp['atraso'], 3)} \cdot {n_tex(nota['atraso'], 3)} "
-         rf"+ {n_tex(wp['reincidencia'], 3)} \cdot {n_tex(nota['reincidencia'], 3)}\big)")
-st.latex(rf"P_p = {n_tex(ex['contrib_risco'], 2)} + {n_tex(ex['contrib_vulnerabilidade'], 2)} "
-         rf"+ {n_tex(ex['contrib_atraso'], 2)} + {n_tex(ex['contrib_reincidencia'], 2)} = \mathbf{{{n_tex(ex['indice'], 1)}}}")
-do_lugar = (ex["contrib_risco"] + ex["contrib_vulnerabilidade"]) / ex["indice"] * 100
-leitura(f"Com nota {metricas.numero(ex['indice'], 1)}, esse pedido empata ou supera "
-        f"{metricas.numero(ex['percentil'], 0)}% dos pedidos abertos do 156 classificados com os pesos padrão. "
-        f"{metricas.numero(do_lugar, 0)}% da nota vieram do lugar (risco e vulnerabilidade do bairro {ex['nome']}) e "
-        f"{metricas.numero(100 - do_lugar, 0)}% do próprio pedido (atraso e repetição no endereço). Cada parcela da "
-        f"última linha é a contribuição do critério, em pontos.")
-
-st.write("")
-st.markdown("**Cada variável em detalhe:**")
-st.markdown("""
-| Símbolo | O que é |
-|---|---|
-| $A$ | Matriz 4 × 4 das comparações par a par: $a_{ij}$ diz quantas vezes o critério $i$ pesa mais que o $j$ (escala de 1 a 9 de Saaty), e $a_{ji} = 1/a_{ij}$ |
-| $w_R, w_V, w_A, w_E$ | Pesos de risco, vulnerabilidade, atraso e reincidência, entre 0 e 1 e somando 1 (os valores atuais estão no gráfico da seção 2) |
-| $\\lambda_{\\max}$ | Maior autovalor de $A$; quanto mais perto de $n$, mais coerentes os julgamentos |
-| $n$ | Número de critérios (4) |
-| $IA_n$ | Índice aleatório de Saaty para $n$ critérios (0,90 para $n = 4$) |
-| $RC$ | Razão de consistência; acima de 0,10 os julgamentos devem ser revistos |
-| $b$ | Bairro; no índice, os 89 com 1.000 moradores ou mais |
-| $N$ | Número de bairros comparados (89) |
-| $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média) |
-| $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
-| $b_p$ | Bairro do pedido $p$; pedidos dos bairros fora do índice (menos de 1.000 moradores) não são classificados |
-| $d_p$ | Dias desde a abertura do pedido (no 156) ou desde o envio à Prefeitura (na Câmara) até a data das bases |
-| $T_{c_p}$ | Prazo típico da categoria do pedido: p90 dos dias até atender no 156 (2021–2025) ou até a resposta no mesmo tema na Câmara; categoria sem prazo típico, o termo de atraso vale 0 |
-| $m_p$ | Pedidos anteriores no mesmo endereço e serviço (156) ou indicações do mesmo tema no bairro nos 90 dias antes (Câmara); sem número no endereço, o termo vale 0; com 10 ou mais, vale 1 |
-| $D_o$, $N_O$ | Dias além do prazo legal da manifestação $o$ e número de manifestações abertas da Ouvidoria |
-| $P_b, P_p, P_o$ | Nota de prioridade, de 0 a 10 |
-""")
-leitura("O fator 10 só muda a escala para uma nota que o gestor lê fácil. Cada parcela da soma é a contribuição do "
-        "critério, em pontos, e é ela que aparece nas barras coloridas do ranking da seção 3 e dos cartões da seção 4.")
 
 # --- Comparações par a par ----------------------------------------------------------------------------
 OPCOES = [-9, -8, -7, -6, -5, -4, -3, -2, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -660,3 +544,122 @@ leitura(f"Cada célula muda o peso de um critério (metade, três quartos, uma v
 st.caption("AHP não é aprendizado de máquina e não substitui o bônus de modelagem preditiva. Ele torna explícito e "
            "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,37), então "
            "os bairros de morro somam pontos nos dois.")
+
+
+# --- Fórmula ---------------------------------------------------------------------------------------
+def legenda_formula(itens: list[str]) -> None:
+    st.caption("Onde: " + " · ".join(itens) + ".")
+
+
+st.subheader("6. A Fórmula da Nota de Prioridade",
+             help="Como os pesos e as notas de cada critério se juntam na nota de 0 a 10.")
+st.markdown("**Pesos (AHP).** As comparações da seção 1 formam a matriz $A$. Os pesos são o autovetor principal "
+            "dela, normalizado para somar 1, e a razão de consistência diz se os julgamentos são coerentes:")
+st.latex(r"A\,w = \lambda_{\max}\,w,\qquad \sum_{k} w_k = 1,\qquad "
+         r"RC = \frac{(\lambda_{\max} - n)\,/\,(n - 1)}{IA_n} \le 0{,}10")
+legenda_formula(["$A$ = matriz das comparações par a par", "$w$ = vetor de pesos", "$w_k$ = peso do critério $k$",
+                 "$\\lambda_{\\max}$ = maior autovalor de $A$", "$n$ = número de critérios (4)",
+                 "$IA_n$ = índice aleatório de Saaty", "$RC$ = razão de consistência"])
+st.markdown("**Nota de um bairro** $b$ (seção 3):")
+st.latex(r"P_b = 10 \cdot \big(\, w_R\, r_R(b) + w_V\, r_V(b) + w_A\, r_A(b) + w_E\, r_E(b) \,\big),"
+         r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N}")
+legenda_formula(["$P_b$ = nota de prioridade do bairro (0 a 10)", "$b$ = bairro",
+                 "$w_R, w_V, w_A, w_E$ = pesos de risco, vulnerabilidade, atraso e reincidência",
+                 "$r_k(b)$ = nota do bairro no critério $k$ (0 a 1)",
+                 "$\\text{posição}_k(b)$ = posição do bairro do menor para o maior valor no critério $k$",
+                 "$N$ = número de bairros comparados (89)"])
+st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
+st.latex(r"P_p = 10 \cdot \bigg(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
+         r"+ w_A\, \frac{\min\!\big(d_p / T_{c_p},\; 2\big)}{2} "
+         r"+ w_E\, \min\!\Big(\frac{\ln(1 + m_p)}{\ln 11},\; 1\Big) \,\bigg)")
+legenda_formula(["$P_p$ = nota de prioridade do pedido (0 a 10)", "$p$ = pedido aberto", "$b_p$ = bairro do pedido",
+                 "$w_R, w_V, w_A, w_E$ = pesos dos critérios", "$r_R(b_p), r_V(b_p)$ = notas de risco e vulnerabilidade do bairro",
+                 "$d_p$ = dias em aberto", "$T_{c_p}$ = prazo típico da categoria do pedido",
+                 "$m_p$ = pedidos anteriores no mesmo endereço e serviço (no 156) ou do mesmo tema no bairro (na Câmara)"])
+st.markdown("**Manifestação da Ouvidoria** $o$ (seção 4): a base aberta não tem lugar, então só o atraso conta, "
+            "pela posição entre as abertas. Essa nota não é comparável com as outras:")
+st.latex(r"P_o = 10 \cdot \frac{\text{posição}(D_o)}{N_O}")
+legenda_formula(["$P_o$ = nota da manifestação (0 a 10)", "$o$ = manifestação aberta da Ouvidoria",
+                 "$D_o$ = dias além do prazo legal", "$\\text{posição}(D_o)$ = posição entre as abertas, da menos à mais atrasada",
+                 "$N_O$ = número de manifestações abertas"])
+@st.cache_data(show_spinner=False)
+def exemplo_de_calculo() -> tuple[pd.Series, dict[str, float], dict[str, float]]:
+    """Um pedido aberto real do 156 que usa todos os termos da fórmula, classificado com os pesos padrão.
+
+    A regra de escolha é fixa para o exemplo não mudar a cada visita: entre os pedidos com 2 a 5 pedidos
+    anteriores e de 1,2 a 1,8 vez o prazo típico, o de nota mais perto do 3º quartil desse grupo.
+    """
+    indicadores = tabela("indicadores_bairro").set_index("bairro_oficial")
+    pesos_padrao = dict(zip(CHAVES, ahp.pesos(ahp.matriz_de_comparacao(ahp.JULGAMENTOS_PADRAO, CHAVES))))
+    todos = ahp.indice_ocorrencias(tabela("ocorrencias_abertas_156"), indicadores, pesos_padrao)
+    vezes = todos["idade_dias"] / todos["prazo_tipico_dias"]
+    grupo = todos[todos["pedidos_anteriores"].between(2, 5) & vezes.between(1.2, 1.8)]
+    escolhido = grupo.loc[(grupo["indice"] - grupo["indice"].quantile(0.75)).abs().idxmin()].copy()
+    escolhido["nome"] = indicadores.loc[escolhido["bairro_oficial"], "nome"]
+    posicoes = {c.chave: float(indicadores[c.coluna].rank(method="average")[escolhido["bairro_oficial"]])
+                for c in ahp.CRITERIOS if c.chave in ("risco", "vulnerabilidade")}
+    return escolhido, pesos_padrao, posicoes
+
+
+def n_tex(valor: float, casas: int) -> str:
+    casas = 0 if float(valor).is_integer() else casas
+    return metricas.numero(valor, casas).replace(",", "{,}")
+
+
+st.markdown("**Exemplo com um pedido real.** Um pedido aberto do 156, calculado com os pesos padrão "
+            "(se você mudar as comparações na seção 1, as notas da seção 4 mudam, mas o exemplo fica fixo):")
+ex, wp, pos = exemplo_de_calculo()
+nota = {k: ex[f"nota_{k}"] / ahp.NOTA_MAXIMA for k in CHAVES}
+st.markdown(
+    f"- **Pedido:** {nome_categoria(ex['servico'])} ({nome_categoria(ex['categoria']).lower()}), no bairro "
+    f"**{ex['nome']}**, aberto há **{metricas.numero(ex['idade_dias'])} dias**; o prazo típico da categoria é "
+    f"**{metricas.numero(ex['prazo_tipico_dias'])} dias**; o endereço já teve **{metricas.numero(ex['pedidos_anteriores'])}** "
+    f"pedidos do mesmo serviço antes.\n"
+    f"- **Pesos padrão:** risco {metricas.numero(wp['risco'] * 100, 1)}%, vulnerabilidade "
+    f"{metricas.numero(wp['vulnerabilidade'] * 100, 1)}%, atraso {metricas.numero(wp['atraso'] * 100, 1)}% e "
+    f"reincidência {metricas.numero(wp['reincidencia'] * 100, 1)}%.")
+st.markdown("Nota de cada critério, de 0 a 1:")
+st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}"
+         rf"\qquad r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
+st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"
+         rf" = \frac{{{n_tex(ex['idade_dias'] / ex['prazo_tipico_dias'], 3)}}}{{2}} = {n_tex(nota['atraso'], 3)}"
+         rf"\qquad \text{{reincidência}} = \min\!\Big(\frac{{\ln(1 + {metricas.numero(ex['pedidos_anteriores'])})}}{{\ln 11}},\;1\Big)"
+         rf" = {n_tex(nota['reincidencia'], 3)}")
+st.markdown("Soma ponderada e escala de 0 a 10:")
+st.latex(rf"P_p = 10 \cdot \big({n_tex(wp['risco'], 3)} \cdot {n_tex(nota['risco'], 3)} "
+         rf"+ {n_tex(wp['vulnerabilidade'], 3)} \cdot {n_tex(nota['vulnerabilidade'], 3)} "
+         rf"+ {n_tex(wp['atraso'], 3)} \cdot {n_tex(nota['atraso'], 3)} "
+         rf"+ {n_tex(wp['reincidencia'], 3)} \cdot {n_tex(nota['reincidencia'], 3)}\big)")
+st.latex(rf"P_p = {n_tex(ex['contrib_risco'], 2)} + {n_tex(ex['contrib_vulnerabilidade'], 2)} "
+         rf"+ {n_tex(ex['contrib_atraso'], 2)} + {n_tex(ex['contrib_reincidencia'], 2)} = \mathbf{{{n_tex(ex['indice'], 1)}}}")
+do_lugar = (ex["contrib_risco"] + ex["contrib_vulnerabilidade"]) / ex["indice"] * 100
+leitura(f"Com nota {metricas.numero(ex['indice'], 1)}, esse pedido empata ou supera "
+        f"{metricas.numero(ex['percentil'], 0)}% dos pedidos abertos do 156 classificados com os pesos padrão. "
+        f"{metricas.numero(do_lugar, 0)}% da nota vieram do lugar (risco e vulnerabilidade do bairro {ex['nome']}) e "
+        f"{metricas.numero(100 - do_lugar, 0)}% do próprio pedido (atraso e repetição no endereço). Cada parcela da "
+        f"última linha é a contribuição do critério, em pontos.")
+
+st.write("")
+st.markdown("**Cada variável em detalhe:**")
+st.markdown("""
+| Símbolo | O que é |
+|---|---|
+| $A$ | Matriz 4 × 4 das comparações par a par: $a_{ij}$ diz quantas vezes o critério $i$ pesa mais que o $j$ (escala de 1 a 9 de Saaty), e $a_{ji} = 1/a_{ij}$ |
+| $w_R, w_V, w_A, w_E$ | Pesos de risco, vulnerabilidade, atraso e reincidência, entre 0 e 1 e somando 1 (os valores atuais estão no gráfico da seção 2) |
+| $\\lambda_{\\max}$ | Maior autovalor de $A$; quanto mais perto de $n$, mais coerentes os julgamentos |
+| $n$ | Número de critérios (4) |
+| $IA_n$ | Índice aleatório de Saaty para $n$ critérios (0,90 para $n = 4$) |
+| $RC$ | Razão de consistência; acima de 0,10 os julgamentos devem ser revistos |
+| $b$ | Bairro; no índice, os 89 com 1.000 moradores ou mais |
+| $N$ | Número de bairros comparados (89) |
+| $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média) |
+| $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
+| $b_p$ | Bairro do pedido $p$; pedidos dos bairros fora do índice (menos de 1.000 moradores) não são classificados |
+| $d_p$ | Dias desde a abertura do pedido (no 156) ou desde o envio à Prefeitura (na Câmara) até a data das bases |
+| $T_{c_p}$ | Prazo típico da categoria do pedido: p90 dos dias até atender no 156 (2021–2025) ou até a resposta no mesmo tema na Câmara; categoria sem prazo típico, o termo de atraso vale 0 |
+| $m_p$ | Pedidos anteriores no mesmo endereço e serviço (156) ou indicações do mesmo tema no bairro nos 90 dias antes (Câmara); sem número no endereço, o termo vale 0; com 10 ou mais, vale 1 |
+| $D_o$, $N_O$ | Dias além do prazo legal da manifestação $o$ e número de manifestações abertas da Ouvidoria |
+| $P_b, P_p, P_o$ | Nota de prioridade, de 0 a 10 |
+""")
+leitura("O fator 10 só muda a escala para uma nota que o gestor lê fácil. Cada parcela da soma é a contribuição do "
+        "critério, em pontos, e é ela que aparece nas barras coloridas do ranking da seção 3 e dos cartões da seção 4.")
