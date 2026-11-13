@@ -175,3 +175,11 @@ def test_coordenada_publicada_tem_no_maximo_tres_casas():
     for coluna in ["lon_aprox", "lat_aprox"]:
         valores = t[coluna].dropna()
         assert ((valores * 1000).round() - valores * 1000).abs().max() < 1e-6
+
+
+def test_dicionario_cobre_o_dataset_sem_expor_dado_pessoal():
+    dic = pd.read_parquet(Path(__file__).resolve().parents[1] / "data" / "clean" / "dicionario_dataset.parquet")
+    assert len(dic) == 45 and dic["coluna"].is_unique
+    assert dic[["descricao", "grupo", "papel_em_modelo"]].notna().all().all()
+    sensiveis = dic[dic["coluna"].isin(COLUNAS_PROIBIDAS | {"camara_autoria", "mes"})]
+    assert (sensiveis["exemplos"] == "").all()

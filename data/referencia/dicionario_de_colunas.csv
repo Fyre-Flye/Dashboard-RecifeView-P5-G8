@@ -1,0 +1,46 @@
+coluna,tipo,descricao,preenchida_em
+id,texto,"Identificador único da linha no dataset (RV0000001…), estável apenas dentro desta versão",todas
+fonte,categoria,"Origem do registro: 156_EMLURB, DEFESA_CIVIL, OUVIDORIA, SEDEC_CHAMADOS, CAMARA_REQUERIMENTOS",todas
+id_registro,texto,"Número publicado pela fonte: processo SEDEC, requerimento da Câmara (ex. 182/2021), protocolo da Ouvidoria quando existe. Vazio no 156 e na Defesa Civil","SEDEC, Câmara, Ouvidoria"
+ano,inteiro,Ano do registro na fonte,todas
+mes,AAAA-MM,Mês de data_abertura,todas
+data_abertura,data,156: DATA_DEMANDA; Defesa Civil: data (ou data da ação); SEDEC: data do chamado; Câmara: data de apresentação; Ouvidoria: data de registro,todas
+data_ult_movimento,data,156: data da última situação; Defesa Civil: data da ação; SEDEC: data de conclusão; Ouvidoria: data da resposta. Vazio na Câmara (ver camara_*),"156, DC, SEDEC, Ouvidoria"
+dias_ate_movimento,inteiro,data_ult_movimento − data_abertura em dias. Negativo = defeito da fonte,"156, DC, SEDEC, Ouvidoria"
+categoria,categoria,156: grupo de serviço harmonizado; Defesa Civil: classe (MONITORAMENTO/LONA/VISTORIA…); SEDEC: 1º rótulo de ocorrência; Câmara: grupo do 156 inferido pela ementa (rótulo fraco); Ouvidoria: assunto,todas
+servico_codigo,categoria,Código SGDE do serviço (= SERVICO_CODIGO do 156). Defesa Civil e SEDEC recebem 448 (código das entradas de Defesa Civil no app Conecta),"156, DC, SEDEC"
+servico,texto,Nome do serviço (156: nome canônico mais recente do código; DC: solicitação; SEDEC: rótulos; Ouvidoria: assunto),"156, DC, SEDEC, Ouvidoria"
+tipo_registro,categoria,"156: SOLICITACAO DE SERVICO; DC: ACAO + tipo da ação; SEDEC: tipo do processo; Câmara: INDICACAO/REQUERIMENTO; Ouvidoria: natureza (reclamação, denúncia…)",todas
+orgao,categoria,Órgão responsável/destinatário (Câmara: órgão citado na ementa por palavra-chave),todas
+canal_entrada,categoria,"Canal por onde a demanda entrou. Só existe na Ouvidoria (0800, site, e-mail, app…) e na Câmara (vereador). Vazio no 156, DC e SEDEC: a fonte não publica","Ouvidoria, Câmara"
+bairro,categoria,"Bairro como veio na fonte (sem acento, maiúsculo; Câmara: bairro citado na ementa)","156, DC, SEDEC, Câmara"
+bairro_oficial,categoria,Bairro normalizado para os 94 bairros oficiais (lista do IBGE). Vazio quando não reconhecido (ex. NAO INFORMADO). Use este para mapas e cruzamentos,"156, DC, SEDEC, Câmara"
+rpa,categoria,Região Político-Administrativa 1–6,"156, DC, SEDEC, Câmara"
+rpa_inferida,booleano,True quando a RPA não veio na fonte e foi preenchida pela RPA mais frequente do bairro no 156,todas
+localidade,texto,Localidade/comunidade informada (Defesa Civil e SEDEC),"DC, SEDEC"
+regional,categoria,Regional da Defesa Civil/SEDEC,"DC, SEDEC"
+situacao,categoria,156: CADASTRADA/EXECUCAO/ATENDIDA…; DC: grau de risco R1–R4; SEDEC: status do processo; Câmara: localização atual; Ouvidoria: situação,todas
+iniciativa,categoria,CIDADAO (demanda) | PROATIVA (monitoramento da Defesa Civil) | VEREADOR | INDEFINIDA,todas
+id_local,texto,Pseudônimo (hash com sal secreto) do endereço. Permite medir reincidência no mesmo local sem expor o endereço. Não cruza entre fontes,"156, DC, SEDEC"
+numero_informado,booleano,156: False quando o número do endereço veio vazio/0/S-N; nesse caso id_local representa a rua inteira (não usar para reincidência),156
+lat,decimal,"Latitude arredondada a 3 casas (~100 m). Falta em boa parte da base, e não ao acaso","156, SEDEC"
+lon,decimal,Longitude arredondada a 3 casas (~100 m),"156, SEDEC"
+texto,texto,"SEDEC: descrição do chamado com dados pessoais mascarados ([N], [NOME], [EMAIL], [LOCAL]); Câmara: ementa oficial da indicação/requerimento","SEDEC, Câmara"
+texto_de_atendente,booleano,SEDEC: True se o texto foi escrito pelo atendente (fala do cidadão em 3ª pessoa),SEDEC
+rotulos_ocorrencia,texto,SEDEC: rótulos de tipo de ocorrência separados por ' | ' (alvo de classificação); DC: ocorrência informada,"SEDEC, DC"
+sedec_n_pedidos_vistoria,inteiro,Nº de pedidos de vistoria do processo (arquivo de solicitações SEDEC),SEDEC
+sedec_n_pedidos_lona,inteiro,Nº de pedidos de lona do processo,SEDEC
+ouv_data_prazo,data,Data-limite de resposta da Ouvidoria,Ouvidoria
+ouv_no_prazo,booleano,True se respondida até o prazo,Ouvidoria
+ouv_resposta_antes_do_registro,booleano,True se data da resposta < data de registro (defeito conhecido 2024–2025),Ouvidoria
+camara_autoria,texto,Vereador(a) autor(a) (dado público),Câmara
+camara_data_envio_prefeitura,data,Data em que a Câmara enviou a indicação à Prefeitura (tramitação no SAGL),Câmara
+camara_canal_envio,categoria,"Como foi enviada: OFICIO, PROTOCOLO NA PREFEITURA, LOTE JSON SISTEMA PCR, SISTEMA SEGOV, E-MAIL…",Câmara
+camara_dias_ate_envio,inteiro,Dias entre apresentação e envio à Prefeitura,Câmara
+camara_data_resposta,data,Data da resposta da Prefeitura registrada na tramitação,Câmara
+camara_dias_ate_resposta,inteiro,Dias entre apresentação e resposta registrada,Câmara
+camara_desfecho,categoria,"ENVIADO E COM RESPOSTA REGISTRADA | ENVIADO, SEM RESPOSTA REGISTRADA | SEM ENVIO REGISTRADO | RETIRADO/PREJUDICADO/REJEITADO. Só indicações têm tramitação",Câmara
+bairro_populacao_2022,inteiro,"População do bairro oficial (IBGE, Censo 2022), para calcular demanda per capita",com bairro_oficial
+bairro_domicilios_2022,inteiro,Domicílios ocupados do bairro (Censo 2022),com bairro_oficial
+bairro_pct_pop_favela_2022,decimal,% da população do bairro em Favelas e Comunidades Urbanas (Censo 2022); 0 = sem favela/comunidade,com bairro_oficial
+arquivo_origem,texto,"Arquivo publicado de onde a linha veio (ex. 156_2024, defesacivil_2019, sedec_chamados_wayback_20240309)",todas

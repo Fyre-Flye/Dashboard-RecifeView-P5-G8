@@ -50,6 +50,7 @@ As tabelas de `data/clean/` saem do dataset do grupo (camada ouro), que **não**
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pipeline.preparar_dados      # cerca de 30 segundos
+python -m pipeline.dicionario          # dicionário de colunas (aba Sobre os Dados), cerca de 35 segundos
 python -m pytest                       # testes do pipeline, do AHP, dos filtros e das páginas
 ```
 
