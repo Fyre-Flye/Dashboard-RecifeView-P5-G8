@@ -75,16 +75,50 @@ def data_longa(d: pd.Timestamp) -> str:
     return f"{DIAS_SEMANA[d.weekday()].capitalize()}, {d.day} de {MESES[d.month - 1]} de {d.year}"
 
 
-def painel(rotulo: str, valor: str, detalhe: str, alerta: bool = False, ajuda_txt: str = "") -> None:
-    """Placa de painel: rótulo, número e uma linha de contexto. Borda laranja = atenção.
-    `ajuda_txt` aparece ao passar o mouse sobre a placa."""
-    cor = DESTAQUE if alerta else AZUL
+def placa(chave: str, rotulo: str, valor: str, detalhe: str, alerta: bool = False, ajuda_txt: str = "",
+          link: tuple[str, str, str] | None = None) -> None:
+    """Placa de painel: rótulo, número, uma linha de contexto e, no rodapé, o link para a página de detalhe.
+    Borda laranja = atenção. `ajuda_txt` aparece ao passar o mouse sobre o número."""
     dica = ajuda_txt.replace("'", "&#39;")
-    st.markdown(
-        f"<div title='{dica}' style='cursor:help;border:1px solid {cor}55;border-left:5px solid {cor};border-radius:8px;"
-        f"padding:8px 12px;min-height:106px'><div style='font-size:.8rem;opacity:.75;line-height:1.2'>{rotulo}</div>"
-        f"<div style='font-size:clamp(1.5rem,2.2vw,2.1rem);font-weight:700;line-height:1.15'>{valor}</div>"
-        f"<div style='font-size:.8rem;opacity:.8;line-height:1.25'>{detalhe}</div></div>", unsafe_allow_html=True)
+    with st.container(border=True, gap="xxsmall",
+                      key=f"placa-{'alerta' if alerta else 'azul'}-{chave}"):
+        st.html(   # st.html, e não st.markdown: o markdown come 1rem do fim do bloco e a linha de baixo vazava
+            f"<div title='{dica}' style='cursor:help'><div style='font-size:.8rem;opacity:.75;line-height:1.25'>{rotulo}</div>"
+            f"<div style='font-size:clamp(1.5rem,2.2vw,2.1rem);font-weight:700;line-height:1.15;margin:2px 0'>{valor}</div>"
+            f"<div style='font-size:.8rem;opacity:.8;line-height:1.3'>{detalhe}</div></div>")
+        if link:
+            st.space("stretch")
+            ver_detalhe(*link)
+
+
+def bloco(chave: str):
+    """Moldura de cada bloco do painel: mesma borda, mesmo respiro, e a mesma altura dos vizinhos da linha."""
+    return st.container(border=True, key=f"bloco-{chave}")
+
+
+def titulo(texto: str, sub: str = "", ajuda_txt: str = "") -> None:
+    st.markdown(f"**{texto}**" + (f" · <span style='opacity:.75'>{sub}</span>" if sub else ""),
+                unsafe_allow_html=True, help=ajuda_txt or None)
+
+
+def secao(texto: str, selo: str, cor: str, dica: str = "") -> None:
+    """Título de cada parte do painel (o estoque do dia, o movimento do 156), com um selo ao lado."""
+    dica = dica.replace("'", "&#39;")
+    st.html(f"<div style='display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:.4rem'>"
+                f"<div style='font-size:1.45rem;font-weight:700;line-height:1.3'>{texto}</div>"
+                f"<div title='{dica}' style='cursor:{'help' if dica else 'default'};font-size:.75rem;font-weight:700;"
+                f"letter-spacing:.06em;color:{cor};border:1px solid {cor};border-radius:6px;padding:2px 8px'>{selo}</div>"
+                "</div>")
+
+
+def lista_curta(rotulo: str, itens: list[tuple[str, float]]) -> None:
+    """Mini-ranking: nome à esquerda, quantidade à direita, sem cortar o nome como numa tabela estreita."""
+    linhas = "".join(f"<div style='display:flex;justify-content:space-between;gap:8px;padding:3px 0;"
+                     f"border-bottom:1px solid rgba(128,128,128,.18)'><span>{nome}</span>"
+                     f"<span style='font-variant-numeric:tabular-nums;opacity:.8'>{num(n)}</span></div>"
+                     for nome, n in itens)
+    st.html(f"<div style='font-size:.78rem;opacity:.7;margin-bottom:2px'>{rotulo}</div>"
+            f"<div style='font-size:.88rem'>{linhas}</div>")
 
 
 def legenda_extremos(serie: pd.Series) -> list[int]:
@@ -93,7 +127,19 @@ def legenda_extremos(serie: pd.Series) -> list[int]:
 
 
 def ver_detalhe(pagina: str, rotulo: str, icone: str) -> None:
-    st.page_link(pagina, label=rotulo, icon=icone)
+    st.page_link(pagina, label=rotulo, icon=icone, width="content")
+
+
+# Placas: borda esquerda grossa na cor do estado; o link do rodapé fica dentro da moldura, com o hover contido.
+st.html(f"""<style>
+div[class*="st-key-placa-"] {{border-left-width: 5px !important; padding: .6rem .85rem .45rem !important;
+                              flex: 1 0 auto !important;}}
+div[class*="st-key-placa-alerta"] {{border-color: {DESTAQUE}66 !important; border-left-color: {DESTAQUE} !important;}}
+div[class*="st-key-placa-azul"] {{border-color: {AZUL}55 !important; border-left-color: {AZUL} !important;}}
+div[class*="st-key-bloco-"] {{padding: .85rem 1rem .75rem !important; flex: 1 0 auto !important;}}
+[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-placa-"]),
+[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-bloco-"]) {{flex: 1 0 auto !important; height: auto !important;}}
+</style>""")
 
 
 st.session_state.setdefault("wr_modo", "hoje")
@@ -145,11 +191,7 @@ def quadro() -> None:
                  f"Registro mais recente: 156 em {ULTIMO_156:%d/%m/%Y}; Câmara, indicações até dezembro de 2025, com "
                  f"envio e resposta acompanhados até {HOJE:%d/%m/%Y}; Ouvidoria em {ULTIMO_OUVIDORIA:%d/%m/%Y}; "
                  "Defesa Civil em dezembro de 2024.") if modo == "hoje" else ""
-    st.markdown(f"<div style='display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin-top:4px'>"
-                f"<div style='font-size:1.6rem;font-weight:700'>{data_longa(dia)}</div>"
-                f"<div title='{dica_hoje}' style='cursor:help;font-size:.78rem;font-weight:700;letter-spacing:.06em;"
-                f"color:{cor_selo};border:1px solid {cor_selo};border-radius:6px;padding:2px 8px'>{selo}</div></div>",
-                unsafe_allow_html=True)
+    secao(data_longa(dia), selo, cor_selo, dica_hoje)
     if modo in ("simulacao", "fim"):
         st.progress(passo / DIAS_SIMULADOS)
 
@@ -164,36 +206,35 @@ def quadro() -> None:
     ultimos30 = por_dia.loc[fim_janela - pd.to_timedelta(29, unit="D"):fim_janela, "entradas"].sum()
     anteriores30 = por_dia.loc[fim_janela - pd.to_timedelta(59, unit="D"):fim_janela - pd.to_timedelta(30, unit="D"),
                                "entradas"].sum()
+    variacao = (ultimos30 / anteriores30 - 1) * 100 if anteriores30 else None
     p = st.columns(5, gap="small")
     with p[0]:
-        painel("Pedidos abertos no 156", num(len(abertos)),
-               ajuda_txt="Pedidos que já tinham entrado e ainda não tinham sido atendidos nesta data. Laranja: além do prazo típico da categoria.",
-               detalhe=f"<b>{metricas.porcentagem(atrasados / len(abertos) * 100 if len(abertos) else 0)}</b> além do prazo típico",
-               alerta=True)
-        ver_detalhe("views/prazos.py", "Ver em Prazos", ":material/schedule:")
+        placa("abertos", "Pedidos abertos no 156", num(len(abertos)),
+              ajuda_txt="Pedidos que já tinham entrado e ainda não tinham sido atendidos nesta data. Laranja: além do prazo típico da categoria.",
+              detalhe=f"<b>{metricas.porcentagem(atrasados / len(abertos) * 100 if len(abertos) else 0)}</b> além do prazo típico",
+              alerta=True, link=("views/prazos.py", "Prazos", ":material/schedule:"))
     with p[1]:
-        painel(f"Fila prioritária (nota ≥ {NOTA_ALTA})", num(prioritarios),
-               ajuda_txt="Pedidos abertos com nota de prioridade 7 ou mais no AHP: o primeiro lote a atender.",
-               detalhe=f"{metricas.porcentagem(prioritarios / len(fila) * 100 if len(fila) else 0, 1)} dos classificáveis")
-        ver_detalhe("views/prioridade.py", "Ver em Prioridade", ":material/low_priority:")
+        placa("fila", f"Fila prioritária (nota ≥ {NOTA_ALTA})", num(prioritarios),
+              ajuda_txt="Pedidos abertos com nota de prioridade 7 ou mais no AHP: o primeiro lote a atender.",
+              detalhe=f"{metricas.porcentagem(prioritarios / len(fila) * 100 if len(fila) else 0, 1)} dos classificáveis",
+              link=("views/prioridade.py", "Prioridade", ":material/low_priority:"))
     with p[2]:
-        painel("Indicações sem resposta", num(len(camara)),
-               ajuda_txt="Indicações de vereadores já enviadas à Prefeitura e ainda sem resposta registrada nesta data.",
-               detalhe=f"mediana de <b>{num(camara['idade_dias'].median())} dias</b> desde o envio", alerta=True)
-        ver_detalhe("views/retorno.py", "Ver em Retorno", ":material/call_split:")
+        placa("camara", "Indicações sem resposta", num(len(camara)),
+              ajuda_txt="Indicações de vereadores já enviadas à Prefeitura e ainda sem resposta registrada nesta data.",
+              detalhe=f"mediana de <b>{num(camara['idade_dias'].median())} dias</b> desde o envio", alerta=True,
+              link=("views/retorno.py", "Retorno", ":material/call_split:"))
     with p[3]:
-        painel("Ouvidoria além do prazo", num(len(ouvidoria)),
-               ajuda_txt="Manifestações abertas cujo prazo legal de resposta (10 dias úteis) já tinha passado.",
-               detalhe=f"mediana de {num(ouvidoria['dias_alem_do_prazo'].median())} dias além do prazo legal", alerta=True)
-        ver_detalhe("views/retorno.py", "Ver em Retorno", ":material/call_split:")
+        placa("ouvidoria", "Ouvidoria além do prazo", num(len(ouvidoria)),
+              ajuda_txt="Manifestações abertas cujo prazo legal de resposta (10 dias úteis) já tinha passado.",
+              detalhe=f"mediana de {num(ouvidoria['dias_alem_do_prazo'].median())} dias além do prazo legal", alerta=True,
+              link=("views/retorno.py", "Retorno", ":material/call_split:"))
     with p[4]:
-        variacao = (ultimos30 / anteriores30 - 1) * 100 if anteriores30 else None
-        painel(f"Entrada no 156 · 30 dias até {fim_janela:%d/%m}", num(ultimos30),
-               ajuda_txt="Pedidos que entraram no 156 nos 30 dias até a data, comparados com os 30 dias antes.",
-               detalhe="sem os 30 dias anteriores para comparar" if variacao is None else
-               f"{'+' if variacao >= 0 else ''}{metricas.porcentagem(variacao)} sobre os 30 dias anteriores",
-               alerta=variacao is not None and variacao > 10)
-        ver_detalhe("views/reincidencia.py", "Ver em Reincidência", ":material/repeat:")
+        placa("entrada", f"Entrada no 156 · 30 dias até {fim_janela:%d/%m}", num(ultimos30),
+              ajuda_txt="Pedidos que entraram no 156 nos 30 dias até a data, comparados com os 30 dias antes.",
+              detalhe="sem os 30 dias anteriores para comparar" if variacao is None else
+              f"{'+' if variacao >= 0 else ''}{metricas.porcentagem(variacao)} sobre os 30 dias anteriores",
+              alerta=variacao is not None and variacao > 10,
+              link=("views/reincidencia.py", "Reincidência", ":material/repeat:"))
 
     # 2. Alertas: o resumo em frases
     cat = (abertos.groupby("categoria", observed=True).agg(abertos=("atrasado", "size"), atrasados=("atrasado", "sum"))
@@ -219,18 +260,16 @@ def quadro() -> None:
         orgao = ouvidoria["orgao"].value_counts()
         alertas.append(f"Na Ouvidoria, <b>{nome_unidade(orgao.index[0])}</b> concentra {num(orgao.iloc[0])} das "
                        f"{num(len(ouvidoria))} manifestações além do prazo.")
-    st.space("small")
-    with st.container(border=True):
-        st.markdown("<div style='font-weight:700;margin-bottom:2px'>Alertas do dia</div><ul style='margin:0'>"
-                    + "".join(f"<li>{a}</li>" for a in alertas) + "</ul>", unsafe_allow_html=True,
-                    help="Frases geradas automaticamente a partir dos números desta data.")
+    with bloco("alertas"):
+        titulo("Alertas do Dia", ajuda_txt="Frases geradas automaticamente a partir dos números desta data.")
+        st.markdown("<ul style='margin:0'>" + "".join(f"<li>{a}</li>" for a in alertas) + "</ul>",
+                    unsafe_allow_html=True)
 
     # 3. Onde está e por onde começar
-    st.space("small")
-    c1, c2 = st.columns([1, 1.25], gap="medium")
-    with c1:
-        st.markdown("**Onde o Estoque Atrasado Está** · pedidos do 156 além do prazo típico",
-                    help="Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria.")
+    c1, c2 = st.columns([1, 1.25], gap="small")
+    with c1, bloco("mapa"):
+        titulo("Onde o Estoque Atrasado Está", "pedidos do 156 além do prazo típico",
+               "Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria.")
         por_bairro = abertos[abertos["atrasado"]].groupby("bairro_oficial", observed=True).size().rename("atrasados").reset_index()
         por_bairro["nome"] = por_bairro["bairro_oficial"].map(nomes_bairro)
         por_bairro["txt"] = por_bairro["atrasados"].map(num)
@@ -244,33 +283,35 @@ def quadro() -> None:
                                               labelExpr=formato_br())), alt.value(SEM_DADO)),
                                 tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("txt:N", title="Atrasados")])
                         .project(type="mercator").properties(height=330), width="stretch")
-        ver_detalhe("views/territorio.py", "Taxas por bairro em Território", ":material/map:")
-    with c2:
-        st.markdown(f"**Fila do Dia** · os 10 pedidos abertos de maior nota (de {num(len(fila))})",
-                    help="Os pedidos abertos nesta data, em ordem de prioridade pela nota do AHP. Por onde começar.")
+        st.space("stretch")
+        ver_detalhe("views/territorio.py", "Ver taxas por bairro em Território", ":material/map:")
+    with c2, bloco("fila"):
+        titulo("Fila do Dia", f"os 10 pedidos abertos de maior nota (de {num(len(fila))})",
+               "Os pedidos abertos nesta data, em ordem de prioridade pela nota do AHP. Por onde começar.")
         topo = fila.head(10)
         st.dataframe(pd.DataFrame({
             "Nota": topo["indice"].round(1),
             "Serviço": topo["servico"].map(nome_categoria),
             "Bairro": topo["bairro_oficial"].map(nomes_bairro),
             "Aberto há": topo["idade_dias"].map(lambda v: f"{num(v)} dias"),
-            "Anteriores no local": topo["pedidos_anteriores"].map(lambda v: "—" if pd.isna(v) else num(v)),
+            "Anteriores": topo["pedidos_anteriores"].map(lambda v: "—" if pd.isna(v) else num(v)),
         }), hide_index=True, width="stretch", height=388, column_config={
             "Nota": st.column_config.ProgressColumn("Nota", min_value=0, max_value=10, format="localized", width="small",
                                                     help=ajuda.texto("Nota")),
             "Serviço": st.column_config.TextColumn("Serviço", width="medium", help=ajuda.texto("Serviço")),
             "Bairro": st.column_config.TextColumn("Bairro", width="small", help=ajuda.texto("Bairro")),
             "Aberto há": st.column_config.TextColumn("Aberto há", width="small", help=ajuda.texto("Aberto há")),
-            "Anteriores no local": st.column_config.TextColumn("Anteriores no local", width="small",
+            "Anteriores": st.column_config.TextColumn("Anteriores", width="small",
                                                               help=ajuda.texto("Anteriores no local"))})
-        ver_detalhe("views/prioridade.py", "Fila completa e cálculo da nota em Prioridade", ":material/low_priority:")
+        st.space("stretch")
+        ver_detalhe("views/prioridade.py", "Ver fila completa e cálculo da nota em Prioridade", ":material/low_priority:")
 
     # 4. O movimento do dia no 156
-    st.space("medium")
-    st.markdown("**O Movimento no 156**" + ("" if dia_fluxo == dia else
-                f" · <span style='font-weight:400;opacity:.8'>o fluxo diário das bases vai até "
-                f"{dia_fluxo:%d/%m/%Y}; os quadros abaixo mostram esse último dia</span>"),
-                unsafe_allow_html=True, help="Entradas e atendimentos do 156 por dia. O estoque acima é sempre da data do painel.")
+    st.space("small")
+    secao("O Movimento no 156", "FLUXO DO DIA" if dia_fluxo == dia else f"ÚLTIMO FLUXO · {dia_fluxo:%d/%m/%Y}",
+          AZUL, "Entradas e atendimentos do 156 por dia. O estoque acima é sempre da data do painel." +
+          ("" if dia_fluxo == dia else f" O fluxo diário das bases vai até {dia_fluxo:%d/%m/%Y}: as placas e os "
+           "gráficos abaixo mostram esse último dia."))
     if dia_fluxo is not None:
         hoje = por_dia.loc[dia_fluxo]
         media = por_dia[por_dia.index.weekday == dia_fluxo.weekday()]["entradas"].mean()
@@ -279,34 +320,33 @@ def quadro() -> None:
         outras = entradas_fontes.loc[dia_fluxo] if dia_fluxo in entradas_fontes.index else pd.Series(dtype=float)
         q = st.columns(4, gap="small")
         with q[0]:
-            painel(f"Entraram no 156 {no_dia}", num(hoje["entradas"]), ajuda_txt="Pedidos registrados no 156 nesta data.",
+            placa("entraram", f"Entraram no 156 {no_dia}", num(hoje["entradas"]), ajuda_txt="Pedidos registrados no 156 nesta data.",
                    detalhe=f"{'+' if diferenca >= 0 else ''}{metricas.porcentagem(diferenca)} sobre a média de "
                    f"{DIAS_SEMANA[dia_fluxo.weekday()]}", alerta=diferenca > 25)
         with q[1]:
-            painel(f"Atendidos no 156 {no_dia}", num(hoje["atendidos"]), "pela data do último movimento",
+            placa("atendidos", f"Atendidos no 156 {no_dia}", num(hoje["atendidos"]), detalhe="pela data do último movimento",
                    ajuda_txt="Pedidos marcados como atendidos nesta data, de qualquer data de entrada.")
         with q[2]:
-            painel("Saldo do dia" if dia_fluxo == dia else f"Saldo em {dia_fluxo:%d/%m}",
+            placa("saldo", "Saldo do dia" if dia_fluxo == dia else f"Saldo em {dia_fluxo:%d/%m}",
                    f"{'+' if saldo > 0 else ''}{num(saldo)}",
                    ajuda_txt="Entradas menos atendimentos: positivo, a fila cresceu.",
                    detalhe="a fila cresceu" if saldo > 0 else "a fila diminuiu", alerta=saldo > 0)
         with q[3]:
-            painel(f"Outras portas {no_dia}", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
+            placa("outras", f"Outras portas {no_dia}", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
                    ajuda_txt="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
                    detalhe=" · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
 
-    st.space("small")
-    c1, c2, c3 = st.columns([1.3, 1, 1], gap="medium")
-    with c1:
+    c1, c2, c3 = st.columns([1.3, 1, 1], gap="small")
+    with c1, bloco("trinta"):
         if modo in ("simulacao", "fim"):
             inicio = pd.Timestamp(e["wr_inicio"])
             janela = pd.date_range(inicio, inicio + pd.to_timedelta(DIAS_SIMULADOS - 1, unit="D"))
-            st.markdown("**O Mês da Simulação até Agora** · 156, por dia",
-                        help="Azul: pedidos que entraram em cada dia. Laranja: pedidos atendidos. Os dias seguintes ainda vazios.")
+            titulo("O Mês da Simulação até Agora", "156, por dia",
+                   "Azul: pedidos que entraram em cada dia. Laranja: pedidos atendidos. Os dias seguintes ainda vazios.")
         else:
             janela = pd.date_range(fim_janela - pd.to_timedelta(29, unit="D"), fim_janela)
-            st.markdown(f"**Os 30 Dias até {fim_janela:%d/%m/%Y}** · 156, por dia",
-                        help="Azul: pedidos que entraram em cada dia. Laranja: pedidos atendidos.")
+            titulo(f"Os 30 Dias até {fim_janela:%d/%m/%Y}", "156, por dia",
+                   "Azul: pedidos que entraram em cada dia. Laranja: pedidos atendidos.")
         serie = por_dia.reindex(janela, fill_value=0)
         serie.loc[serie.index > dia] = 0                                   # o futuro ainda não aconteceu
         serie = serie.rename_axis("data").reset_index().melt(id_vars="data", var_name="tipo", value_name="n")
@@ -322,31 +362,28 @@ def quadro() -> None:
                             legend=alt.Legend(orient="top", title=None)),
             tooltip=[alt.Tooltip("dia_txt:N", title="Dia"), alt.Tooltip("tipo:N", title=" "),
                      alt.Tooltip("n:Q", title="Pedidos", format=",")],
-        ).properties(height=210), width="stretch")
-    with c2:
-        st.markdown("**Categorias com Mais Atraso** · abertos no 156",
-                    help="Pedidos abertos além do prazo típico, por categoria · % dos abertos da categoria que já atrasaram.")
-        base = alt.Chart(cat).encode(y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=140)),
+        ).properties(height=250), width="stretch")
+    with c2, bloco("categorias"):
+        titulo("Categorias com Mais Atraso", "abertos no 156",
+               "Pedidos abertos além do prazo típico, por categoria · % dos abertos da categoria que já atrasaram.")
+        base = alt.Chart(cat).encode(y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=125)),
                                      x=alt.X("atrasados:Q", axis=None,
-                                             scale=alt.Scale(domain=[0, max(cat["atrasados"].max(), 1) * 1.7])))
-        st.altair_chart((base.mark_bar(color=DESTAQUE) + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=11)
+                                             scale=alt.Scale(domain=[0, max(cat["atrasados"].max(), 1) * 3.0], nice=False)))
+        st.altair_chart((base.mark_bar(color=DESTAQUE) + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=10)
                          .encode(text="rotulo:N")).properties(height=210), width="stretch")
-        ver_detalhe("views/prazos.py", "Prazos por categoria", ":material/schedule:")
-    with c3:
-        st.markdown("**O que Mais Entrou Neste Dia** · 156" if dia_fluxo == dia else
-                    f"**O que Mais Entrou em {dia_fluxo:%d/%m/%Y}** · 156",
-                    help="Categorias e bairros com mais pedidos registrados nesta data. Entre parênteses, quantos.")
+        st.space("stretch")
+        ver_detalhe("views/prazos.py", "Ver em Prazos", ":material/schedule:")
+    with c3, bloco("entrou"):
+        titulo("O que Mais Entrou " + ("Neste Dia" if dia_fluxo == dia else f"em {dia_fluxo:%d/%m/%Y}"), "156",
+               "As 3 categorias e os 3 bairros com mais pedidos registrados nesta data, com a quantidade.")
         do_dia = fluxo[fluxo["data"] == dia_fluxo]
         if do_dia.empty:
             st.caption("Sem entradas registradas neste dia.")
         else:
-            cats = do_dia.groupby("categoria")["entradas"].sum().nlargest(5)
-            bairros = do_dia.groupby("bairro_oficial")["entradas"].sum().nlargest(5)
-            st.dataframe(pd.DataFrame({"Categoria": [f"{nome_categoria(c)} ({num(n)})" for c, n in cats.items()],
-                                       "Bairro": [f"{nomes_bairro.get(b, b)} ({num(n)})" for b, n in bairros.items()]}),
-                         hide_index=True, width="stretch", column_config={
-                             "Categoria": st.column_config.Column("Categoria", help="Categorias com mais entradas neste dia (pedidos)."),
-                             "Bairro": st.column_config.Column("Bairro", help="Bairros com mais entradas neste dia (pedidos).")})
+            cats = do_dia.groupby("categoria")["entradas"].sum().nlargest(3)
+            bairros = do_dia.groupby("bairro_oficial")["entradas"].sum().nlargest(3)
+            lista_curta("Categorias", [(nome_categoria(c), n) for c, n in cats.items()])
+            lista_curta("Bairros", [(nomes_bairro.get(b, b), n) for b, n in bairros.items()])
 
     st.space("small")
     leitura("Como o estoque de cada dia é reconstruído: um pedido conta como aberto da entrada até o atendimento (ou até "
