@@ -418,23 +418,21 @@ with aba_indice:
         return min(xs), max(xs), min(ys), max(ys)
 
 
-    OPACIDADE_FUNDO_SORTEADOS = 0.5    # mais claro que o mapa da seção 3, para as cruzes ficarem à frente
-
-
     def mapa_sorteados(pontos: pd.DataFrame) -> alt.LayerChart:
-        """Fundo com o índice dos bairros (o mesmo da seção 3, mais claro) e uma cruz em cada sorteado, na cor do cartão.
+        """Fundo com o índice dos bairros (o mesmo mapa da seção 3, mesmas cores) e uma cruz em cada sorteado, na cor do
+        cartão. Vermelho, âmbar e verde não existem na rampa de azuis, então as cruzes ficam à frente sem apagar o fundo.
 
         O fundo explica a parte da nota que vem do lugar (risco e vulnerabilidade); a cruz é a ocorrência.
         """
         fundo = r.reset_index()[["bairro_oficial", "nome", "indice"]].assign(
             indice_txt=lambda d: d["indice"].map(lambda v: metricas.numero(v, 1)))
         base = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(
-            stroke=cor_fundo(), strokeWidth=0.7, fillOpacity=OPACIDADE_FUNDO_SORTEADOS).transform_lookup(
+            stroke="white", strokeWidth=0.7).transform_lookup(
             lookup="properties.bairro_oficial", from_=alt.LookupData(fundo, "bairro_oficial", ["nome", "indice", "indice_txt"]),
         ).encode(
             color=alt.condition("isValid(datum.indice)", alt.Color(
                 "indice:Q", title="fundo: índice do bairro (seção 3)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
-                legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=160, titleLimit=300)),
+                legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
                 alt.value(SEM_DADO)),
             tooltip=[alt.Tooltip("properties.nome:N", title="Bairro"), alt.Tooltip("indice_txt:N", title="Índice do bairro")])
         camadas = [base]
