@@ -20,10 +20,13 @@ f = filtros.atuais()
 
 
 def achado(coluna, pergunta: str, frase: str, pagina: str, rotulo: str, icone: str) -> None:
-    with coluna.container(border=True, height="stretch"):
-        st.markdown(f"<div style='font-size:.8rem;opacity:.7;margin-bottom:2px'>{pergunta}</div>"
-                    f"<div style='font-size:1.02rem;line-height:1.4'>{frase}</div>", unsafe_allow_html=True)
-        st.page_link(pagina, label=rotulo, icon=icone)
+    """Cartão de achado: a pergunta, a frase com o número e, no rodapé, o link para a página que o detalha.
+    O texto vai em st.html: o st.markdown come 1rem do fim do bloco e o link colava no texto."""
+    with coluna.container(border=True, height="stretch", gap="small"):
+        st.html(f"<div style='font-size:.8rem;opacity:.7;margin-bottom:4px'>{pergunta}</div>"
+                f"<div style='font-size:1.02rem;line-height:1.45'>{frase}</div>")
+        st.space("stretch")
+        st.page_link(pagina, label=rotulo, icon=icone, width="content")
 
 
 st.title("Achados")
@@ -73,7 +76,8 @@ def ou_traco(valor: str | None) -> str:
     return valor if valor not in (None, "—") else "sem dado no recorte"
 
 
-l1 = st.columns(3)
+st.space("xxsmall")
+l1 = st.columns(3, gap="medium")
 achado(l1[0], "A porta de entrada",
        f"O app Conecta Recife é <b>{ou_traco(pct(app))}</b> das manifestações da Ouvidoria desde 2023; o telefone "
        "e o site dominam. E quase toda indicação de vereador chega à Prefeitura: "
@@ -87,7 +91,8 @@ achado(l1[2], "O problema volta",
        f"<b>{ou_traco(pct(repetidos))}</b> dos pedidos do 156 caem num local + serviço que já teve pedido. "
        "Não é só pedido em dobro: o mesmo problema volta ao mesmo endereço.",
        "views/reincidencia.py", "Ver em Reincidência", ":material/repeat:")
-l2 = st.columns(3)
+st.space("xxsmall")
+l2 = st.columns(3, gap="medium")
 tendencia = ""
 if len(p90_por_ano) >= 2:
     primeiro, ultimo = min(p90_por_ano), max(p90_por_ano)
@@ -108,6 +113,7 @@ achado(l2[2], "O território",
        "views/territorio.py", "Ver em Território", ":material/map:")
 
 # --- Volume por fonte -------------------------------------------------------------------------------
+st.space("small")
 st.subheader("Quanto Chega por Cada Porta",
              help="Registros por ano em cada fonte. Clique numa fonte da legenda para destacá-la. Linha tracejada e "
                   "ponto vazado: ano em que a fonte publicou só parte dos registros.")
