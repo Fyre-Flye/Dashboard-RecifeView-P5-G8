@@ -122,7 +122,7 @@ def lista_curta(rotulo: str, itens: list[tuple[str, float]]) -> None:
 
 
 def legenda_extremos(serie: pd.Series) -> list[int]:
-    """Só o menor e o maior valor na legenda do mapa: com escala raiz, os rótulos do meio se encavalam no celular."""
+    """Só o menor e o maior valor na legenda do mapa: com escala comprimida, os rótulos do meio se encavalam no celular."""
     return [int(serie.min()), int(serie.max())] if len(serie) else []
 
 
@@ -271,7 +271,9 @@ def quadro() -> None:
     c1, c2 = st.columns([1, 1.25], gap="medium")
     with c1, bloco("mapa"):
         titulo("Onde o Estoque Atrasado Está", "pedidos do 156 além do prazo típico",
-               "Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria.")
+               "Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria. A escala de cores "
+               "é comprimida (potência 0,3), porque as contagens vão de poucos a mais de mil: assim os bairros do meio não "
+               "somem no claro e o mapa fica na mesma faixa de azuis do Onde Agir Primeiro.")
         por_bairro = abertos[abertos["atrasado"]].groupby("bairro_oficial", observed=True).size().rename("atrasados").reset_index()
         por_bairro["nome"] = por_bairro["bairro_oficial"].map(nomes_bairro)
         por_bairro["txt"] = por_bairro["atrasados"].map(num)
@@ -279,12 +281,12 @@ def quadro() -> None:
                         .transform_lookup(lookup="properties.bairro_oficial",
                                           from_=alt.LookupData(por_bairro, "bairro_oficial", ["nome", "atrasados", "txt"]))
                         .encode(color=alt.condition("isValid(datum.atrasados)", alt.Color(
-                            "atrasados:Q", title="pedidos atrasados", scale=alt.Scale(range=RAMPA, type="sqrt"),
+                            "atrasados:Q", title="pedidos atrasados", scale=alt.Scale(range=RAMPA, type="pow", exponent=0.3),
                             legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=200,
                                               values=legenda_extremos(por_bairro["atrasados"]),
                                               labelExpr=formato_br())), alt.value(SEM_DADO)),
                                 tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("txt:N", title="Atrasados")])
-                        .project(type="mercator").properties(height=330), width="stretch")
+                        .project(type="mercator").properties(height=370), width="stretch")
         st.space("stretch")
         ver_detalhe("views/territorio.py", "Ver taxas por bairro em Território", ":material/map:")
     with c2, bloco("fila"):
