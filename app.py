@@ -26,7 +26,9 @@ pagina = st.navigation({
     ],
 })
 
-desenhar_barra_lateral()
+SEM_FILTROS = {"war_room": "Esta página mostra a cidade inteira num dia, com os pesos padrão do AHP: os filtros "
+                           "não se aplicam aqui e voltam a valer nas outras páginas."}
+desenhar_barra_lateral(SEM_FILTROS.get(pagina.url_path))
 pagina.run()
 
 st.divider()

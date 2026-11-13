@@ -15,7 +15,8 @@ import streamlit as st
 
 from src import ahp, ajuda, metricas, retrato
 from src.componentes import fontes, leitura
-from src.config import AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria
+from src.config import (AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria,
+                        nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
 
 SEGUNDOS_POR_DIA = 2.5
@@ -62,6 +63,12 @@ def dia_aleatorio() -> None:
 
 def voltar_para_hoje() -> None:
     st.session_state.update(wr_modo="hoje", wr_dia=HOJE)
+
+
+def ultimo_dia_com_fluxo(dia: pd.Timestamp) -> pd.Timestamp | None:
+    """O próprio dia, se tem fluxo diário do 156; senão o último dia com fluxo antes dele."""
+    anteriores = por_dia.index[por_dia.index <= dia]
+    return anteriores.max() if len(anteriores) else None
 
 
 def data_longa(d: pd.Timestamp) -> str:
@@ -134,35 +141,39 @@ def quadro() -> None:
 
     abertos, fila, camara, ouvidoria = estado_em(dia)
 
-    # O dia: entradas e atendimentos
-    if dia in por_dia.index:
-        hoje = por_dia.loc[dia]
-        media = por_dia[por_dia.index.weekday == dia.weekday()]["entradas"].mean()
+    # O dia: entradas e atendimentos. Depois do fim do fluxo diário, mostra o último dia com fluxo, dizendo qual.
+    dia_fluxo = ultimo_dia_com_fluxo(dia)
+    no_dia = "neste dia" if dia_fluxo == dia else f"em {dia_fluxo:%d/%m/%Y}"
+    if dia_fluxo != dia:
+        st.markdown(f"<div style='font-size:.9rem;border-left:4px solid {AZUL};padding:4px 10px;margin:4px 0 8px'>"
+                    f"O fluxo diário do 156 nas bases vai até <b>{data_longa(dia_fluxo).lower()}</b>. Os quatro quadros "
+                    f"de cima mostram esse último dia; o estoque, a fila e os alertas abaixo são de <b>{dia:%d/%m/%Y}</b>."
+                    "</div>", unsafe_allow_html=True)
+    if dia_fluxo is not None:
+        hoje = por_dia.loc[dia_fluxo]
+        media = por_dia[por_dia.index.weekday == dia_fluxo.weekday()]["entradas"].mean()
         diferenca = (hoje["entradas"] / media - 1) * 100
         saldo = int(hoje["entradas"] - hoje["atendidos"])
-        outras = entradas_fontes.loc[dia] if dia in entradas_fontes.index else pd.Series(dtype=float)
+        outras = entradas_fontes.loc[dia_fluxo] if dia_fluxo in entradas_fontes.index else pd.Series(dtype=float)
         q = st.columns(4, gap="small")
         with q[0]:
-            painel("Entraram no 156 neste dia", num(hoje["entradas"]), ajuda_txt="Pedidos registrados no 156 nesta data.",
+            painel(f"Entraram no 156 {no_dia}", num(hoje["entradas"]), ajuda_txt="Pedidos registrados no 156 nesta data.",
                    detalhe=
                    f"{'+' if diferenca >= 0 else ''}{metricas.porcentagem(diferenca)} sobre a média de "
-                   f"{DIAS_SEMANA[dia.weekday()]}", alerta=diferenca > 25)
+                   f"{DIAS_SEMANA[dia_fluxo.weekday()]}", alerta=diferenca > 25)
         with q[1]:
-            painel("Atendidos no 156 neste dia", num(hoje["atendidos"]), "pela data do último movimento",
+            painel(f"Atendidos no 156 {no_dia}", num(hoje["atendidos"]), "pela data do último movimento",
                    ajuda_txt="Pedidos marcados como atendidos nesta data, de qualquer data de entrada.")
         with q[2]:
-            painel("Saldo do dia", f"{'+' if saldo > 0 else ''}{num(saldo)}",
+            painel("Saldo do dia" if dia_fluxo == dia else f"Saldo em {dia_fluxo:%d/%m}", f"{'+' if saldo > 0 else ''}{num(saldo)}",
                    ajuda_txt="Entradas menos atendimentos: positivo, a fila cresceu.",
                    detalhe=
                    "a fila cresceu" if saldo > 0 else "a fila diminuiu", alerta=saldo > 0)
         with q[3]:
-            painel("Outras portas neste dia", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
+            painel(f"Outras portas {no_dia}", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
                    ajuda_txt="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
                    detalhe=
                    " · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
-    else:
-        st.caption(f"Sem entradas registradas neste dia: o fluxo diário vai até {ULTIMO:%d/%m/%Y}. Os números de "
-                   "estoque abaixo continuam valendo para a data.")
 
     st.write("")
     # O estoque no dia
@@ -279,9 +290,10 @@ def quadro() -> None:
         st.altair_chart((base.mark_bar(color=DESTAQUE) + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=11)
                          .encode(text="rotulo:N")).properties(height=260), width="stretch")
     with c3:
-        st.markdown("**O que Mais Entrou Neste Dia** · 156",
+        st.markdown("**O que Mais Entrou Neste Dia** · 156" if dia_fluxo == dia else
+                    f"**O que Mais Entrou em {dia_fluxo:%d/%m/%Y}** · 156, último dia com fluxo",
                     help="Categorias e bairros com mais pedidos registrados nesta data. Entre parênteses, quantos.")
-        do_dia = fluxo[fluxo["data"] == dia]
+        do_dia = fluxo[fluxo["data"] == dia_fluxo]
         if do_dia.empty:
             st.caption("Sem entradas registradas neste dia.")
         else:
@@ -306,9 +318,9 @@ def quadro() -> None:
                         "Nenhum pedido tem nota 9 ou mais") + "; o primeiro da fila é "
                        f"{nome_categoria(primeiro['servico']).lower()} em {nomes_bairro.get(primeiro['bairro_oficial'])}, "
                        f"aberto há {num(primeiro['idade_dias'])} dias.")
-    if dia in por_dia.index and por_dia.loc[dia, "entradas"] > 0:
-        alertas.append(f"Entraram {num(por_dia.loc[dia, 'entradas'])} pedidos no 156 neste dia, "
-                       f"{'acima' if diferenca >= 0 else 'abaixo'} da média de {DIAS_SEMANA[dia.weekday()]} "
+    if dia_fluxo is not None and por_dia.loc[dia_fluxo, "entradas"] > 0:
+        alertas.append(f"Entraram {num(por_dia.loc[dia_fluxo, 'entradas'])} pedidos no 156 {no_dia}, "
+                       f"{'acima' if diferenca >= 0 else 'abaixo'} da média de {DIAS_SEMANA[dia_fluxo.weekday()]} "
                        f"({metricas.porcentagem(abs(diferenca))}).")
     if not camara.empty:
         tema = camara["categoria"].value_counts()
@@ -316,7 +328,7 @@ def quadro() -> None:
                        f"({num(tema.iloc[0])}).")
     if not ouvidoria.empty:
         orgao = ouvidoria["orgao"].value_counts()
-        alertas.append(f"Na Ouvidoria, <b>{nome_categoria(orgao.index[0])}</b> concentra {num(orgao.iloc[0])} das "
+        alertas.append(f"Na Ouvidoria, <b>{nome_unidade(orgao.index[0])}</b> concentra {num(orgao.iloc[0])} das "
                        f"{num(len(ouvidoria))} manifestações além do prazo.")
     st.markdown("<ul style='margin-top:0'>" + "".join(f"<li>{a}</li>" for a in alertas) + "</ul>", unsafe_allow_html=True)
     leitura("Como o estoque de cada dia é reconstruído: um pedido conta como aberto da entrada até o atendimento (ou até "

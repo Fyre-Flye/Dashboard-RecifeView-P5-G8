@@ -40,24 +40,29 @@ class Filtros:
         return df[mascara]
 
 
-def desenhar_barra_lateral() -> None:
+def desenhar_barra_lateral(aviso_sem_filtros: str | None = None) -> None:
+    """Desenha os filtros. Numa página que não os usa, `aviso_sem_filtros` explica por quê e os filtros ficam
+    travados, sem perder o valor escolhido para as outras páginas."""
     bairros = tabela("bairros").sort_values("nome")
+    travado = aviso_sem_filtros is not None
     with st.sidebar:
         st.subheader("Filtros")
-        st.slider("Período", ANO_MIN, ANO_MAX, PERIODO_PADRAO, key="f_anos",
+        if travado:
+            st.caption(aviso_sem_filtros)
+        st.slider("Período", ANO_MIN, ANO_MAX, PERIODO_PADRAO, key="f_anos", disabled=travado,
                   help="Ano de abertura do pedido. 2025 e 2026 são parciais em algumas fontes (veja 'Sobre os dados').")
-        st.multiselect("RPA", [str(i) for i in range(1, 7)], key="f_rpas", placeholder="Todas",
+        st.multiselect("RPA", [str(i) for i in range(1, 7)], key="f_rpas", placeholder="Todas", disabled=travado,
                        format_func=lambda r: f"RPA {r}",
                        help="Região Político-Administrativa. Vazio = todas.")
         rpas = st.session_state.get("f_rpas") or []
         opcoes = bairros[bairros["rpa"].isin(rpas)] if rpas else bairros
         nomes = dict(zip(bairros["bairro_oficial"], bairros["nome"]))
-        st.multiselect("Bairro", opcoes["bairro_oficial"].tolist(), key="f_bairros", placeholder="Todos",
+        st.multiselect("Bairro", opcoes["bairro_oficial"].tolist(), key="f_bairros", placeholder="Todos", disabled=travado,
                        format_func=nomes.get)
-        st.multiselect("Categoria de serviço", categorias_156(), key="f_categorias", placeholder="Todas",
+        st.multiselect("Categoria de serviço", categorias_156(), key="f_categorias", placeholder="Todas", disabled=travado,
                        format_func=nome_categoria,
                        help="Grupos de serviço do 156. Na Câmara, a categoria foi inferida da ementa.")
-        st.button("Limpar filtros", width="stretch", on_click=limpar,
+        st.button("Limpar filtros", width="stretch", on_click=limpar, disabled=travado,
                   help="Volta período, RPA, bairro e categoria ao padrão.")
 
 

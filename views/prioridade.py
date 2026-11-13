@@ -8,7 +8,7 @@ import streamlit as st
 from src import ahp, ajuda, filtros, metricas
 from src.componentes import fontes, kpi, leitura
 from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
-                        nome_categoria, nome_orgao)
+                        nome_categoria, nome_orgao, nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
 
 f = filtros.atuais()
@@ -208,7 +208,7 @@ def textos(linha: pd.Series, fonte: str) -> tuple[str, str, str, str]:
     canal = linha["canal_entrada"]
     canal = f"canal {str(canal).lower()}" if pd.notna(canal) else "canal não informado (o campo some no arquivo de 2025)"
     return (nome_categoria(linha["assunto"]),
-            f"{nome_categoria(linha['natureza'])} · {nome_categoria(linha['orgao'])} · {canal}",
+            f"{nome_categoria(linha['natureza'])} · {nome_unidade(linha['orgao'])} · {canal}",
             f"Registrada em {data_br(linha['data_abertura'])}; prazo legal em {data_br(linha['data_prazo'])}: "
             f"<b>{metricas.numero(linha['dias_alem_do_prazo'])} dias além do prazo</b>.",
             "Sem lugar na base aberta: risco, vulnerabilidade e reincidência não se aplicam.")
@@ -314,7 +314,7 @@ def tabela_exibicao(linhas: pd.DataFrame, fonte: str, notas: bool = True) -> pd.
     else:
         t["Assunto"] = linhas["assunto"].map(nome_categoria)
         t["Natureza"] = linhas["natureza"].map(nome_categoria)
-        t["Órgão"] = linhas["orgao"].map(nome_categoria)
+        t["Órgão"] = linhas["orgao"].map(nome_unidade)
         t["Canal"] = linhas["canal_entrada"].map(lambda v: str(v).lower() if pd.notna(v) else "—")
         t["Registrada em"] = linhas["data_abertura"].map(data_br)
         t["Dias além do prazo"] = linhas["dias_alem_do_prazo"].map(num)

@@ -119,8 +119,14 @@ _ACENTOS = {
     "ACESSIBILIDADE": "acessibilidade", "PREVIDENCIA": "previdência", "LICITACAO": "licitação",
     "AGENCIA": "agência", "CREDITO": "crédito", "EDUCACAO": "educação", "NAO": "não", "CLASSIFICADO": "classificado",
     "INFORMACAO": "informação",
+    "ADMINISTRACAO": "administração", "AMBITO": "âmbito", "ARTICULACAO": "articulação", "CIDADA": "cidadã",
+    "CIENCIA": "ciência", "COMUNICACAO": "comunicação", "ECONOMICO": "econômico", "FINANCAS": "finanças",
+    "FUNDACAO": "fundação", "GESTAO": "gestão", "INOVACAO": "inovação", "MUNICIPIO": "município",
+    "NUCLEO": "núcleo", "PARTICIPACAO": "participação", "POLITICA": "política", "QUALIFICACAO": "qualificação",
+    "RELACOES": "relações", "TRANSFORMACAO": "transformação", "PELOPIDAS": "pelópidas",
 }
-_SIGLAS = {"EMLURB", "URB", "CTTU", "SEINFRA", "SEDEC", "COMPESA", "SEGOV", "EMPREL", "CONVIVA", "RECIPREV", "COMDICA"}
+_SIGLAS = {"EMLURB", "URB", "CTTU", "SEINFRA", "SEDEC", "COMPESA", "SEGOV", "EMPREL", "CONVIVA", "RECIPREV", "COMDICA",
+           "PROCON"}
 
 
 def nome_categoria(texto) -> str:
@@ -129,6 +135,20 @@ def nome_categoria(texto) -> str:
         return "—"
     frase = re.sub(r"[A-Z]+(?:-[A-Z]+)?", lambda m: _ACENTOS.get(m.group(), m.group().lower()), str(texto).strip())
     return frase[:1].upper() + frase[1:]
+
+
+def nome_unidade(texto) -> str:
+    """Nome próprio de órgão ou unidade, com iniciais maiúsculas e siglas em caixa alta:
+    'CENTRO DE REFERENCIA EM DIREITOS HUMANOS MARGARIDA ALVES' -> 'Centro de Referência em Direitos Humanos
+    Margarida Alves'; 'CTTU' -> 'CTTU'; 'OUVIDORIA-GERAL DO MUNICIPIO' -> 'Ouvidoria-Geral do Município'."""
+    if texto is None or texto != texto:
+        return "—"
+    bruto = str(texto).strip()
+    if bruto in _SIGLAS:
+        return bruto
+    palavras = titulo(nome_categoria(bruto).replace(",", ", ").replace("  ", " ")).split(" ")
+    return " ".join("-".join(parte[:1].upper() + parte[1:] if j else parte for j, parte in enumerate(p.split("-")))
+                    for p in palavras)
 
 
 def nome_orgao(texto) -> str:
@@ -142,7 +162,8 @@ def nome_orgao(texto) -> str:
 # Títulos em "Title Case" à brasileira: palavras com inicial maiúscula, menos artigos, preposições,
 # contrações e conjunções curtas no meio do título ("Onde o Pedido se Perde").
 _MINUSCULAS = {"a", "o", "as", "os", "e", "ou", "de", "da", "do", "das", "dos", "em", "na", "no", "nas", "nos",
-               "por", "pela", "pelo", "para", "com", "ao", "aos", "à", "às", "um", "uma", "se", "que", "x", "×"}
+               "por", "pela", "pelo", "para", "com", "ao", "aos", "à", "às", "um", "uma", "se", "que", "x", "×",
+               "sobre"}
 
 
 def titulo(texto: str) -> str:
