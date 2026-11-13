@@ -14,7 +14,7 @@ f = filtros.atuais()
 st.title("Retorno e Fragmentação")
 st.markdown("Depois que a demanda entra, ela **muda de mão** entre órgãos e **raramente volta** com resposta registrada. "
             f"A Câmara ({registros('CAMARA_REQUERIMENTOS')}) é a única fonte pública que mostra o caminho inteiro, do pedido do vereador até a resposta da Prefeitura.")
-filtros.legenda(f, {"Ouvidoria": "não tem bairro nem a mesma classificação de serviço; o último bloco segue só o período."})
+filtros.legenda(f, aplicacao={"RPA": "só Câmara", "Bairro": "só Câmara", "Categoria": "só Câmara"}, ignorados={"Ouvidoria": "não tem bairro nem a mesma classificação de serviço; o último bloco segue só o período."})
 fontes(['CAMARA_REQUERIMENTOS', 'OUVIDORIA'])
 
 ind = f.aplicar(tabela("camara_indicacoes"))
@@ -53,7 +53,7 @@ etapas["pct"] = etapas["n"] / len(ind) * 100
 etapas["rotulo"] = etapas.apply(lambda r: f"{metricas.numero(r['n'])} ({metricas.porcentagem(r['pct'])})", axis=1)
 funil = alt.Chart(etapas).encode(
     y=alt.Y("etapa:N", sort=list(etapas["etapa"]), title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
-    x=alt.X("n:Q", axis=eixo_numero("indicações"), scale=alt.Scale(domain=[0, len(ind) * 1.6])),
+    x=alt.X("n:Q", axis=eixo_numero("indicações"), scale=alt.Scale(domain=[0, len(ind) * 2.1], nice=False)),
     tooltip=[alt.Tooltip("etapa:N", title="Etapa"), alt.Tooltip("rotulo:N", title="Indicações")],
 )
 barras = funil.mark_bar(height=34).encode(

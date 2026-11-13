@@ -6,11 +6,18 @@ from src.filtros import desenhar_barra_lateral
 st.set_page_config(page_title="RecifeView · Demandas do Recife", page_icon="assets/recifeview_icone.png",
                    layout="wide")
 st.logo("assets/recifeview_wordmark.png", icon_image="assets/recifeview_icone.png", size="large")
+# Mais conteúdo por tela: o Streamlit reserva muito espaço no topo e entre blocos. Ajuste só de espaçamento.
+st.html("""<style>
+.stMainBlockContainer {padding-top: 3.6rem; padding-bottom: 2rem;}
+.stMainBlockContainer h1 {padding-top: .25rem; padding-bottom: .5rem;}
+.stMainBlockContainer h2, .stMainBlockContainer h3 {padding-top: .6rem; padding-bottom: .3rem;}
+@media (max-width: 640px) {.stMainBlockContainer {padding-left: 1rem; padding-right: 1rem; padding-top: 3.6rem;}}
+</style>""")
 
 pagina = st.navigation({
     "Visão Geral": [
-        st.Page("views/inicio.py", title="Início", icon=":material/home:", default=True),
-        st.Page("views/war_room.py", title="War Room", icon=":material/monitor_heart:"),
+        st.Page("views/war_room.py", title="Painel Geral", icon=":material/dashboard:", default=True),
+        st.Page("views/inicio.py", title="Achados", icon=":material/lightbulb:", url_path="achados"),
     ],
     "Onde o Pedido se Perde": [
         st.Page("views/retorno.py", title="Retorno e Fragmentação", icon=":material/call_split:"),
@@ -26,9 +33,10 @@ pagina = st.navigation({
     ],
 })
 
-SEM_FILTROS = {"war_room": "Esta página mostra a cidade inteira num dia, com os pesos padrão do AHP: os filtros "
-                           "não se aplicam aqui e voltam a valer nas outras páginas."}
-desenhar_barra_lateral(SEM_FILTROS.get(pagina.url_path))
+SEM_FILTROS = {"Painel Geral": "O Painel Geral mostra a cidade inteira num dia, com os pesos padrão do AHP: os "
+                               "filtros não se aplicam aqui e voltam a valer nas outras páginas.",
+               "Sobre os Dados": "Esta página descreve o dataset inteiro: os filtros não se aplicam aqui."}
+desenhar_barra_lateral(SEM_FILTROS.get(pagina.title))
 pagina.run()
 
 st.divider()

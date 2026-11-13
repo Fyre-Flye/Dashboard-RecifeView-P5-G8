@@ -1,4 +1,4 @@
-"""Estado das filas num dia qualquer, a partir das linhas do tempo (base da War Room).
+"""Estado das filas num dia qualquer, a partir das linhas do tempo (base do Painel Geral).
 
 Um registro está "aberto" num dia quando já tinha entrado e ainda não tinha saído: atendido, respondido
 ou concluído depois daquele dia, ou ainda sem desfecho. Em 07/10/2026 (data do download das bases) o

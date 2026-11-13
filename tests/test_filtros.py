@@ -42,6 +42,7 @@ def test_limpar_filtros_volta_ao_padrao_sem_erro():
     at.session_state["f_rpas"] = ["6"]
     at.session_state["f_anos"] = (2015, 2018)
     at.run()
+    at.switch_page("views/retorno.py").run()   # o Painel Geral abre primeiro e trava os filtros
     next(b for b in at.button if b.label == "Limpar filtros").click().run()
     assert not at.exception, [e.value for e in at.exception]
     assert at.session_state["f_rpas"] == []

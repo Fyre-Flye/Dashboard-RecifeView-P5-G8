@@ -13,7 +13,7 @@ st.title("Território")
 st.markdown("**Há pelo menos dois mapas de prioridade.** O pedido de serviço urbano "
             f"(156, {registros('156_EMLURB')}) e a demanda de emergência (Defesa Civil, {registros('DEFESA_CIVIL')}) apontam para bairros diferentes. A demanda aparece por mil habitantes, porque bairro "
             "grande pede mais só por ser grande; o volume absoluto fica ao lado, no detalhe.")
-filtros.legenda(f, {"Mapas": "RPA e bairro escolhidos ficam em destaque (o resto da cidade continua visível); "
+filtros.legenda(f, aplicacao={"RPA": "destaca", "Bairro": "destaca", "Categoria": "só 156"}, ignorados={"Mapas": "RPA e bairro escolhidos ficam em destaque (o resto da cidade continua visível); "
                              "a categoria vale só para o 156."})
 fontes(['156_EMLURB', 'DEFESA_CIVIL', 'SEDEC_CHAMADOS'])
 

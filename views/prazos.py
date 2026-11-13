@@ -15,7 +15,7 @@ st.title("Prazos")
 st.markdown(f"**Quem demora está demorando mais.** A maioria dos pedidos do 156 ({registros('156_EMLURB')}) é atendida em poucos dias, mas a "
             "cauda longa cresceu. Por isso o prazo aparece em percentis e por categoria: a média engana "
             "(no 156 ela é cerca de dez vezes a mediana).")
-filtros.legenda(f, {"Base": "pedidos ATENDIDOS do 156; os abertos não têm tempo final e entram só no estoque, no fim da página."})
+filtros.legenda(f, aplicacao={"Período": "aplica (o estoque, não)"}, ignorados={"Base": "pedidos ATENDIDOS do 156; os abertos não têm tempo final e entram só no estoque, no fim da página."})
 fontes(['156_EMLURB'])
 
 praz = f.aplicar(tabela("prazos_156"))

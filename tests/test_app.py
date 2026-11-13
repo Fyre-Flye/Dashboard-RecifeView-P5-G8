@@ -29,11 +29,12 @@ def test_pagina_abre_sem_erro(pagina, filtros):
     assert not at.exception, [e.value for e in at.exception]
 
 
-def test_war_room_simula_sorteia_e_volta_para_hoje_sem_erro():
+def test_painel_geral_simula_sorteia_e_volta_para_hoje_sem_erro():
     at = AppTest.from_file(APP, default_timeout=120)
     at.switch_page("views/war_room.py").run()
     assert at.session_state["wr_modo"] == "hoje"
-    for rotulo, modo in [("Simular um Mês", "simulacao"), ("Dia Aleatório", "dia"), ("Voltar para Hoje", "hoje")]:
+    for rotulo, modo in [("Simular um mês", "simulacao"), ("Parar e voltar para hoje", "hoje"),
+                         ("Dia aleatório", "dia"), ("Voltar para hoje", "hoje")]:
         next(b for b in at.button if b.label.startswith(rotulo) or b.label.endswith(rotulo)).click().run()
         assert not at.exception, [e.value for e in at.exception]
         assert at.session_state["wr_modo"] == modo

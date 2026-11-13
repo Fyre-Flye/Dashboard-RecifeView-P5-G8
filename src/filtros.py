@@ -83,8 +83,11 @@ def atuais() -> Filtros:
     )
 
 
-def legenda(f: Filtros, ignorados: dict[str, str] | None = None) -> None:
-    """Mostra o recorte em uso e quais filtros a página não consegue aplicar (e por quê)."""
+TODOS_APLICADOS = {"Período": "aplica", "RPA": "aplica", "Bairro": "aplica", "Categoria": "aplica"}
+
+
+def legenda(f: Filtros, ignorados: dict[str, str] | None = None, aplicacao: dict[str, str] | None = None) -> None:
+    """Mostra o recorte em uso, o que cada filtro faz nesta página (`aplicacao`, por filtro) e as ressalvas."""
     partes = [f"{f.anos[0]}–{f.anos[1]}" if f.anos[0] != f.anos[1] else str(f.anos[0])]
     if f.rpas:
         partes.append("RPA " + ", ".join(f.rpas))
@@ -94,6 +97,8 @@ def legenda(f: Filtros, ignorados: dict[str, str] | None = None) -> None:
     if f.categorias:
         partes.append(", ".join(nome_categoria(c) for c in f.categorias[:3]) + ("…" if len(f.categorias) > 3 else ""))
     texto = "Recorte: " + " · ".join(partes)
+    efeito = TODOS_APLICADOS | (aplicacao or {})
+    texto += "  \n**Filtros nesta página:** " + " · ".join(f"{k} {v}" for k, v in efeito.items())
     if ignorados:
         texto += "  \n" + " ".join(f"_{k}_: {v}" for k, v in ignorados.items())
     st.caption(texto)

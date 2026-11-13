@@ -1,8 +1,8 @@
-# RecifeView · Dashboard (versão inicial)
+# RecifeView · Dashboard
 
 Painel analítico do projeto **RecifeView** (Projetos 5, CESAR School, 2026.2, Grupo 08, trilha AVD) sobre o desafio
 "Fragmentação do Tratamento de Denúncias Recebidas via Conecta Recife", do Banco de Oportunidades da Prefeitura do
-Recife. Esta é a entrega **N4 — Dashboard Interativo, versão inicial**.
+Recife. Começou na entrega **N4 (versão inicial)** e chega à **N6 (Dashboard Consolidado)**.
 
 **Link do app:** https://dashboard-recifeview-p5-g8.streamlit.app/
 
@@ -13,17 +13,19 @@ repetem, demoram ou ficam sem resposta. A narrativa segue os insights da EDA (N3
 
 | Página | Mensagem | Principais visuais |
 |---|---|---|
-| Início | A porta de entrada funciona; a perda está depois dela | 4 KPIs, volume por fonte e ano |
-| War Room | Protótipo de tela de operações: o estado de um dia para bater o olho | a página inteira muda com a data: hoje (retrato), dia sorteado ou simulação de um mês (um dia a cada 3,5 s); placas do dia e do estoque, mapa do atraso, fila do dia, mês por dia, categorias e alertas |
+| Painel Geral (abre primeiro) | O retrato da cidade num dia, para bater o olho e saber por onde começar | placas do estoque, alertas, mapa do atraso, fila do dia e o movimento do 156, cada bloco com link para a página de detalhe; outro dia ou simulação de um mês (um dia a cada 2,5 s) |
+| Achados | A porta de entrada funciona; a perda está depois dela | seis achados com o número de cada um e link para a página que o detalha, volume por fonte e ano (anos parciais tracejados) |
 | Retorno e fragmentação | Quase tudo chega à Prefeitura, 1 em cada 5 volta com resposta | funil, resposta por canal de envio, mapa de calor categoria × órgão ligado a um Sankey, canais da Ouvidoria |
 | Reincidência | Repetir não é duplicar: o problema volta | % em local repetido por categoria, intervalo entre pedidos, pontos crônicos |
 | Prazos | Quem demora está demorando mais | mediana e p90 por ano, faixas de prazo, prazo por categoria, estoque aberto fora do prazo |
 | Território | Serviço urbano e emergência apontam para bairros diferentes | dois mapas por habitante, detalhe do bairro clicado, vulnerabilidade × demanda |
 | Prioridade (AHP) | Onde agir primeiro, com critérios explícitos | comparação par a par editável, pesos, RC, mapa e ranking, registros em aberto reais classificados (156, Câmara e Ouvidoria, por sorteio), sensibilidade |
-| Sobre os dados | Fontes, cobertura, cuidados, correções e privacidade | tabela de cobertura por fonte e ano, glossário |
+| Sobre os dados | Fontes, cobertura, dicionário do dataset, cuidados, correções e privacidade | cobertura por fonte e ano, dicionário das 45 colunas com preenchimento por fonte, glossário |
 
-Filtros globais na barra lateral (valem em todas as páginas): **período**, **RPA**, **bairro** e **categoria de
-serviço**. Cada página diz quais filtros não consegue aplicar e por quê (a Ouvidoria não tem bairro, por exemplo).
+Filtros globais na barra lateral: **período**, **RPA**, **bairro** e **categoria de serviço**. Cada página diz, logo
+abaixo do título, como aplica cada filtro e por quê (a Ouvidoria não tem bairro, por exemplo). No Painel Geral e em
+Sobre os Dados os filtros ficam travados: o painel mostra a cidade inteira num dia e o dicionário descreve o dataset
+todo.
 
 ## Como rodar
 
@@ -82,7 +84,7 @@ pipeline/              correções e agregação (roda fora do app)
 data/raw/              dataset do grupo (não versionado)
 data/clean/            agregados lidos pelo app (versionados)
 entregas/              rascunho do layout, justificativa das métricas, julgamentos do AHP
-relatorios/            relatório em PDF de cada entrega (N4: Semana 13)
+relatorios/            relatório em PDF de cada entrega
 prompts/               declaração de uso de IA
 tests/                 pytest + AppTest do Streamlit
 static/fonts/          Montserrat (licença OFL), servida pelo próprio app

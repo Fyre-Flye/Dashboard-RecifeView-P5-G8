@@ -13,7 +13,7 @@ st.title("Reincidência")
 st.markdown(f"**Repetir não é duplicar.** Boa parte dos pedidos do 156 ({registros('156_EMLURB')}) cai num local + serviço que já teve pedido, "
             "e na maioria das vezes o problema **voltou** semanas ou meses depois. Um ponto com 100 pedidos é um "
             "problema, não cem.")
-filtros.legenda(f, {"Definição": "156 de 2015 a 2025, só endereços com número; chave = local + serviço "
+filtros.legenda(f, ignorados={"Definição": "156 de 2015 a 2025, só endereços com número; chave = local + serviço "
                                  "(o local é um pseudônimo do endereço, que não aparece no painel)."})
 fontes(['156_EMLURB'])
 
