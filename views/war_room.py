@@ -219,12 +219,14 @@ def quadro() -> None:
         orgao = ouvidoria["orgao"].value_counts()
         alertas.append(f"Na Ouvidoria, <b>{nome_unidade(orgao.index[0])}</b> concentra {num(orgao.iloc[0])} das "
                        f"{num(len(ouvidoria))} manifestações além do prazo.")
+    st.space("small")
     with st.container(border=True):
         st.markdown("<div style='font-weight:700;margin-bottom:2px'>Alertas do dia</div><ul style='margin:0'>"
                     + "".join(f"<li>{a}</li>" for a in alertas) + "</ul>", unsafe_allow_html=True,
                     help="Frases geradas automaticamente a partir dos números desta data.")
 
     # 3. Onde está e por onde começar
+    st.space("small")
     c1, c2 = st.columns([1, 1.25], gap="medium")
     with c1:
         st.markdown("**Onde o Estoque Atrasado Está** · pedidos do 156 além do prazo típico",
@@ -264,6 +266,7 @@ def quadro() -> None:
         ver_detalhe("views/prioridade.py", "Fila completa e cálculo da nota em Prioridade", ":material/low_priority:")
 
     # 4. O movimento do dia no 156
+    st.space("medium")
     st.markdown("**O Movimento no 156**" + ("" if dia_fluxo == dia else
                 f" · <span style='font-weight:400;opacity:.8'>o fluxo diário das bases vai até "
                 f"{dia_fluxo:%d/%m/%Y}; os quadros abaixo mostram esse último dia</span>"),
@@ -292,6 +295,7 @@ def quadro() -> None:
                    ajuda_txt="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
                    detalhe=" · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
 
+    st.space("small")
     c1, c2, c3 = st.columns([1.3, 1, 1], gap="medium")
     with c1:
         if modo in ("simulacao", "fim"):
@@ -344,6 +348,7 @@ def quadro() -> None:
                              "Categoria": st.column_config.Column("Categoria", help="Categorias com mais entradas neste dia (pedidos)."),
                              "Bairro": st.column_config.Column("Bairro", help="Bairros com mais entradas neste dia (pedidos).")})
 
+    st.space("small")
     leitura("Como o estoque de cada dia é reconstruído: um pedido conta como aberto da entrada até o atendimento (ou até "
             "hoje, se continua aberto nos arquivos mais recentes). Pedidos que ficaram \"abertos\" em arquivos anuais "
             "antigos têm destino desconhecido e ficam de fora, então em datas antigas o estoque é um piso. Em "
