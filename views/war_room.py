@@ -132,11 +132,11 @@ def ver_detalhe(pagina: str, rotulo: str, icone: str) -> None:
 
 # Placas: borda esquerda grossa na cor do estado; o link do rodapé fica dentro da moldura, com o hover contido.
 st.html(f"""<style>
-div[class*="st-key-placa-"] {{border-left-width: 5px !important; padding: .6rem .85rem .45rem !important;
+div[class*="st-key-placa-"] {{border-left-width: 5px !important; padding: .8rem .9rem .7rem !important;
                               flex: 1 0 auto !important;}}
 div[class*="st-key-placa-alerta"] {{border-color: {DESTAQUE}66 !important; border-left-color: {DESTAQUE} !important;}}
 div[class*="st-key-placa-azul"] {{border-color: {AZUL}55 !important; border-left-color: {AZUL} !important;}}
-div[class*="st-key-bloco-"] {{padding: .85rem 1rem .75rem !important; flex: 1 0 auto !important;}}
+div[class*="st-key-bloco-"] {{padding: 1.1rem 1.25rem 1rem !important; flex: 1 0 auto !important;}}
 [data-testid="stLayoutWrapper"]:has(> div[class*="st-key-placa-"]),
 [data-testid="stLayoutWrapper"]:has(> div[class*="st-key-bloco-"]) {{flex: 1 0 auto !important; height: auto !important;}}
 </style>""")
@@ -260,13 +260,15 @@ def quadro() -> None:
         orgao = ouvidoria["orgao"].value_counts()
         alertas.append(f"Na Ouvidoria, <b>{nome_unidade(orgao.index[0])}</b> concentra {num(orgao.iloc[0])} das "
                        f"{num(len(ouvidoria))} manifestações além do prazo.")
+    st.space("xxsmall")   # 1rem + .25 + 1rem: o mesmo respiro dos blocos lado a lado
     with bloco("alertas"):
         titulo("Alertas do Dia", ajuda_txt="Frases geradas automaticamente a partir dos números desta data.")
-        st.markdown("<ul style='margin:0'>" + "".join(f"<li>{a}</li>" for a in alertas) + "</ul>",
-                    unsafe_allow_html=True)
+        st.html("<ul style='margin:0;padding-left:1.3rem;line-height:1.6'>"
+                + "".join(f"<li style='margin:.15rem 0'>{a}</li>" for a in alertas) + "</ul>")
 
     # 3. Onde está e por onde começar
-    c1, c2 = st.columns([1, 1.25], gap="small")
+    st.space("xxsmall")
+    c1, c2 = st.columns([1, 1.25], gap="medium")
     with c1, bloco("mapa"):
         titulo("Onde o Estoque Atrasado Está", "pedidos do 156 além do prazo típico",
                "Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria.")
@@ -336,7 +338,8 @@ def quadro() -> None:
                    ajuda_txt="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
                    detalhe=" · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
 
-    c1, c2, c3 = st.columns([1.3, 1, 1], gap="small")
+    st.space("xxsmall")
+    c1, c2, c3 = st.columns([1.3, 1, 1], gap="medium")
     with c1, bloco("trinta"):
         if modo in ("simulacao", "fim"):
             inicio = pd.Timestamp(e["wr_inicio"])
