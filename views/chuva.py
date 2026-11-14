@@ -119,16 +119,25 @@ pavimentação, chega 3 a 8 semanas depois.</div>""")
             "semanas) é onde caiu o pico da pavimentação nos quatro temporais. Chamados da Defesa Civil vão até março de "
             "2024 e as ações em campo até 2024; em 2025 só há o 156.")
 
-    resumo = []
+    resumo, preparo = [], []
     for e in avisos.EVENTOS:
         r = avisos.recorte(diarias, e)
-        p = avisos._picos(r)
+        p = avisos.picos(r)
+        if "pav" in p:
+            preparo.append(p["pav"][1])
         vezes = lambda c: f"{num(p[c][0], 1)}×" if c in p else "sem dado"  # noqa: E731
         resumo.append({"Temporal": e.nome.split(" · ")[0], "Chuva no dia": f"{num(r.loc[r['dia'] == 0, 'chuva'].iloc[0])} mm",
                        "Chamados da Defesa Civil": vezes("sedec"), "156 · drenagem e árvores": vezes("imediato"),
-                       "156 · pavimentação": vezes("pav") + (f" ({p['pav'][1] // 7} sem. depois)" if "pav" in p else "")})
-    st.markdown("**Em Todos os Temporais** · o pico de cada onda, em vezes o normal")
+                       "156 · pavimentação": vezes("pav"),
+                       "Tempo de preparo do 156": f"{p['pav'][1]} dias" if "pav" in p else "sem dado"})
+    st.markdown("**Em Todos os Temporais** · o pico de cada onda, em vezes o normal, e quanto tempo o 156 teve entre o dia "
+                "de mais chuva e o pico da pavimentação")
     st.dataframe(pd.DataFrame(resumo), hide_index=True, width="stretch")
+    media = sum(preparo) / len(preparo)
+    leitura(f"Em média, o 156 tem <b>cerca de {num(media)} dias (umas {num(media / 7)} semanas)</b> entre o dia de mais chuva e "
+            f"o pico dos pedidos de pavimentação, e no pior caso {min(preparo)} dias. Somando a previsão (faixa amarela), "
+            "dá para começar a se organizar ainda antes. É o pico, não o começo da onda: na época de chuva a pavimentação "
+            "já fica acima do normal, então o começo exato não é nítido.")
 
 with aba_estudo:
     k = st.columns(4)

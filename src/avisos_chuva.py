@@ -99,7 +99,7 @@ def temporal(r: pd.DataFrame) -> tuple[int, int]:
     return ini, fim
 
 
-def _picos(r: pd.DataFrame) -> dict:
+def picos(r: pd.DataFrame) -> dict:
     out = {}
     for c in SERIES:
         s = r.loc[r["dia"] >= 0, c].dropna()
@@ -128,18 +128,20 @@ def _fase(dia: int, ev: Evento, r: pd.DataFrame, p: dict) -> str:
         return ("<b>AVISO 2 · choveu forte: a pavimentação vai subir em 3 a 8 semanas</b><br>"
                 f"Agora, o 156 recebe drenagem e árvores (até {v:.1f}× o normal)").replace(".", ",")
     v, d = p.get("pav", (np.nan, 0))
-    return (f"<b>A segunda onda chega</b><br>Pavimentação no 156: {v:.1f}× o normal, "
-            f"{d // 7} semanas depois da chuva").replace(".", ",")
+    return (f"<b>A segunda onda chega</b><br>Pavimentação no 156: pico de {v:.1f}× o normal, "
+            f"{d} dias depois da chuva (umas {round(d / 7)} semanas)").replace(".", ",")
 
 
 def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
     r = recorte(d, ev)
-    p = _picos(r)
+    p = picos(r)
     t_ini, t_fim = temporal(r)
     prev_ini = min([dd for dd, _ in ev.avisos] + [t_ini - 1, -1])  # primeiro aviso oficial
     texto = "#E6E6E6" if escuro else "#262730"
     cor_temporal = "#A6C8FF" if escuro else NAVY
     cor_previsao = "#F2C14E" if escuro else "#8A6100"
+    cor_preparo = "#A6C8FF" if escuro else NAVY
+    pico_pav = p.get("pav", (None, None))[1]
     grade = "rgba(140,140,140,.18)"
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06, row_heights=[0.26, 0.37, 0.37],
                         subplot_titles=("Chuva (mm por dia, estações do Cemaden)",
@@ -186,6 +188,20 @@ def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
             notas.append(dict(text=f"temporal: {dias_t} dia{'s' if dias_t > 1 else ''}, {mm_t:.0f} mm".replace(".", ","),
                               x=min(ate, t_fim) + .5, y=.97, xref="x", yref="y domain", xanchor="right", yanchor="top",
                               showarrow=False, font=dict(size=11, color=cor_temporal),
+                              bgcolor="rgba(14,17,23,.75)" if escuro else "rgba(255,255,255,.8)"))
+        if ate >= 1 and pico_pav:  # tempo de preparo do 156: do dia de mais chuva ao pico da pavimentação
+            ate_pav = min(ate, pico_pav)
+            formas += [dict(type="line", xref="x", yref="y3 domain", x0=0, x1=ate_pav, y0=.9, y1=.9,
+                            line=dict(color=cor_preparo, width=2)),
+                       dict(type="line", xref="x", yref="y3 domain", x0=0, x1=0, y0=.84, y1=.96,
+                            line=dict(color=cor_preparo, width=2))]
+            if ate >= pico_pav:
+                formas.append(dict(type="line", xref="x", yref="y3 domain", x0=pico_pav, x1=pico_pav, y0=.84, y1=.96,
+                                   line=dict(color=cor_preparo, width=2)))
+            texto_preparo = (f"156: {pico_pav} dias até o pico da pavimentação" if ate >= pico_pav
+                             else f"156: {ate_pav} dias de preparo até aqui")
+            notas.append(dict(text=texto_preparo, x=ate_pav / 2, y=.97, xref="x", yref="y3 domain", xanchor="center",
+                              yanchor="bottom", showarrow=False, font=dict(size=11, color=cor_preparo),
                               bgcolor="rgba(14,17,23,.75)" if escuro else "rgba(255,255,255,.8)"))
         if ate >= 1:
             notas.append(dict(text="janela do aviso 2", x=sum(JANELA_AVISO2) / 2, y=1.0, xref="x", yref="paper",
