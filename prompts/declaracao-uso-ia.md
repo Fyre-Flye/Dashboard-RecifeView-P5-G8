@@ -1,9 +1,10 @@
 # Declaração de Uso de IA
 
 **Projeto:** RecifeView · Projetos 5 · CESAR School · 2026.2 · Grupo 08 (trilha AVD)
-**Entrega:** N4, Dashboard Interativo (versão inicial), Semana 13
+**Entregas cobertas:** N4, Dashboard Interativo (Semana 13) · N5, Proposta de Integração e Publicação (Semana 14) ·
+N6, Dashboard Consolidado (Semana 15)
 **Quem usou:** Gustavo Henrique Cruz de Oliveira, em nome do grupo
-**Período:** 28/10 a 30/10/2026
+**Período:** 28/10 a 13/11/2026
 
 ## Ferramenta
 
@@ -14,13 +15,13 @@ Claude (Anthropic), usado como assistente de programação e de revisão, com ac
 
 Os pedidos foram feitos em linguagem natural, em português, e cobriram quatro frentes:
 
-1. **Planejamento:** propor a estrutura do repositório e das páginas a partir do enunciado da N4, das entregas N1 a
-   N3 e da prática de Streamlit. O plano foi discutido e ajustado pelo grupo antes de qualquer código.
+1. **Planejamento:** propor a estrutura do repositório e das páginas a partir dos enunciados das entregas, das
+   entregas anteriores e da prática de Streamlit. Os planos foram discutidos e ajustados pelo grupo antes do código.
 2. **Código:** escrever o pipeline de agregação, as páginas do painel, o cálculo do AHP e os testes, seguindo as
    decisões do grupo sobre narrativa, identidade visual e privacidade dos dados.
-3. **Conferência:** comparar os números do painel com os da EDA (N3), testar o app publicado de ponta a ponta e
-   corrigir os defeitos encontrados.
-4. **Texto:** rascunhar o relatório da semana, o README e as justificativas, revisados pelo grupo.
+3. **Conferência:** comparar os números do painel com os da EDA (N3), testar o app publicado de ponta a ponta, revisar
+   a interface em tamanhos de tela diferentes e corrigir os defeitos encontrados.
+4. **Texto:** rascunhar os relatórios das entregas, o README e os textos de leitura do painel, revisados pelo grupo.
 
 ## O que foi aceito, modificado ou rejeitado e por quê
 
@@ -30,11 +31,16 @@ Os pedidos foram feitos em linguagem natural, em português, e cobriram quatro f
   - Pipeline que aplica as correções da EDA (N3) e gera só tabelas agregadas, com testes.
   - Gráficos em Altair com seleção cruzada, na ordem dos insights da N3.
   - Índice de prioridade por bairro com AHP, com os julgamentos editáveis na própria página.
+  - Na consolidação (N6): o Painel Geral como página inicial, a página de Achados, o dicionário do dataset e a
+    indicação dos filtros que cada página aplica.
 
 - **Modificado:**
-  - Todos os números do painel foram conferidos contra a N3 antes da entrega.
+  - Todos os números do painel foram conferidos contra a N3 antes de cada entrega.
   - O Sankey usa Plotly, porque o Altair não tem esse tipo de gráfico; o resto é Altair, como a prática pede.
-  - Rótulos, títulos e cores foram ajustados depois de conferir o painel nos temas claro e escuro.
+  - Rótulos, títulos, cores e espaçamentos foram ajustados pelo grupo depois de conferir o painel nos temas claro e
+    escuro e em telas de celular, notebook e monitor.
+  - A divisão entre o dashboard (entrega de AVD) e a aplicação RecifeView (parte da solução, que replica o dashboard)
+    foi corrigida pelo grupo depois da N5.
 
 - **Rejeitado ou deixado de fora:**
   - Publicar o dataset do grupo no repositório: ele tem campos de uso interno. Só sobem agregados, e um teste
