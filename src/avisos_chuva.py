@@ -17,7 +17,7 @@ from plotly.subplots import make_subplots
 from src.config import AZUL, AZUL40, CINZA, DESTAQUE, FONTE, NAVY
 
 ANTES, DEPOIS = 10, 63            # dias mostrados antes e depois do pico de chuva
-JANELA_AVISO2 = (28, 49)          # 4 a 7 semanas depois: onde o estudo achou o pico da pavimentação
+JANELA_AVISO2 = (21, 56)          # 3 a 8 semanas depois: onde caiu o pico da pavimentação nos quatro temporais
 AMARELO = "#F2A900"
 
 
@@ -30,14 +30,24 @@ class Evento:
 
 EVENTOS = [
     Evento("2022-05-28", "Maio de 2022 · a catástrofe", (
+        (-8, "20/05 · Cemaden: risco moderado de deslizamento e alagamento na RMR"),
         (-5, "23/05 · Apac: alerta laranja de chuva"),
-        (-3, "25/05 · Cemaden: risco alto de deslizamento"),
+        (-4, "24/05 · Cemaden: risco ALTO de deslizamento para o dia 25"),
         (-2, "26/05 · Inmet: 150 a 200 mm por dia no fim de semana"),
         (-1, "27/05 · Prefeitura aciona o plano, só na véspera"),
     )),
-    Evento("2023-05-24", "Maio de 2023"),
-    Evento("2024-06-15", "Junho de 2024"),
-    Evento("2025-05-14", "Maio de 2025"),
+    Evento("2023-05-24", "Maio de 2023", (
+        (-4, "20/05 · Apac: alerta amarelo de chuva"),
+        (-2, "22/05 · Cemaden: risco moderado de deslizamento na RMR"),
+        (-1, "23/05 · Cemaden: risco moderado de deslizamento e alagamento; Apac emite aviso"),
+    )),
+    Evento("2024-06-15", "Junho de 2024", (
+        (-2, "13/06 · Cemaden: risco moderado de alagamento no Recife"),
+        (-1, "14/06 · Apac: alerta amarelo de manhã, laranja às 19h"),
+    )),
+    Evento("2025-05-14", "Maio de 2025", (
+        (-1, "13/05 · Cemaden: risco moderado de alagamento no Recife"),
+    )),
 ]
 
 SERIES = {  # coluna: (rótulo, cor, linha do gráfico)
@@ -100,7 +110,7 @@ def _fase(dia: int, ev: Evento, r: pd.DataFrame, p: dict) -> str:
         return txt
     if dia <= 21:
         v, d = p.get("imediato", (np.nan, 0))
-        return ("<b>AVISO 2 · choveu forte: a pavimentação vai subir em 4 a 7 semanas</b><br>"
+        return ("<b>AVISO 2 · choveu forte: a pavimentação vai subir em 3 a 8 semanas</b><br>"
                 f"Agora, o 156 recebe drenagem e árvores (até {v:.1f}× o normal)").replace(".", ",")
     v, d = p.get("pav", (np.nan, 0))
     return (f"<b>A segunda onda chega</b><br>Pavimentação no 156: {v:.1f}× o normal, "

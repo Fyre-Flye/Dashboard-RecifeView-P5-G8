@@ -91,7 +91,7 @@ st.markdown("Recife é frágil na chuva. A pergunta: **dá para avisar a gestão
 st.caption("Filtros nesta página: nenhum. Cidade inteira, por semana. Chuva: mediana diária das estações do Cemaden "
            f"em Recife ({len(ambos)} dias). Demanda: 156 (2022 a maio de 2026) e Defesa Civil (até 2024).")
 
-aba_aviso, aba_estudo = st.tabs(["Os Dois Avisos (Simulação)", "O Estudo em Números"])
+aba_estudo, aba_aviso = st.tabs(["O Estudo em Números", "Os Dois Avisos (Simulação)"])
 
 with aba_aviso:
     st.subheader("Antes e Depois do Temporal",
@@ -100,7 +100,7 @@ with aba_aviso:
     st.html("""<div style='font-size:1rem;line-height:1.6'>
 <b style='color:#B07C00'>Aviso 1, antes da chuva:</b> a previsão de chuva forte avisa a Defesa Civil e o 156 para reforçarem
 plantão e equipes. &nbsp;<b style='color:#0F62FE'>Aviso 2, depois da chuva:</b> a chuva medida avisa que a segunda onda, a
-pavimentação, chega 4 a 7 semanas depois.</div>""")
+pavimentação, chega 3 a 8 semanas depois.</div>""")
     nomes_ev = {e.nome: e for e in avisos.EVENTOS}
     qual_ev = st.segmented_control("Temporal", list(nomes_ev), default=avisos.EVENTOS[0].nome,
                                    label_visibility="collapsed", key="evento_aviso") or avisos.EVENTOS[0].nome
@@ -112,10 +112,11 @@ pavimentação, chega 4 a 7 semanas depois.</div>""")
         escuro = False
     st.plotly_chart(avisos.figura(diarias, evento, escuro), width="stretch",
                     config={"displayModeBar": False}, key=f"avisos-{evento.pico}")
-    leitura("Em maio de 2022 a chuva estava prevista: alerta da Apac 5 dias antes, risco alto do Cemaden 3 dias antes e o "
-            "Inmet falando em 150 a 200 mm por dia 2 dias antes. A Prefeitura acionou o plano só na véspera. Nos outros "
-            "temporais o aviso 1 é simulado (2 a 3 dias antes, prazo comum das previsões). Chamados da Defesa Civil vão até "
-            "março de 2024 e as ações em campo até 2024; em 2025 só há o 156.")
+    leitura("Em todos os temporais houve aviso oficial antes: de 1 a 8 dias antes do dia de mais chuva. Os avisos do "
+            "Cemaden vêm dos boletins originais de previsão de riscos (publicados na véspera do dia previsto); os da Apac e "
+            "do Inmet, de notícias da época, porque a Apac não mantém arquivo público dos alertas. A janela azul (3 a 8 "
+            "semanas) é onde caiu o pico da pavimentação nos quatro temporais. Chamados da Defesa Civil vão até março de "
+            "2024 e as ações em campo até 2024; em 2025 só há o 156.")
 
     resumo = []
     for e in avisos.EVENTOS:
@@ -213,7 +214,7 @@ with aba_estudo:
                      alt.Tooltip("r:Q", title="Correlação", format=".2f"),
                      alt.Tooltip("semanas:Q", title="Semanas usadas")])
             + cursor_vertical(corr_largo, eixo_lag, "defasagem", dica_lag)).properties(height=430), width="stretch")
-        leitura("Mesmo só dentro da época de chuva, a pavimentação e a drenagem sobem umas 5 semanas depois da chuva. "
+        leitura("Mesmo só dentro da época de chuva, a pavimentação e a drenagem sobem 3 a 8 semanas depois (pico médio em 5). "
                 "A limpeza urbana, que serve de controle, não acompanha.")
 
     st.space("small")
@@ -262,10 +263,10 @@ with aba_estudo:
     st.space("small")
     st.subheader("O Que Já Dá Para Dizer")
     st.html(f"""<div style='font-size:1rem;line-height:1.65'>
-    <b>Dá:</b> a pavimentação e a drenagem no 156 tendem a subir 4 a 7 semanas depois de chuva forte, mesmo comparando
+    <b>Dá:</b> a pavimentação e a drenagem no 156 tendem a subir 3 a 8 semanas depois de chuva forte, mesmo comparando
     só semanas da época de chuva. Um aviso no formato <i>"choveu {TEMPORAL_SEMANA} mm ou mais esta semana: espere mais pedidos de
     pavimentação daqui a um mês"</i> tem base.<br>
     <b>Ainda não dá:</b> dizer quantos pedidos a mais. São {len(ev)} temporais na amostra, e a resposta varia muito de um
     para outro. A Defesa Civil reage na mesma semana, mas fraco no dado aberto, e não publicou 2025.<br>
-    <b>Para avançar:</b> os meses secos (setembro a março) do Cemaden, para usar o ano inteiro; e a previsão da Apac, para
-    transformar o aviso de "choveu" em "vai chover".</div>""")
+    <b>Para avançar:</b> os meses secos (setembro a março) do Cemaden, para usar o ano inteiro; e ler sozinho os boletins do
+    Cemaden e os alertas da Apac e do Inmet, para o aviso 1 ("vai chover") sair automático, como na aba ao lado.</div>""")
