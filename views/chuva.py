@@ -103,7 +103,7 @@ kpi(k[2], "Pavimentação no 156", f"{pico.loc['156 · Pavimentação', 'defasag
     "Semanas entre a chuva acumulada (4 semanas) e o pico de correlação, só dentro da época de chuva.")
 lag_dc = int(pico.loc["Defesa Civil", "defasagem"])
 kpi(k[3], "Defesa Civil", "na hora" if lag_dc == 0 else f"{lag_dc} sem.",
-    f"mesma semana da chuva · r = {num(pico.loc['Defesa Civil', 'r'], 2)}" if lag_dc == 0
+    f"mesma semana · r = {num(pico.loc['Defesa Civil', 'r'], 2)}" if lag_dc == 0
     else f"depois da chuva · r = {num(pico.loc['Defesa Civil', 'r'], 2)}",
     "A Defesa Civil reage na mesma semana, mas fraco: ela já está alta em toda a época de chuva.")
 
@@ -129,7 +129,8 @@ with c1:
         tooltip=[alt.Tooltip("semana:T", title="Semana", format="%d/%m/%Y"), alt.Tooltip("fonte:N", title="Fonte"),
                  alt.Tooltip("mm:Q", title="mm", format=".0f")]).properties(height=140)
     escolha = st.segmented_control("Série", SERIES[:3] + SERIES[4:], default="156 · Pavimentação",
-                                   label_visibility="collapsed")
+                                   format_func=lambda x: x.replace("156 · ", ""), label_visibility="collapsed")
+    escolha = escolha or "156 · Pavimentação"
     linha = base[["semana", escolha]].dropna().assign(indice=lambda x: x[escolha] / x[escolha].mean() * 100)
     cor = DESTAQUE if escolha == "Defesa Civil" else (CINZA if "Limpeza" in escolha else AZUL)
     linhas = alt.Chart(linha).mark_line(color=cor, strokeWidth=1.6).encode(
@@ -151,7 +152,7 @@ with c2:
         x=alt.X("defasagem:O", title="semanas depois da chuva", axis=alt.Axis(labelAngle=0)),
         y=alt.Y("r:Q", title="correlação", scale=alt.Scale(domain=[-0.4, 0.7])),
         color=alt.Color("serie:N", title=None, scale=alt.Scale(domain=SERIES, range=CORES),
-                        legend=alt.Legend(orient="top", columns=2, labelLimit=160)),
+                        legend=alt.Legend(orient="top", columns=2, labelExpr="replace(datum.label, '156 · ', '156 ')")),
         tooltip=[alt.Tooltip("serie:N", title="Série"), alt.Tooltip("defasagem:O", title="Semanas depois"),
                  alt.Tooltip("r:Q", title="Correlação", format=".2f"),
                  alt.Tooltip("semanas:Q", title="Semanas usadas")]).properties(height=430), width="stretch")

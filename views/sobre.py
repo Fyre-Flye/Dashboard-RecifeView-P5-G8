@@ -58,6 +58,9 @@ with aba_fontes:
     st.caption("Células vazias: a fonte não publica aquele ano. 2025 e 2026 são parciais (a Ouvidoria de 2025 só traz "
                "parte do ano; o arquivo de 2025 da Defesa Civil foi publicado vazio; 2026 vai até o download, em "
                "07/10/2026).")
+    st.caption("Fora do dataset, só na página Chuva e Carga (estudo): chuva diária dos pluviômetros do Cemaden em Recife "
+               "(mapa interativo do Cemaden; mediana das estações, abril a agosto de 2022 a 2025 e abril a maio de "
+               "2026) e a reanálise ERA5 (Open-Meteo), só como referência.")
 
 # --- Dicionário do dataset --------------------------------------------------------------------------------
 with aba_dicionario:

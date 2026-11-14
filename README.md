@@ -20,6 +20,7 @@ repetem, demoram ou ficam sem resposta. A narrativa segue os insights da EDA (N3
 | Prazos | Quem demora está demorando mais | mediana e p90 por ano, faixas de prazo, prazo por categoria, estoque aberto fora do prazo |
 | Território | Serviço urbano e emergência apontam para bairros diferentes | dois mapas por habitante, detalhe do bairro clicado, vulnerabilidade × demanda |
 | Prioridade (AHP) | Onde agir primeiro, com critérios explícitos | comparação par a par editável, pesos, RC, mapa e ranking, registros em aberto reais classificados (156, Câmara e Ouvidoria, por sorteio), sensibilidade |
+| Chuva e Carga (estudo) | Dá para avisar a gestão antes que o trabalho chegue? | chuva semanal dos pluviômetros do Cemaden (abril a agosto) × pedidos, correlação por semanas de atraso, o que veio depois de cada temporal; estudo em andamento, não é resultado |
 | Sobre os dados | Fontes, cobertura, dicionário do dataset, cuidados, correções e privacidade | cobertura por fonte e ano, dicionário das 45 colunas com preenchimento por fonte, glossário |
 
 Filtros globais na barra lateral: **período**, **RPA**, **bairro** e **categoria de serviço**. Cada página diz, logo
