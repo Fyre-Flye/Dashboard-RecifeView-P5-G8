@@ -84,6 +84,21 @@ def recorte(d: pd.DataFrame, ev: Evento) -> pd.DataFrame:
     return janela
 
 
+CHUVA_FORTE = 20     # mm no dia
+FOLGA = 2            # dias secos seguidos que ainda contam como o mesmo temporal
+
+
+def temporal(r: pd.DataFrame) -> tuple[int, int]:
+    """Do primeiro ao último dia de chuva forte em torno do pico, aceitando até FOLGA dias mais fracos no meio."""
+    fortes = set(r.loc[r["chuva"] >= CHUVA_FORTE, "dia"].astype(int)) | {0}
+    ini = fim = 0
+    while any(ini - k in fortes for k in range(1, FOLGA + 2)):
+        ini = max(d for d in fortes if ini - FOLGA - 1 <= d < ini)
+    while any(fim + k in fortes for k in range(1, FOLGA + 2)):
+        fim = min(d for d in fortes if fim < d <= fim + FOLGA + 1)
+    return ini, fim
+
+
 def _picos(r: pd.DataFrame) -> dict:
     out = {}
     for c in SERIES:
@@ -120,7 +135,10 @@ def _fase(dia: int, ev: Evento, r: pd.DataFrame, p: dict) -> str:
 def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
     r = recorte(d, ev)
     p = _picos(r)
+    t_ini, t_fim = temporal(r)
+    t_mm = r.loc[r["dia"].between(t_ini, t_fim), "chuva"].sum()
     texto = "#E6E6E6" if escuro else "#262730"
+    cor_temporal = "#A6C8FF" if escuro else NAVY
     grade = "rgba(140,140,140,.18)"
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06, row_heights=[0.26, 0.37, 0.37],
                         subplot_titles=("Chuva (mm por dia, estações do Cemaden)",
@@ -144,11 +162,22 @@ def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
             ini = min([dd for dd, _ in ev.avisos] + [-3])
             formas.append(dict(type="rect", xref="x", yref="paper", x0=ini - .5, x1=-.5, y0=0, y1=1,
                                fillcolor=AMARELO, opacity=.13, line_width=0, layer="below"))
+        if ate >= t_ini:  # o temporal cresce com a animação, só no painel da chuva
+            formas.append(dict(type="rect", xref="x", yref="y domain", x0=t_ini - .5, x1=min(ate, t_fim) + .5,
+                               y0=0, y1=1, fillcolor=NAVY, opacity=.10, line=dict(color=NAVY, width=1.2, dash="dot"),
+                               layer="below"))
         if ate >= 1:
             formas.append(dict(type="rect", xref="x", yref="paper", x0=JANELA_AVISO2[0], x1=JANELA_AVISO2[1],
                                y0=0, y1=1, fillcolor=AZUL, opacity=.10, line_width=0, layer="below"))
         notas = [dict(text=_fase(ate, ev, r, p), x=0, y=1.25, xref="paper", yref="paper", xanchor="left", yanchor="top",
                       showarrow=False, align="left", font=dict(size=15, color=texto))]
+        if ate >= t_ini:
+            dias_t = min(ate, t_fim) - t_ini + 1
+            mm_t = r.loc[r["dia"].between(t_ini, min(ate, t_fim)), "chuva"].sum()
+            notas.append(dict(text=f"temporal: {dias_t} dia{'s' if dias_t > 1 else ''}, {mm_t:.0f} mm".replace(".", ","),
+                              x=min(ate, t_fim) + .5, y=.97, xref="x", yref="y domain", xanchor="right", yanchor="top",
+                              showarrow=False, font=dict(size=11, color=cor_temporal),
+                              bgcolor="rgba(14,17,23,.75)" if escuro else "rgba(255,255,255,.8)"))
         if ate >= 1:
             notas.append(dict(text="janela do aviso 2", x=sum(JANELA_AVISO2) / 2, y=1.0, xref="x", yref="paper",
                               showarrow=False, font=dict(size=11, color=AZUL), yanchor="bottom"))
