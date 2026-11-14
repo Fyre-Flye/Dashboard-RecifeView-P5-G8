@@ -237,7 +237,10 @@ def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
                                         frame=dict(duration=140, redraw=True), transition=dict(duration=0),
                                         fromcurrent=True, mode="immediate")]),
                                    dict(label="❚❚ Pausar", method="animate", args=[[None], dict(
-                                        frame=dict(duration=0, redraw=False), mode="immediate")])])],
+                                        frame=dict(duration=0, redraw=False), mode="immediate")]),
+                                   dict(label="↺ Recomeçar", method="animate", args=[[str(t) for t in dias], dict(
+                                        frame=dict(duration=140, redraw=True), transition=dict(duration=0),
+                                        fromcurrent=False, mode="immediate")])])],
         sliders=[dict(active=0, steps=passo, x=0, len=1, y=-0.2, pad=dict(t=30),
                       currentvalue=dict(prefix="dia ", font=dict(size=12, color=texto)), font=dict(color=texto))],
     )
