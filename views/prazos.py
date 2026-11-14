@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import fontes, kpi, leitura
+from src.componentes import cursor_vertical, fontes, kpi, leitura
 from src.config import (registros, AZUL25, TEXTO_TEMA, cor_forte, cor_fundo, cor_suave, eixo_numero, nome_categoria, par_comparacao,
                         rampa_prazo)
 from src.dados import tabela
@@ -61,7 +61,13 @@ with c1:
         tooltip=[alt.Tooltip("ano:O", title="Ano"), alt.Tooltip("medida:N", title="Medida"),
                  alt.Tooltip("rotulo:N", title="Prazo")],
     )
-    st.altair_chart((base.mark_line() + base.mark_point(size=55)).properties(height=300), width="stretch")
+    largo = linhas.pivot(index="ano", columns="medida", values="rotulo")
+    nomes = list(largo.columns)
+    largo = largo.fillna("").reset_index()
+    largo.columns = ["ano"] + [f"m{i}" for i in range(len(nomes))]
+    regua = cursor_vertical(largo, alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)), "ano",
+                            [alt.Tooltip("ano:O", title="Ano")] + [alt.Tooltip(f"m{i}:N", title=n) for i, n in enumerate(nomes)])
+    st.altair_chart((base.mark_line() + base.mark_point(size=55) + regua).properties(height=300), width="stretch")
     leitura("A mediana quase não se move; o p90 sobe a partir de 2021. Em 2024–2026 a cauda ainda está incompleta: "
             "pedidos abertos há muito tempo só entram aqui quando forem atendidos.")
 

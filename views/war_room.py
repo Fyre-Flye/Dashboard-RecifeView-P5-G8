@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, ajuda, metricas, retrato
-from src.componentes import fontes, leitura, placa
+from src.componentes import cursor_vertical, fontes, leitura, placa
 from src.config import (AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria,
                         nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
@@ -332,16 +332,22 @@ def quadro() -> None:
         serie["tipo"] = serie["tipo"].map({"entradas": "entraram", "atendidos": "atendidos"})
         serie["dia_txt"] = serie["data"].dt.strftime("%d/%m")
         ordem_dias = serie.drop_duplicates("data")["dia_txt"].tolist()
-        st.altair_chart(alt.Chart(serie).mark_bar().encode(
-            x=alt.X("dia_txt:N", sort=ordem_dias, title=None,
-                    axis=alt.Axis(labelAngle=-90, labelExpr="(indexof(" + str(ordem_dias) + ", datum.value) % 3 == 0) ? datum.value : ''")),
+        eixo_dia = alt.X("dia_txt:N", sort=ordem_dias, title=None,
+                         axis=alt.Axis(labelAngle=-90, labelExpr="(indexof(" + str(ordem_dias) + ", datum.value) % 3 == 0) ? datum.value : ''"))
+        largo = serie.pivot(index="dia_txt", columns="tipo", values="n").reset_index()
+        for c in ("entraram", "atendidos"):
+            largo[c] = largo[c].map(num)
+        regua = cursor_vertical(largo, eixo_dia, "dia_txt", [alt.Tooltip("dia_txt:N", title="Dia"),
+                                alt.Tooltip("entraram:N", title="Entraram"), alt.Tooltip("atendidos:N", title="Atendidos")])
+        st.altair_chart((alt.Chart(serie).mark_bar().encode(
+            x=eixo_dia,
             xOffset=alt.XOffset("tipo:N", sort=["entraram", "atendidos"]),
             y=alt.Y("n:Q", axis=eixo_numero(None)),
             color=alt.Color("tipo:N", scale=alt.Scale(domain=["entraram", "atendidos"], range=[AZUL, DESTAQUE]),
                             legend=alt.Legend(orient="top", title=None)),
             tooltip=[alt.Tooltip("dia_txt:N", title="Dia"), alt.Tooltip("tipo:N", title=" "),
                      alt.Tooltip("n:Q", title="Pedidos", format=",")],
-        ).properties(height=250), width="stretch")
+        ) + regua).properties(height=250), width="stretch")
     with c2, bloco("categorias"):
         titulo("Categorias com Mais Atraso", "abertos no 156",
                "Pedidos abertos além do prazo típico, por categoria · % dos abertos da categoria que já atrasaram.")

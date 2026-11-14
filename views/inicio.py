@@ -2,11 +2,12 @@
 que o detalha. Os números respeitam os filtros da barra lateral."""
 
 import altair as alt
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import fontes
+from src.componentes import cursor_vertical, fontes
 from src.config import ESCALA_FONTE, eixo_numero, rotulo_fonte
 from src.dados import tabela
 
@@ -149,6 +150,13 @@ else:
         x=x, y=y, color=cor, opacity=opacidade, tooltip=dica))
     camadas.append(alt.Chart(serie[serie["parcial"]]).mark_point(size=70, filled=False, strokeWidth=2).encode(
         x=x, y=y, color=cor, opacity=opacidade, tooltip=dica))
+    largo = serie.assign(txt=lambda d: d["registros"] + np.where(d["parcial"], " (ano parcial)", "")).pivot(
+        index="ano", columns="fonte_nome", values="txt")
+    nomes = list(largo.columns)
+    largo = largo.fillna("").reset_index()
+    largo.columns = ["ano"] + [f"f{i}" for i in range(len(nomes))]
+    camadas.append(cursor_vertical(largo, x, "ano", [alt.Tooltip("ano:O", title="Ano")] + [
+        alt.Tooltip(f"f{i}:N", title=n.split(" (")[0]) for i, n in enumerate(nomes)]))
     st.altair_chart(alt.layer(*camadas).add_params(clique).properties(height=320), width="stretch")
     notas = ["Clique numa fonte da legenda para destacá-la. Tracejado e ponto vazado: ano parcial "
              "(Ouvidoria 2025, SEDEC 2024, 156 em 2026)."]

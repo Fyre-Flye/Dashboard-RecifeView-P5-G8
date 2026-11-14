@@ -3,9 +3,10 @@
 import re
 import unicodedata
 
+import altair as alt
 import streamlit as st
 
-from src.config import AZUL, DESTAQUE, rotulo_fonte
+from src.config import AZUL, CINZA, DESTAQUE, rotulo_fonte
 
 # Placas: borda esquerda grossa na cor do estado (azul neutro, laranja atenção); o link do rodapé fica dentro
 # da moldura, com o hover contido. Vale em todas as páginas: o app.py injeta este CSS uma vez.
@@ -59,3 +60,14 @@ def leitura(texto: str) -> None:
 def fontes(codigos: list[str]) -> None:
     """Linha discreta com as fontes usadas na página e quantos registros cada uma tem."""
     st.caption("Fontes nesta página: " + " · ".join(rotulo_fonte(c) for c in codigos) + ".")
+
+
+def cursor_vertical(dados, x, campo: str, dicas: list) -> alt.Chart:
+    """Régua tracejada que acompanha o mouse em gráficos densos (séries no tempo, linhas com muitos pontos).
+
+    Uma linha vertical invisível por valor de x, com a altura toda do gráfico; o mouse escolhe a mais próxima, que
+    aparece tracejada e mostra a dica. Assim ninguém precisa mirar num ponto ou numa barra fina para ler o valor.
+    """
+    sel = alt.selection_point(fields=[campo], nearest=True, on="pointerover", clear="pointerout", empty=False)
+    return alt.Chart(dados).mark_rule(strokeDash=[5, 4], color=CINZA, strokeWidth=1.3).encode(
+        x=x, opacity=alt.condition(sel, alt.value(0.9), alt.value(0)), tooltip=dicas).add_params(sel)

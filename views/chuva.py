@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 from src import metricas
-from src.componentes import kpi, leitura
+from src.componentes import cursor_vertical, kpi, leitura
 from src.config import AZUL, CINZA, DESTAQUE
 from src.dados import tabela
 
@@ -139,8 +139,17 @@ with c1:
                  alt.Tooltip(f"{escolha}:Q", title="Pedidos", format=",.0f")]).properties(height=200)
     maio = alt.Chart(pd.DataFrame({"ini": [pd.Timestamp("2022-05-23")], "fim": [pd.Timestamp("2022-06-05")]})).mark_rect(
         color=DESTAQUE, opacity=.12).encode(x="ini:T", x2="fim:T")
-    st.altair_chart((barras + maio).properties(height=210), width="stretch")
-    st.altair_chart((linhas + maio).properties(height=190), width="stretch")
+    # Uma régua por semana, nos dois gráficos, com a chuva e os pedidos na mesma dica.
+    dica_df = base[["semana"]].merge(barras_df, on="semana", how="left").merge(
+        linha[["semana", escolha]].rename(columns={escolha: "pedidos"}), on="semana", how="left")
+    dica_df["mm_txt"] = dica_df["mm"].map(lambda v: "" if pd.isna(v) else num(v))
+    dica_df["pedidos_txt"] = dica_df["pedidos"].map(lambda v: "" if pd.isna(v) else num(v))
+    dica = [alt.Tooltip("semana:T", title="Semana", format="%d/%m/%Y"), alt.Tooltip("mm_txt:N", title="Chuva (mm)"),
+            alt.Tooltip("fonte:N", title="Fonte da chuva"), alt.Tooltip("pedidos_txt:N", title=f"{escolha} (pedidos)")]
+    st.altair_chart((barras + maio + cursor_vertical(dica_df, eixo_x, "semana", dica)).properties(height=210),
+                    width="stretch")
+    st.altair_chart((linhas + maio + cursor_vertical(dica_df, eixo_x, "semana", dica)).properties(height=190),
+                    width="stretch")
     leitura("Faixa laranja: as chuvas de maio de 2022 (506 mm numa semana, pela mediana das estações). As barras "
             "cinza são só referência: a correlação usa apenas as semanas com estação.")
 with c2:
@@ -148,14 +157,23 @@ with c2:
                  help="Correlação entre a chuva acumulada em 4 semanas (estações) e os pedidos, com a chuva deslocada "
                       "de 0 a 10 semanas. Só semanas de abril a agosto: a diferença entre época seca e chuvosa fica "
                       "de fora.")
-    st.altair_chart(alt.Chart(corr).mark_line(point=True).encode(
-        x=alt.X("defasagem:O", title="semanas depois da chuva", axis=alt.Axis(labelAngle=0)),
+    eixo_lag = alt.X("defasagem:O", title="semanas depois da chuva", axis=alt.Axis(labelAngle=0))
+    corr_largo = corr.pivot(index="defasagem", columns="serie", values="r").reset_index()
+    corr_largo.columns = ["defasagem"] + [f"s{i}" for i in range(len(corr_largo.columns) - 1)]
+    nomes_corr = corr.pivot(index="defasagem", columns="serie", values="r").columns
+    for c in corr_largo.columns[1:]:
+        corr_largo[c] = corr_largo[c].map(lambda v: num(v, 2))
+    dica_lag = [alt.Tooltip("defasagem:O", title="Semanas depois")] + [
+        alt.Tooltip(f"s{i}:N", title=n) for i, n in enumerate(nomes_corr)]
+    st.altair_chart((alt.Chart(corr).mark_line(point=True).encode(
+        x=eixo_lag,
         y=alt.Y("r:Q", title="correlação", scale=alt.Scale(domain=[-0.4, 0.7])),
         color=alt.Color("serie:N", title=None, scale=alt.Scale(domain=SERIES, range=CORES),
                         legend=alt.Legend(orient="top", columns=2, labelExpr="replace(datum.label, '156 · ', '156 ')")),
         tooltip=[alt.Tooltip("serie:N", title="Série"), alt.Tooltip("defasagem:O", title="Semanas depois"),
                  alt.Tooltip("r:Q", title="Correlação", format=".2f"),
-                 alt.Tooltip("semanas:Q", title="Semanas usadas")]).properties(height=430), width="stretch")
+                 alt.Tooltip("semanas:Q", title="Semanas usadas")])
+        + cursor_vertical(corr_largo, eixo_lag, "defasagem", dica_lag)).properties(height=430), width="stretch")
     leitura("Mesmo só dentro da época de chuva, a pavimentação e a drenagem sobem umas 5 semanas depois da chuva. "
             "A limpeza urbana, que serve de controle, não acompanha.")
 
@@ -182,14 +200,24 @@ with c4:
     longo = pd.concat(longo)
     regua = alt.Chart(pd.DataFrame({"y": [100]})).mark_rule(color=CINZA, strokeDash=[4, 3]).encode(y="y:Q")
     marco = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color=DESTAQUE, strokeWidth=2).encode(x="x:Q")
+    eixo_ev = alt.X("semanas:Q", title="semanas em relação ao temporal", scale=alt.Scale(domain=[-4, 8]))
+    largo = longo.pivot(index="semanas", columns="serie", values="pedidos")
+    nomes_ev = list(largo.columns)
+    largo = largo.reset_index()
+    largo.columns = ["semanas"] + [f"s{i}" for i in range(len(nomes_ev))]
+    for c in largo.columns[1:]:
+        largo[c] = largo[c].map(lambda v: "" if pd.isna(v) else num(v))
+    dica_ev = [alt.Tooltip("semanas:Q", title="Semanas depois do temporal")] + [
+        alt.Tooltip(f"s{i}:N", title=f"{n} (pedidos)") for i, n in enumerate(nomes_ev)]
     st.altair_chart((alt.Chart(longo).mark_line(point=True).encode(
-        x=alt.X("semanas:Q", title="semanas em relação ao temporal", scale=alt.Scale(domain=[-4, 8])),
+        x=eixo_ev,
         y=alt.Y("indice:Q", title="índice (antes = 100)"),
         color=alt.Color("serie:N", title=None, scale=alt.Scale(domain=SERIES, range=CORES),
                         legend=alt.Legend(orient="bottom", columns=3)),
         tooltip=[alt.Tooltip("serie:N", title="Série"), alt.Tooltip("semanas:Q", title="Semanas depois"),
                  alt.Tooltip("pedidos:Q", title="Pedidos", format=",.0f"),
-                 alt.Tooltip("indice:Q", title="Índice", format=".0f")]) + regua + marco).properties(height=300),
+                 alt.Tooltip("indice:Q", title="Índice", format=".0f")]) + regua + marco
+         + cursor_vertical(largo, eixo_ev, "semanas", dica_ev)).properties(height=300),
         width="stretch")
 
 st.space("small")
