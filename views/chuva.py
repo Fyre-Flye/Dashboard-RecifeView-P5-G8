@@ -112,7 +112,8 @@ pavimentação, chega 3 a 8 semanas depois.</div>""")
         escuro = False
     st.plotly_chart(avisos.figura(diarias, evento, escuro), width="stretch",
                     config={"displayModeBar": False}, key=f"avisos-{evento.pico}")
-    leitura("Em todos os temporais houve aviso oficial antes: de 1 a 8 dias antes do dia de mais chuva. Os avisos do "
+    leitura("Em todos os temporais houve aviso oficial antes: de 1 a 3 dias antes de a chuva forte começar (faixa "
+            "amarela) e de 1 a 8 dias antes do dia de mais chuva. Os avisos do "
             "Cemaden vêm dos boletins originais de previsão de riscos (publicados na véspera do dia previsto); os da Apac e "
             "do Inmet, de notícias da época, porque a Apac não mantém arquivo público dos alertas. A janela azul (3 a 8 "
             "semanas) é onde caiu o pico da pavimentação nos quatro temporais. Chamados da Defesa Civil vão até março de "

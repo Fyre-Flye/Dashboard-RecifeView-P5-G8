@@ -136,9 +136,10 @@ def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
     r = recorte(d, ev)
     p = _picos(r)
     t_ini, t_fim = temporal(r)
-    t_mm = r.loc[r["dia"].between(t_ini, t_fim), "chuva"].sum()
+    prev_ini = min([dd for dd, _ in ev.avisos] + [t_ini - 1, -1])  # primeiro aviso oficial
     texto = "#E6E6E6" if escuro else "#262730"
     cor_temporal = "#A6C8FF" if escuro else NAVY
+    cor_previsao = "#F2C14E" if escuro else "#8A6100"
     grade = "rgba(140,140,140,.18)"
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06, row_heights=[0.26, 0.37, 0.37],
                         subplot_titles=("Chuva (mm por dia, estações do Cemaden)",
@@ -158,10 +159,10 @@ def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
     def enfeites(ate: int) -> dict:
         formas = [dict(type="line", xref="x", yref="paper", x0=ate, x1=ate, y0=0, y1=1,
                        line=dict(color=CINZA, width=1.5, dash="dash"))]
-        if ate >= -3 or any(dd <= ate for dd, _ in ev.avisos):
-            ini = min([dd for dd, _ in ev.avisos] + [-3])
-            formas.append(dict(type="rect", xref="x", yref="paper", x0=ini - .5, x1=-.5, y0=0, y1=1,
-                               fillcolor=AMARELO, opacity=.13, line_width=0, layer="below"))
+        if ate >= prev_ini:  # previsão: do primeiro aviso oficial até a chuva forte começar a cair
+            prev_fim = min(ate, t_ini - 1)
+            formas.append(dict(type="rect", xref="x", yref="paper", x0=prev_ini - .5, x1=prev_fim + .5, y0=0, y1=1,
+                               fillcolor=AMARELO, opacity=.16, line_width=0, layer="below"))
         if ate >= t_ini:  # o temporal cresce com a animação, só no painel da chuva
             formas.append(dict(type="rect", xref="x", yref="y domain", x0=t_ini - .5, x1=min(ate, t_fim) + .5,
                                y0=0, y1=1, fillcolor=NAVY, opacity=.10, line=dict(color=NAVY, width=1.2, dash="dot"),
@@ -171,6 +172,14 @@ def figura(d: pd.DataFrame, ev: Evento, escuro: bool = False) -> go.Figure:
                                y0=0, y1=1, fillcolor=AZUL, opacity=.10, line_width=0, layer="below"))
         notas = [dict(text=_fase(ate, ev, r, p), x=0, y=1.25, xref="paper", yref="paper", xanchor="left", yanchor="top",
                       showarrow=False, align="left", font=dict(size=15, color=texto))]
+        if ate >= prev_ini:
+            dias_p = min(ate + 1, t_ini) - prev_ini
+            rotulo = (f"previsão: {dias_p} dia{'s' if dias_p > 1 else ''}<br>antes de a chuva começar" if ate >= t_ini
+                      else f"previsão: {dias_p} dia{'s' if dias_p > 1 else ''}<br>e a chuva ainda não começou")
+            notas.append(dict(text=rotulo, x=prev_ini - .5, y=.97, xref="x", yref="y2 domain",
+                              xanchor="left", yanchor="top", align="left", showarrow=False,
+                              font=dict(size=11, color=cor_previsao),
+                              bgcolor="rgba(14,17,23,.75)" if escuro else "rgba(255,255,255,.8)"))
         if ate >= t_ini:
             dias_t = min(ate, t_fim) - t_ini + 1
             mm_t = r.loc[r["dia"].between(t_ini, min(ate, t_fim)), "chuva"].sum()
