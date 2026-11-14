@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import cursor_vertical, fontes, kpi, leitura
+from src.componentes import cursor_vertical, fontes, kpi, leitura, regua
 from src.config import (registros, AZUL25, TEXTO_TEMA, cor_forte, cor_fundo, cor_suave, eixo_numero, nome_categoria, par_comparacao,
                         rampa_prazo)
 from src.dados import tabela
@@ -65,9 +65,9 @@ with c1:
     nomes = list(largo.columns)
     largo = largo.fillna("").reset_index()
     largo.columns = ["ano"] + [f"m{i}" for i in range(len(nomes))]
-    regua = cursor_vertical(largo, alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)), "ano",
+    regua_ano = cursor_vertical(largo, alt.X("ano:O", title=None, axis=alt.Axis(labelAngle=0)), "ano",
                             [alt.Tooltip("ano:O", title="Ano")] + [alt.Tooltip(f"m{i}:N", title=n) for i, n in enumerate(nomes)])
-    st.altair_chart((base.mark_line() + base.mark_point(size=55) + regua).properties(height=300), width="stretch")
+    st.altair_chart((base.mark_line() + base.mark_point(size=55) + regua_ano).properties(height=300), width="stretch")
     leitura("A mediana quase não se move; o p90 sobe a partir de 2021. Em 2024–2026 a cauda ainda está incompleta: "
             "pedidos abertos há muito tempo só entram aqui quando forem atendidos.")
 
@@ -89,7 +89,7 @@ with c2:
     )
     cores = alt.Scale(domain=ordem, range=rampa_prazo())
     st.altair_chart((b.mark_bar(size=40).encode(color=alt.Color("faixa:N", scale=cores, legend=None))
-                     + b.mark_text(dy=-8, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N")).properties(height=300),
+                     + b.mark_text(dy=-8, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N") + regua(b, "x")).properties(height=300),
                     width="stretch")
     leitura("A distribuição é muito assimétrica: a maior parte se resolve em uma semana, e uma fatia pequena leva "
             "meses ou anos (obras como escadaria e macrodrenagem).")
@@ -119,7 +119,7 @@ pontos_med = alt.Chart(por_cat).mark_point(filled=True, size=90, color=cor_suave
     y=eixo_y, x="mediana_plot:Q", tooltip=dica)
 pontos_p90 = alt.Chart(por_cat).mark_point(filled=True, size=90, color=cor_forte()).encode(
     y=eixo_y, x="p90_plot:Q", tooltip=dica)
-st.altair_chart((faixa_cat + pontos_med + pontos_p90).properties(height=alt.Step(28)), width="stretch")
+st.altair_chart((faixa_cat + pontos_med + pontos_p90 + regua(pontos_med, "y")).properties(height=alt.Step(28)), width="stretch")
 leitura(f"Em cada categoria, o ponto da esquerda é a mediana e o da direita é o p90; a linha entre eles é onde fica a maior parte dos pedidos. "
         f"Categorias com {metricas.numero(minimo)} pedidos atendidos ou mais, da mais lenta para a mais rápida. Um "
         "semáforo de prazo precisa de referência por categoria: 10 dias é atraso em iluminação e é rápido em drenagem.")
@@ -153,7 +153,11 @@ else:
             tooltip=[alt.Tooltip("nome:N", title="Categoria"), alt.Tooltip("situacao:N", title="Situação"),
                      alt.Tooltip("n_txt:N", title="Pedidos")],
         ).properties(height=alt.Step(26))
-        st.altair_chart(barras, width="stretch")
+        e_txt = e.assign(passou=e["acima_prazo_tipico"].map(metricas.numero), dentro=e["no_prazo"].map(metricas.numero),
+                         total=e["abertos"].map(metricas.numero))
+        st.altair_chart(barras + regua(barras, "y", e_txt, [alt.Tooltip("nome:N", title="Categoria"),
+                        alt.Tooltip("passou:N", title="Passou do prazo típico"), alt.Tooltip("dentro:N", title="Dentro do prazo"),
+                        alt.Tooltip("total:N", title="Abertos")]), width="stretch")
         leitura("O prazo típico é o da própria categoria. Onde ele é curto (iluminação, limpeza), quase todo pedido "
                 "ainda aberto já passou dele; em drenagem, cujo p90 chega perto de três anos, quase nenhum passou. "
                 "As 12 categorias com mais pedidos atrasados.")

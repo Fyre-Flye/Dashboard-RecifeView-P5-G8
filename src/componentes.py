@@ -71,3 +71,24 @@ def cursor_vertical(dados, x, campo: str, dicas: list) -> alt.Chart:
     sel = alt.selection_point(fields=[campo], nearest=True, on="pointerover", clear="pointerout", empty=False)
     return alt.Chart(dados).mark_rule(strokeDash=[5, 4], color=CINZA, strokeWidth=1.3).encode(
         x=x, opacity=alt.condition(sel, alt.value(0.9), alt.value(0)), tooltip=dicas).add_params(sel)
+
+
+def regua(grafico: alt.Chart, eixo: str = "x", dados=None, dicas=None) -> alt.Chart:
+    """A mesma régua tracejada de `cursor_vertical`, montada a partir de um gráfico pronto.
+
+    eixo="x": linha vertical (barras em pé, séries no tempo); eixo="y": linha horizontal (barras deitadas). Usa os
+    dados, o eixo e a dica do próprio gráfico; em barras empilhadas, passe `dados` com uma linha por categoria e
+    `dicas` com todas as partes, para a dica mostrar a barra inteira.
+    """
+    enc = grafico.encoding
+    canal = getattr(enc, eixo)
+    nome = canal.shorthand if isinstance(canal.shorthand, str) else canal.field
+    campo = str(nome).split(":")[0]
+    sel = alt.selection_point(fields=[campo], nearest=True, on="pointerover", clear="pointerout", empty=False)
+    regra = alt.Chart(grafico.data if dados is None else dados).mark_rule(
+        strokeDash=[5, 4], color=CINZA, strokeWidth=1.3).encode(
+        **{eixo: canal}, opacity=alt.condition(sel, alt.value(0.9), alt.value(0)),
+        tooltip=enc.tooltip if dicas is None else dicas).add_params(sel)
+    if dados is None and grafico.transform is not alt.Undefined:
+        regra.transform = grafico.transform
+    return regra

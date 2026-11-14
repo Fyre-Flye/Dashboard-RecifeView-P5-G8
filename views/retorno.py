@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src import filtros, metricas
-from src.componentes import fontes, kpi, leitura
+from src.componentes import fontes, kpi, leitura, regua
 from src.config import (registros, NAVY, AZUL, AZUL25, AZUL40, AZUL70, CINZA, DESTAQUE, FONTE, RAMPA, TEXTO, TEXTO_TEMA, eixo_numero, cor_fechada, cor_forte, cor_fundo,
                         nome_categoria, nome_orgao, titulo)
 from src.dados import tabela
@@ -61,7 +61,8 @@ barras = funil.mark_bar(height=34).encode(
 with c1:
     st.markdown("**Funil das Indicações**",
     help='Das indicações apresentadas na Câmara, quantas chegaram à Prefeitura e quantas voltaram com resposta.')
-    st.altair_chart((barras + funil.mark_text(align="left", dx=6, fontSize=12, color=TEXTO_TEMA).encode(text="rotulo:N"))
+    st.altair_chart((barras + funil.mark_text(align="left", dx=6, fontSize=12, color=TEXTO_TEMA).encode(text="rotulo:N")
+                     + regua(funil, "y"))
                     .properties(height=200), width="stretch")
     leitura("Quase tudo sai da Câmara em poucos dias. A queda acontece dentro da Prefeitura, no caminho de volta: "
             "é a retaguarda descrita no desafio do Banco de Oportunidades.")
@@ -85,7 +86,8 @@ canal = alt.Chart(por_ano).encode(
 with c2:
     st.markdown("**Quando o Envio Vira Sistema, a Resposta Aparece**",
     help='% das indicações com resposta registrada por ano, com o canal de envio mais usado em cada ano.')
-    st.altair_chart((canal.mark_bar(size=46, color=AZUL) + canal.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N"))
+    st.altair_chart((canal.mark_bar(size=46, color=AZUL) + canal.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N")
+                     + regua(canal, "x"))
                     .properties(height=260), width="stretch")
     leitura("De ofício e protocolo em papel para lote e sistema da SEGOV, a parte com resposta registrada sobe de "
             "menos de 1% para cerca de 45%. É o indício mais forte (H9) de que o encaminhamento digital e integrado "
@@ -203,7 +205,12 @@ else:
             tooltip=[alt.Tooltip("ano:O", title="Ano"), alt.Tooltip("canal_nome:N", title="Canal"),
                      alt.Tooltip("rotulo:N", title="Participação")],
         ).transform_calculate(ordem=f"indexof({ordem}, datum.canal_nome)").properties(height=280)
-        st.altair_chart(g, width="stretch")
+        largo = o.pivot_table(index="ano", columns="canal_nome", values="rotulo", aggfunc="first")
+        nomes_canal = [c for c in ordem if c in largo.columns]
+        largo = largo[nomes_canal].fillna("").reset_index()
+        largo.columns = ["ano"] + [f"c{i}" for i in range(len(nomes_canal))]
+        st.altair_chart(g + regua(g, "x", largo, [alt.Tooltip("ano:O", title="Ano")] + [
+            alt.Tooltip(f"c{i}:N", title=n) for i, n in enumerate(nomes_canal)]), width="stretch")
     with c2:
         app = o[o["canal"] == "APP CONECTA RECIFE"]
         ultimo = app[app["ano"] == app["ano"].max()] if not app.empty else app

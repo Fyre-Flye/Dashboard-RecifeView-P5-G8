@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, ajuda, filtros, metricas
-from src.componentes import fontes, kpi, leitura
+from src.componentes import fontes, kpi, leitura, regua
 from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
                         nome_categoria, nome_orgao, nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
@@ -98,7 +98,8 @@ with aba_indice:
         )
         st.altair_chart((base.mark_bar().encode(color=alt.Color(
             "chave:N", scale=alt.Scale(domain=list(CORES), range=list(CORES.values())), legend=None))
-            + base.mark_text(align="left", dx=4, color=TEXTO_TEMA).encode(text="rotulo:N")).properties(height=alt.Step(34)),
+            + base.mark_text(align="left", dx=4, color=TEXTO_TEMA).encode(text="rotulo:N") + regua(base, "y"))
+            .properties(height=alt.Step(34)),
             width="stretch")
         ok = rc <= ahp.RC_ACEITAVEL
         kpi(st, "Razão de consistência (RC)", metricas.porcentagem(rc * 100, 1),
@@ -403,7 +404,14 @@ with aba_indice:
             tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("criterio:N", title="Critério"),
                      alt.Tooltip("pontos_txt:N", title="Pontos"), alt.Tooltip("indice_txt:N", title="Índice total")],
         ).transform_calculate(ordem_crit=f"indexof({CHAVES}, datum.chave)").properties(height=alt.Step(24))
-        st.altair_chart(barras, width="stretch")
+        largo = longo.pivot_table(index=["rotulo_bairro", "nome", "indice_txt"], columns="criterio", values="pontos_txt",
+                                  aggfunc="first").reset_index()
+        nomes_crit = [CRIT[k].nome for k in CHAVES if CRIT[k].nome in largo.columns]
+        largo = largo[["rotulo_bairro", "nome", "indice_txt"] + nomes_crit]
+        largo.columns = ["rotulo_bairro", "nome", "indice_txt"] + [f"k{i}" for i in range(len(nomes_crit))]
+        st.altair_chart(barras + regua(barras, "y", largo, [alt.Tooltip("nome:N", title="Bairro"),
+                        alt.Tooltip("indice_txt:N", title="Índice")] + [
+                        alt.Tooltip(f"k{i}:N", title=n) for i, n in enumerate(nomes_crit)]), width="stretch")
         leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
                 "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
 
@@ -545,7 +553,8 @@ with aba_ocorrencias:
                     x="indice:Q", color=cor_marca, tooltip=[alt.Tooltip("nota_txt:N", title="Nota")])
                 rotulos = alt.Chart(marcas).mark_text(align="left", dx=4, fontWeight="bold", fontSize=12).encode(
                     x="indice:Q", y=alt.Y("altura:Q", scale=None), text="rotulo:N", color=cor_marca)
-                st.altair_chart((barras_fila + linhas + rotulos).resolve_scale(color="independent").properties(height=260),
+                st.altair_chart((barras_fila + linhas + rotulos + regua(barras_fila, "x")).resolve_scale(color="independent")
+                                .properties(height=260),
                                 width="stretch")
                 alta = (oc["indice"] >= NOTA_ALTA).mean() * 100
                 kpi(st, f"Com nota {NOTA_ALTA} ou mais", metricas.porcentagem(alta, 1),

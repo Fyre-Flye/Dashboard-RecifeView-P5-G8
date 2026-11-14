@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ajuda, filtros, metricas
-from src.componentes import fontes, kpi, leitura
+from src.componentes import fontes, kpi, leitura, regua
 from src.config import registros, AZUL, AZUL40, CINZA, TEXTO_TEMA, cor_forte, cor_suave, nome_categoria, titulo
 from src.dados import tabela
 
@@ -66,16 +66,18 @@ with c1:
     help='% dos pedidos que caem num endereço + serviço que já teve pedido. Clique numa barra para ver o intervalo dela.')
     clique = alt.selection_point(fields=["nome"], name="cat")
     base = alt.Chart(por_cat).encode(
-        y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=200, labelOverlap=False)),
+        y=alt.Y("nome:N", sort=por_cat.sort_values("pct", ascending=False)["nome"].tolist(), title=None,
+                axis=alt.Axis(labelLimit=200, labelOverlap=False)),
         x=alt.X("pct:Q", title="% em local repetido", scale=alt.Scale(domain=[0, 100])),
         tooltip=[alt.Tooltip("nome:N", title="Categoria"), alt.Tooltip("rotulo:N", title="Em local repetido"),
                  alt.Tooltip("pedidos_txt:N", title="Pedidos")],
     )
     barras = base.mark_bar().encode(
         color=alt.condition(clique, alt.value(AZUL), alt.value(AZUL40))).add_params(clique)
-    grafico = (barras + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N"))
+    grafico = (barras + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=11).encode(text="rotulo:N")
+               + regua(base, "y"))
     evento = st.altair_chart(grafico.properties(height=alt.Step(24)), width="stretch",
-                             on_select="rerun", key="rep_cat")
+                             on_select="rerun", selection_mode=["cat"], key="rep_cat")
     leitura(f"Categorias com {metricas.numero(minimo)} pedidos ou mais no recorte. Clique numa barra para ver, ao lado, "
             "como os pedidos dela se repetem.")
 
@@ -99,7 +101,7 @@ with c2:
     )
     st.altair_chart((b.mark_bar(size=56).encode(color=alt.Color(
         "tipo:N", scale=alt.Scale(domain=list(faixas["tipo"]), range=[cor_suave(), CINZA, cor_forte()]), legend=None))
-        + b.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N")).properties(height=300), width="stretch")
+        + b.mark_text(dy=-8, color=TEXTO_TEMA).encode(text="rotulo:N") + regua(b, "x")).properties(height=300), width="stretch")
     leitura("Duplicidade se resolve na triagem (juntar pedidos). Reincidência é outro problema: o serviço foi feito "
             "e não durou, ou não foi feito. Em quase todas as categorias, a reincidência é a maior parte.")
 

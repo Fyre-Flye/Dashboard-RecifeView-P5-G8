@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, ajuda, metricas, retrato
-from src.componentes import cursor_vertical, fontes, leitura, placa
+from src.componentes import cursor_vertical, fontes, leitura, placa, regua
 from src.config import (AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria,
                         nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
@@ -337,7 +337,7 @@ def quadro() -> None:
         largo = serie.pivot(index="dia_txt", columns="tipo", values="n").reset_index()
         for c in ("entraram", "atendidos"):
             largo[c] = largo[c].map(num)
-        regua = cursor_vertical(largo, eixo_dia, "dia_txt", [alt.Tooltip("dia_txt:N", title="Dia"),
+        regua_dia = cursor_vertical(largo, eixo_dia, "dia_txt", [alt.Tooltip("dia_txt:N", title="Dia"),
                                 alt.Tooltip("entraram:N", title="Entraram"), alt.Tooltip("atendidos:N", title="Atendidos")])
         st.altair_chart((alt.Chart(serie).mark_bar().encode(
             x=eixo_dia,
@@ -347,15 +347,17 @@ def quadro() -> None:
                             legend=alt.Legend(orient="top", title=None)),
             tooltip=[alt.Tooltip("dia_txt:N", title="Dia"), alt.Tooltip("tipo:N", title=" "),
                      alt.Tooltip("n:Q", title="Pedidos", format=",")],
-        ) + regua).properties(height=250), width="stretch")
+        ) + regua_dia).properties(height=250), width="stretch")
     with c2, bloco("categorias"):
         titulo("Categorias com Mais Atraso", "abertos no 156",
                "Pedidos abertos além do prazo típico, por categoria · % dos abertos da categoria que já atrasaram.")
-        base = alt.Chart(cat).encode(y=alt.Y("nome:N", sort="-x", title=None, axis=alt.Axis(labelLimit=125)),
+        base = alt.Chart(cat).encode(y=alt.Y("nome:N", sort=cat.sort_values("atrasados", ascending=False)["nome"].tolist(),
+                                             title=None, axis=alt.Axis(labelLimit=125)),
                                      x=alt.X("atrasados:Q", axis=None,
                                              scale=alt.Scale(domain=[0, max(cat["atrasados"].max(), 1) * 3.0], nice=False)))
         st.altair_chart((base.mark_bar(color=DESTAQUE) + base.mark_text(align="left", dx=4, color=TEXTO_TEMA, fontSize=10)
-                         .encode(text="rotulo:N")).properties(height=210), width="stretch")
+                         .encode(text="rotulo:N") + regua(base, "y", dicas=[alt.Tooltip("nome:N", title="Categoria"),
+                         alt.Tooltip("rotulo:N", title="Atrasados")])).properties(height=210), width="stretch")
         st.space("stretch")
         ver_detalhe("views/prazos.py", "Ver em Prazos", ":material/schedule:")
     with c3, bloco("entrou"):

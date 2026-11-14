@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ajuda, filtros, metricas
-from src.componentes import fontes, kpi, leitura
+from src.componentes import fontes, kpi, leitura, regua
 from src.config import registros, AZUL, AZUL25, DESTAQUE, RAMPA, SEM_DADO, cor_forte
 from src.dados import malha, tabela
 
@@ -150,7 +150,7 @@ def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> 
     )
     tendencia = alt.Chart(d).transform_loess("pct_favela", "taxa", bandwidth=0.6).mark_line(
         color=cor_forte(), strokeWidth=2.5).encode(x="pct_favela:Q", y=alt.Y("taxa:Q", scale=escala))
-    return (pontos + tendencia).properties(height=280)
+    return (pontos + tendencia + regua(pontos, "x")).properties(height=280)
 
 
 c1, c2 = st.columns(2, gap="large")
