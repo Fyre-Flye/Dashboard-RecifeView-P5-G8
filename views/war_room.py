@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, ajuda, metricas, retrato
-from src.componentes import fontes, leitura
+from src.componentes import fontes, leitura, placa
 from src.config import (AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria,
                         nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
@@ -75,30 +75,14 @@ def data_longa(d: pd.Timestamp) -> str:
     return f"{DIAS_SEMANA[d.weekday()].capitalize()}, {d.day} de {MESES[d.month - 1]} de {d.year}"
 
 
-def placa(chave: str, rotulo: str, valor: str, detalhe: str, alerta: bool = False, ajuda_txt: str = "",
-          link: tuple[str, str, str] | None = None) -> None:
-    """Placa de painel: rótulo, número, uma linha de contexto e, no rodapé, o link para a página de detalhe.
-    Borda laranja = atenção. `ajuda_txt` aparece ao passar o mouse sobre o número."""
-    dica = ajuda_txt.replace("'", "&#39;")
-    with st.container(border=True, gap="xxsmall",
-                      key=f"placa-{'alerta' if alerta else 'azul'}-{chave}"):
-        st.html(   # st.html, e não st.markdown: o markdown come 1rem do fim do bloco e a linha de baixo vazava
-            f"<div title='{dica}' style='cursor:help'><div style='font-size:.8rem;opacity:.75;line-height:1.25'>{rotulo}</div>"
-            f"<div style='font-size:clamp(1.5rem,2.2vw,2.1rem);font-weight:700;line-height:1.15;margin:2px 0'>{valor}</div>"
-            f"<div style='font-size:.8rem;opacity:.8;line-height:1.3'>{detalhe}</div></div>")
-        if link:
-            st.space("stretch")
-            ver_detalhe(*link)
-
-
 def bloco(chave: str):
     """Moldura de cada bloco do painel: mesma borda, mesmo respiro, e a mesma altura dos vizinhos da linha."""
     return st.container(border=True, key=f"bloco-{chave}")
 
 
-def titulo(texto: str, sub: str = "", ajuda_txt: str = "") -> None:
+def titulo(texto: str, sub: str = "", ajuda: str = "") -> None:
     st.markdown(f"**{texto}**" + (f" · <span style='opacity:.75'>{sub}</span>" if sub else ""),
-                unsafe_allow_html=True, help=ajuda_txt or None)
+                unsafe_allow_html=True, help=ajuda or None)
 
 
 def secao(texto: str, selo: str, cor: str, dica: str = "") -> None:
@@ -130,16 +114,6 @@ def ver_detalhe(pagina: str, rotulo: str, icone: str) -> None:
     st.page_link(pagina, label=rotulo, icon=icone, width="content")
 
 
-# Placas: borda esquerda grossa na cor do estado; o link do rodapé fica dentro da moldura, com o hover contido.
-st.html(f"""<style>
-div[class*="st-key-placa-"] {{border-left-width: 5px !important; padding: .8rem .9rem .7rem !important;
-                              flex: 1 0 auto !important;}}
-div[class*="st-key-placa-alerta"] {{border-color: {DESTAQUE}66 !important; border-left-color: {DESTAQUE} !important;}}
-div[class*="st-key-placa-azul"] {{border-color: {AZUL}55 !important; border-left-color: {AZUL} !important;}}
-div[class*="st-key-bloco-"] {{padding: 1.1rem 1.25rem 1rem !important; flex: 1 0 auto !important;}}
-[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-placa-"]),
-[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-bloco-"]) {{flex: 1 0 auto !important; height: auto !important;}}
-</style>""")
 
 
 st.session_state.setdefault("wr_modo", "hoje")
@@ -209,32 +183,32 @@ def quadro() -> None:
     variacao = (ultimos30 / anteriores30 - 1) * 100 if anteriores30 else None
     p = st.columns(5, gap="small")
     with p[0]:
-        placa("abertos", "Pedidos abertos no 156", num(len(abertos)),
-              ajuda_txt="Pedidos que já tinham entrado e ainda não tinham sido atendidos nesta data. Laranja: além do prazo típico da categoria.",
+        placa(st, "Pedidos abertos no 156", num(len(abertos)),
+              ajuda="Pedidos que já tinham entrado e ainda não tinham sido atendidos nesta data. Laranja: além do prazo típico da categoria.",
               detalhe=f"<b>{metricas.porcentagem(atrasados / len(abertos) * 100 if len(abertos) else 0)}</b> além do prazo típico",
-              alerta=True, link=("views/prazos.py", "Prazos", ":material/schedule:"))
+              alerta=True, link=("views/prazos.py", "Prazos", ":material/schedule:"), chave="abertos", esticar=True)
     with p[1]:
-        placa("fila", f"Fila prioritária (nota ≥ {NOTA_ALTA})", num(prioritarios),
-              ajuda_txt="Pedidos abertos com nota de prioridade 7 ou mais no AHP: o primeiro lote a atender.",
+        placa(st, f"Fila prioritária (nota ≥ {NOTA_ALTA})", num(prioritarios),
+              ajuda="Pedidos abertos com nota de prioridade 7 ou mais no AHP: o primeiro lote a atender.",
               detalhe=f"{metricas.porcentagem(prioritarios / len(fila) * 100 if len(fila) else 0, 1)} dos classificáveis",
-              link=("views/prioridade.py", "Prioridade", ":material/low_priority:"))
+              link=("views/prioridade.py", "Prioridade", ":material/low_priority:"), chave="fila", esticar=True)
     with p[2]:
-        placa("camara", "Indicações sem resposta", num(len(camara)),
-              ajuda_txt="Indicações de vereadores já enviadas à Prefeitura e ainda sem resposta registrada nesta data.",
+        placa(st, "Indicações sem resposta", num(len(camara)),
+              ajuda="Indicações de vereadores já enviadas à Prefeitura e ainda sem resposta registrada nesta data.",
               detalhe=f"mediana de <b>{num(camara['idade_dias'].median())} dias</b> desde o envio", alerta=True,
-              link=("views/retorno.py", "Retorno", ":material/call_split:"))
+              link=("views/retorno.py", "Retorno", ":material/call_split:"), chave="camara", esticar=True)
     with p[3]:
-        placa("ouvidoria", "Ouvidoria além do prazo", num(len(ouvidoria)),
-              ajuda_txt="Manifestações abertas cujo prazo legal de resposta (10 dias úteis) já tinha passado.",
+        placa(st, "Ouvidoria além do prazo", num(len(ouvidoria)),
+              ajuda="Manifestações abertas cujo prazo legal de resposta (10 dias úteis) já tinha passado.",
               detalhe=f"mediana de {num(ouvidoria['dias_alem_do_prazo'].median())} dias além do prazo legal", alerta=True,
-              link=("views/retorno.py", "Retorno", ":material/call_split:"))
+              link=("views/retorno.py", "Retorno", ":material/call_split:"), chave="ouvidoria", esticar=True)
     with p[4]:
-        placa("entrada", f"Entrada no 156 · 30 dias até {fim_janela:%d/%m}", num(ultimos30),
-              ajuda_txt="Pedidos que entraram no 156 nos 30 dias até a data, comparados com os 30 dias antes.",
+        placa(st, f"Entrada no 156 · 30 dias até {fim_janela:%d/%m}", num(ultimos30),
+              ajuda="Pedidos que entraram no 156 nos 30 dias até a data, comparados com os 30 dias antes.",
               detalhe="sem os 30 dias anteriores para comparar" if variacao is None else
               f"{'+' if variacao >= 0 else ''}{metricas.porcentagem(variacao)} sobre os 30 dias anteriores",
               alerta=variacao is not None and variacao > 10,
-              link=("views/reincidencia.py", "Reincidência", ":material/repeat:"))
+              link=("views/reincidencia.py", "Reincidência", ":material/repeat:"), chave="entrada", esticar=True)
 
     # 2. Alertas: o resumo em frases
     cat = (abertos.groupby("categoria", observed=True).agg(abertos=("atrasado", "size"), atrasados=("atrasado", "sum"))
@@ -262,7 +236,7 @@ def quadro() -> None:
                        f"{num(len(ouvidoria))} manifestações além do prazo.")
     st.space("xxsmall")   # 1rem + .25 + 1rem: o mesmo respiro dos blocos lado a lado
     with bloco("alertas"):
-        titulo("Alertas do Dia", ajuda_txt="Frases geradas automaticamente a partir dos números desta data.")
+        titulo("Alertas do Dia", ajuda="Frases geradas automaticamente a partir dos números desta data.")
         st.html("<ul style='margin:0;padding-left:1.3rem;line-height:1.6'>"
                 + "".join(f"<li style='margin:.15rem 0'>{a}</li>" for a in alertas) + "</ul>")
 
@@ -324,21 +298,21 @@ def quadro() -> None:
         outras = entradas_fontes.loc[dia_fluxo] if dia_fluxo in entradas_fontes.index else pd.Series(dtype=float)
         q = st.columns(4, gap="small")
         with q[0]:
-            placa("entraram", f"Entraram no 156 {no_dia}", num(hoje["entradas"]), ajuda_txt="Pedidos registrados no 156 nesta data.",
+            placa(st, f"Entraram no 156 {no_dia}", num(hoje["entradas"]), ajuda="Pedidos registrados no 156 nesta data.",
                    detalhe=f"{'+' if diferenca >= 0 else ''}{metricas.porcentagem(diferenca)} sobre a média de "
-                   f"{DIAS_SEMANA[dia_fluxo.weekday()]}", alerta=diferenca > 25)
+                   f"{DIAS_SEMANA[dia_fluxo.weekday()]}", alerta=diferenca > 25, chave="entraram", esticar=True)
         with q[1]:
-            placa("atendidos", f"Atendidos no 156 {no_dia}", num(hoje["atendidos"]), detalhe="pela data do último movimento",
-                   ajuda_txt="Pedidos marcados como atendidos nesta data, de qualquer data de entrada.")
+            placa(st, f"Atendidos no 156 {no_dia}", num(hoje["atendidos"]), detalhe="pela data do último movimento",
+                   ajuda="Pedidos marcados como atendidos nesta data, de qualquer data de entrada.", chave="atendidos", esticar=True)
         with q[2]:
-            placa("saldo", "Saldo do dia" if dia_fluxo == dia else f"Saldo em {dia_fluxo:%d/%m}",
+            placa(st, "Saldo do dia" if dia_fluxo == dia else f"Saldo em {dia_fluxo:%d/%m}",
                    f"{'+' if saldo > 0 else ''}{num(saldo)}",
-                   ajuda_txt="Entradas menos atendimentos: positivo, a fila cresceu.",
-                   detalhe="a fila cresceu" if saldo > 0 else "a fila diminuiu", alerta=saldo > 0)
+                   ajuda="Entradas menos atendimentos: positivo, a fila cresceu.",
+                   detalhe="a fila cresceu" if saldo > 0 else "a fila diminuiu", alerta=saldo > 0, chave="saldo", esticar=True)
         with q[3]:
-            placa("outras", f"Outras portas {no_dia}", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
-                   ajuda_txt="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
-                   detalhe=" · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()))
+            placa(st, f"Outras portas {no_dia}", num(sum(outras.get(c, 0) for c in OUTRAS_PORTAS)),
+                   ajuda="Registros que entraram nesta data pela Câmara, pela Ouvidoria e pela Defesa Civil.",
+                   detalhe=" · ".join(f"{nome} {num(outras.get(c, 0))}" for c, nome in OUTRAS_PORTAS.items()), chave="outras", esticar=True)
 
     st.space("xxsmall")
     c1, c2, c3 = st.columns([1.3, 1, 1], gap="medium")

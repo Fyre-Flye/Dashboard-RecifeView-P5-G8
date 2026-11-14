@@ -1,13 +1,54 @@
 """Peças de interface repetidas em todas as páginas."""
 
+import re
+import unicodedata
+
 import streamlit as st
 
-from src.config import rotulo_fonte
+from src.config import AZUL, DESTAQUE, rotulo_fonte
+
+# Placas: borda esquerda grossa na cor do estado (azul neutro, laranja atenção); o link do rodapé fica dentro
+# da moldura, com o hover contido. Vale em todas as páginas: o app.py injeta este CSS uma vez.
+CSS_PLACAS = f"""<style>
+div[class*="st-key-placa-"] {{border-left-width: 5px !important; padding: .8rem .9rem .7rem !important;}}
+div[class*="st-key-placa-"][class*="-estica"] {{flex: 1 0 auto !important;}}
+div[class*="st-key-placa-alerta"] {{border-color: {DESTAQUE}66 !important; border-left-color: {DESTAQUE} !important;}}
+div[class*="st-key-placa-azul"] {{border-color: {AZUL}55 !important; border-left-color: {AZUL} !important;}}
+div[class*="st-key-bloco-"] {{padding: 1.1rem 1.25rem 1rem !important; flex: 1 0 auto !important;}}
+[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-placa-"][class*="-estica"]),
+[data-testid="stLayoutWrapper"]:has(> div[class*="st-key-bloco-"]) {{flex: 1 0 auto !important; height: auto !important;}}
+</style>"""
+
+
+def _chave(texto: str) -> str:
+    sem_acento = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", sem_acento.lower()).strip("-")
+
+
+def placa(onde, rotulo: str, valor: str, detalhe: str = "", alerta: bool = False, ajuda: str = "",
+          link: tuple[str, str, str] | None = None, chave: str | None = None, esticar: bool = False) -> None:
+    """Placa de indicador, igual em todas as páginas: rótulo, número, uma linha de contexto e, se houver, o link
+    para a página de detalhe no rodapé. Borda laranja = atenção. `ajuda` aparece ao passar o mouse.
+
+    `esticar`: numa faixa de placas lado a lado, todas ficam com a altura da mais alta (Painel Geral). Fora de
+    faixa fica desligado, senão a placa cresce até a altura da coluna vizinha.
+
+    O texto vai em st.html: o st.markdown come 1rem do fim do bloco e a linha de baixo vazava a borda."""
+    dica = (ajuda or "").replace("'", "&#39;")
+    with onde.container(border=True, gap="xxsmall",
+                        key=f"placa-{'alerta' if alerta else 'azul'}-{chave or _chave(rotulo)}{'-estica' if esticar else ''}"):
+        st.html(f"<div title='{dica}' style='cursor:{'help' if dica else 'default'}'>"
+                f"<div style='font-size:.8rem;opacity:.75;line-height:1.25'>{rotulo}</div>"
+                f"<div style='font-size:clamp(1.5rem,2.2vw,2.1rem);font-weight:700;line-height:1.15;margin:2px 0'>{valor}</div>"
+                f"<div style='font-size:.8rem;opacity:.8;line-height:1.3'>{detalhe}</div></div>")
+        if link:
+            st.space("stretch")
+            st.page_link(link[0], label=link[1], icon=link[2], width="content")
 
 
 def kpi(coluna, rotulo: str, valor: str, contexto: str | None = None, ajuda: str | None = None) -> None:
-    """Cartão de indicador: rótulo curto, número grande e uma linha de contexto (sem seta de variação)."""
-    coluna.metric(rotulo, valor, delta=contexto, delta_color="off", delta_arrow="off", help=ajuda, border=True)
+    """Cartão de indicador das páginas de detalhe: a mesma placa do Painel Geral, em azul."""
+    placa(coluna, rotulo, valor, contexto or "", ajuda=ajuda or "")
 
 
 def leitura(texto: str) -> None:

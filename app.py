@@ -1,11 +1,13 @@
 import streamlit as st
 
+from src.componentes import CSS_PLACAS
 from src.config import AVISO_IA
 from src.filtros import desenhar_barra_lateral
 
 st.set_page_config(page_title="RecifeView · Demandas do Recife", page_icon="assets/recifeview_icone.png",
                    layout="wide")
 st.logo("assets/recifeview_wordmark.png", icon_image="assets/recifeview_icone.png", size="large")
+st.html(CSS_PLACAS)   # placas e blocos iguais em todas as páginas
 # Mais conteúdo por tela: o Streamlit reserva muito espaço no topo e entre blocos. Ajuste só de espaçamento.
 st.html("""<style>
 .stMainBlockContainer {padding-top: 3.6rem; padding-bottom: 2rem;}

@@ -207,13 +207,11 @@ else:
     with c2:
         app = o[o["canal"] == "APP CONECTA RECIFE"]
         ultimo = app[app["ano"] == app["ano"].max()] if not app.empty else app
-        st.metric("App Conecta Recife na Ouvidoria",
-                  metricas.porcentagem(ultimo["pct"].iat[0], 1) if not ultimo.empty else "—",
-                  delta=f"em {int(ultimo['ano'].iat[0])}" if not ultimo.empty else None,
-                  delta_color="off", delta_arrow="off", border=True)
+        kpi(st, "App Conecta Recife na Ouvidoria",
+            metricas.porcentagem(ultimo["pct"].iat[0], 1) if not ultimo.empty else "—",
+            f"em {int(ultimo['ano'].iat[0])}" if not ultimo.empty else None)
         no_prazo = f.aplicar(tabela("ouvidoria"), territorio=False, categoria=False)
         pct_prazo = no_prazo.loc[no_prazo["no_prazo"] == "True", "n"].sum() / no_prazo["n"].sum() * 100
-        st.metric("Respondidas no prazo", metricas.porcentagem(pct_prazo), delta="Ouvidoria, no período",
-                  delta_color="off", delta_arrow="off", border=True)
+        kpi(st, "Respondidas no prazo", metricas.porcentagem(pct_prazo), "Ouvidoria, no período")
         leitura("O telefone virou o canal dominante, e o app só aparece em 2023, com cerca de 3%. O problema não é "
                 "falta de canal digital para o cidadão: é o que acontece depois que o pedido entra.")
