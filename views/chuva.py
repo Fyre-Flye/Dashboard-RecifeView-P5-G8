@@ -99,8 +99,8 @@ with aba_aviso:
                       "(1 = normal; 3 = três vezes o normal). Aperte Rodar, ou arraste a barra de dias.")
     st.html("""<div style='font-size:1rem;line-height:1.6'>
 <b style='color:#B07C00'>Aviso 1, antes da chuva:</b> a previsão de chuva forte avisa a Defesa Civil e o 156 para reforçarem
-plantão e equipes. &nbsp;<b style='color:#0F62FE'>Aviso 2, depois da chuva:</b> a chuva medida avisa que a segunda onda, a
-pavimentação, chega 3 a 8 semanas depois.</div>""")
+plantão e equipes. &nbsp;<b style='color:#0F62FE'>Aviso 2, depois da chuva:</b> a chuva medida avisa que, nos dois meses
+seguintes, os pedidos de danos da chuva no 156 (buraco, drenagem, árvore, barreira, escadaria) vão passar do normal.</div>""")
     nomes_ev = {e.nome: e for e in avisos.EVENTOS}
     qual_ev = st.segmented_control("Temporal", list(nomes_ev), default=avisos.EVENTOS[0].nome,
                                    label_visibility="collapsed", key="evento_aviso") or avisos.EVENTOS[0].nome
@@ -113,31 +113,38 @@ pavimentação, chega 3 a 8 semanas depois.</div>""")
     st.plotly_chart(avisos.figura(diarias, evento, escuro), width="stretch",
                     config={"displayModeBar": False}, key=f"avisos-{evento.pico}")
     leitura("Em todos os temporais houve aviso oficial antes: de 1 a 3 dias antes de a chuva forte começar (faixa "
-            "amarela) e de 1 a 8 dias antes do dia de mais chuva. Os avisos do "
-            "Cemaden vêm dos boletins originais de previsão de riscos (publicados na véspera do dia previsto); os da Apac e "
-            "do Inmet, de notícias da época, porque a Apac não mantém arquivo público dos alertas. A janela azul (3 a 8 "
-            "semanas) é onde caiu o pico da pavimentação nos quatro temporais. Chamados da Defesa Civil vão até março de "
-            "2024 e as ações em campo até 2024; em 2025 só há o 156.")
+            "amarela) e de 1 a 8 dias antes do dia de mais chuva. No painel do 156, a faixa azul marca a sobrecarga: os "
+            "danos da chuva acima de 1,3× o normal por uma semana ou mais. Chamados da Defesa Civil vão até março de 2024 "
+            "e as ações em campo até 2024; em 2025 só há o 156.")
 
-    resumo, preparo = [], []
+    resumo, comecos, extras = [], [], []
     for e in avisos.EVENTOS:
         r = avisos.recorte(diarias, e)
         p = avisos.picos(r)
-        if "pav" in p:
-            preparo.append(p["pav"][1])
+        blocos = avisos.sobrecargas(r)
+        extra = avisos.pedidos_extras(r)
+        if blocos:
+            comecos.append(blocos[0][0])
+            extras.append(extra)
         vezes = lambda c: f"{num(p[c][0], 1)}×" if c in p else "sem dado"  # noqa: E731
-        resumo.append({"Temporal": e.nome.split(" · ")[0], "Chuva no dia": f"{num(r.loc[r['dia'] == 0, 'chuva'].iloc[0])} mm",
-                       "Chamados da Defesa Civil": vezes("sedec"), "156 · drenagem e árvores": vezes("imediato"),
-                       "156 · pavimentação": vezes("pav"),
-                       "Tempo de preparo do 156": f"{p['pav'][1]} dias" if "pav" in p else "sem dado"})
-    st.markdown("**Em Todos os Temporais** · o pico de cada onda, em vezes o normal, e quanto tempo o 156 teve entre o dia "
-                "de mais chuva e o pico da pavimentação")
+        resumo.append({
+            "Temporal": e.nome.split(" · ")[0],
+            "Chuva no dia": f"{num(r.loc[r['dia'] == 0, 'chuva'].iloc[0])} mm",
+            "Chamados da Defesa Civil": vezes("sedec"),
+            "156 · danos da chuva (pico)": vezes("danos"),
+            "Começo da sobrecarga": ("não houve" if not blocos else
+                                     "no dia da chuva" if blocos[0][0] == 0 else f"{blocos[0][0]} dias depois"),
+            "Pedidos a mais (9 semanas)": avisos.milhar(extra),
+        })
+    st.markdown("**Em Todos os Temporais** · o pico de cada onda, em vezes o normal; quando a sobrecarga do 156 começou e "
+                "quantos pedidos de danos chegaram acima do normal")
     st.dataframe(pd.DataFrame(resumo), hide_index=True, width="stretch")
-    media = sum(preparo) / len(preparo)
-    leitura(f"Em média, o 156 tem <b>cerca de {num(media)} dias (umas {num(media / 7)} semanas)</b> entre o dia de mais chuva e "
-            f"o pico dos pedidos de pavimentação, e no pior caso {min(preparo)} dias. Somando a previsão (faixa amarela), "
-            "dá para começar a se organizar ainda antes. É o pico, não o começo da onda: na época de chuva a pavimentação "
-            "já fica acima do normal, então o começo exato não é nítido.")
+    leitura(f"Em {len(extras)} dos {len(avisos.EVENTOS)} temporais o 156 teve sobrecarga, com <b>de "
+            f"{avisos.milhar(min(extras))} a {avisos.milhar(max(extras))} pedidos de danos a mais</b> em nove semanas. "
+            f"Quando ela começa varia muito: de {'imediato' if min(comecos) == 0 else f'{min(comecos)} dias'} a "
+            f"{max(comecos)} dias depois da chuva. Por isso o aviso 2 fala em volume para os próximos dois meses, não em "
+            "data. Danos da chuva = pavimentação, drenagem, macrodrenagem, arborização, terraplenagem e escadarias; "
+            "limpeza urbana e iluminação ficam de fora, como controle (elas também variam uns 20 a 30% sozinhas).")
 
 with aba_estudo:
     k = st.columns(4)
@@ -276,7 +283,50 @@ with aba_estudo:
     <b>Dá:</b> a pavimentação e a drenagem no 156 tendem a subir 3 a 8 semanas depois de chuva forte, mesmo comparando
     só semanas da época de chuva. Um aviso no formato <i>"choveu {TEMPORAL_SEMANA} mm ou mais esta semana: espere mais pedidos de
     pavimentação daqui a um mês"</i> tem base.<br>
-    <b>Ainda não dá:</b> dizer quantos pedidos a mais. São {len(ev)} temporais na amostra, e a resposta varia muito de um
-    para outro. A Defesa Civil reage na mesma semana, mas fraco no dado aberto, e não publicou 2025.<br>
+    <b>Ainda não dá:</b> dizer em que dia a sobrecarga do 156 começa. Na aba ao lado, nos quatro maiores temporais, ela
+    trouxe de 1.600 a 1.900 pedidos de danos a mais em dois meses quando aconteceu, mas começou de imediato em um, em uma
+    semana em outro, em cinco semanas num terceiro e não aconteceu no quarto. A Defesa Civil reage na mesma semana, mas
+    fraco no dado aberto, e não publicou 2025.<br>
     <b>Para avançar:</b> os meses secos (setembro a março) do Cemaden, para usar o ano inteiro; e ler sozinho os boletins do
     Cemaden e os alertas da Apac e do Inmet, para o aviso 1 ("vai chover") sair automático, como na aba ao lado.</div>""")
+
+st.space("small")
+st.subheader("Fontes", help="Tudo o que esta página usa, com link. Os números da demanda vêm do dataset do grupo, montado "
+                            "com os dados abertos da Prefeitura; só agregados por dia estão neste repositório.")
+CEMADEN = "https://www.gov.br/cemaden/pt-br/assuntos/riscos-geo-hidrologicos/"
+st.markdown(f"""
+**Chuva**
+- Pluviômetros do Cemaden em Recife: [Mapa Interativo do Cemaden](https://mapainterativo.cemaden.gov.br/), download
+  mensal (Download de Dados → Estações Pluviométricas, PE, Recife). 28 estações; usamos a mediana diária das estações com o
+  dia completo, abril a agosto de 2022 a 2025 e abril a maio de 2026 (horário de Brasília).
+- Referência, só no gráfico semanal onde não há estação: reanálise ERA5 via [Open-Meteo](https://open-meteo.com/).
+
+**Demanda**
+- Central 156 / Emlurb (pedidos por dia e categoria), Defesa Civil (ações em campo, até 2024) e chamados da Defesa Civil
+  (SEDEC, até março de 2024): [Portal de Dados Abertos do Recife](http://dados.recife.pe.gov.br/), no dataset do grupo
+  (ver Sobre os Dados).
+
+**Avisos oficiais antes de cada temporal**
+- Cemaden, boletins originais de previsão de riscos geo-hidrológicos (publicados à tarde, na véspera do dia previsto):
+  [arquivo]({CEMADEN}) ·
+  [21/05/2022]({CEMADEN}21-05-2022-previsao-de-riscos-geo-hidrologicos) ·
+  [25/05/2022]({CEMADEN}25-05-2022-previsao-de-riscos-geo-hidrologicos) ·
+  [23/05/2023]({CEMADEN}23-05-2023-previsao-de-riscos-geo-hidrologicos) ·
+  [24/05/2023]({CEMADEN}24-05-2023-previsao-de-riscos-geo-hidrologicos) ·
+  [14/06/2024]({CEMADEN}14-06-2024-previsao-de-riscos-geo-hidrologicos-e-estendida-para-o-rio-grande-do-sul-entre-os-dias-15-16-e-17-06-2024) ·
+  [14/05/2025]({CEMADEN}14-05-2025-previsao-de-riscos-geo-hidrologicos) ·
+  [15/05/2025]({CEMADEN}15-05-2025-previsao-de-riscos-geo-hidrologicos)
+- Apac, Inmet e Prefeitura (a Apac não mantém arquivo público dos alertas; usamos notícias da época):
+  [Apac renova alerta, 24/05/2022](https://www.diariodepernambuco.com.br/noticia/vidaurbana/2022/05/apac-renova-por-mais-24-horas-alerta-de-chuvas-fortes-em-pernambuco.html) ·
+  [coletiva Inmet e Defesa Civil, 26/05/2022](https://portal.inmet.gov.br/noticias/chuvas-inmet-e-defesa-civil-realizam-coletiva-de-imprensa-para-alertar-população-nordestina) ·
+  [alerta de chuva intensa, 26/05/2022](https://www.folhape.com.br/noticias/defesa-civil-alerta-para-risco-de-chuva-intensa-no-litoral-de/228207/) ·
+  [Apac: alerta amarelo desde 20/05 e aviso de 23/05/2023](https://www.diariodepernambuco.com.br/noticia/vidaurbana/2023/05/recife-amanhece-sob-fortes-chuvas-e-varios-pontos-alagados.html) ·
+  [Apac alerta amarelo, 14/06/2024](https://www.folhape.com.br/noticias/chuva-no-recife/342422/) ·
+  [Apac sobe o alerta, 14/06/2024](https://www.folhape.com.br/noticias/apac-sobe-alerta-de-chuvas-moderadas-a-fortes-na-rmr/342627/) ·
+  [Apac emite alerta, 14/05/2025](https://www.diariodepernambuco.com.br/vida-urbana/2025/05/3893601-apac-emite-alerta-de-chuvas-para-litoral-de-pernambuco.html)
+
+**Sobre o temporal de 2022**
+- [Relatório GADRI, Recife, maio e junho de 2022](https://gadri.net/events/Kobiyama%20%28GADRI-report%202022%29-Recife-2022-May-June_29August2022.pdf)
+  (linha do tempo dos alertas e do plano de contingência).
+- [Estudo de atribuição do World Weather Attribution (PIK)](https://publications.pik-potsdam.de/pubman/item/item_30340_1/component/file_30423/30340oa.pdf).
+""")

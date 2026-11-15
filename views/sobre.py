@@ -60,7 +60,9 @@ with aba_fontes:
                "07/10/2026).")
     st.caption("Fora do dataset, só na página Chuva e Carga (estudo): chuva diária dos pluviômetros do Cemaden em Recife "
                "(mapa interativo do Cemaden; mediana das estações, abril a agosto de 2022 a 2025 e abril a maio de "
-               "2026) e a reanálise ERA5 (Open-Meteo), só como referência.")
+               "2026) e a reanálise ERA5 (Open-Meteo), só como referência. Os avisos oficiais de cada temporal vêm dos "
+               "boletins do Cemaden e de notícias com os alertas da Apac e do Inmet; a lista completa, com links, está no "
+               "fim daquela página.")
 
 # --- Dicionário do dataset --------------------------------------------------------------------------------
 with aba_dicionario:
