@@ -12,7 +12,7 @@ como alternativa a classificadores complexos, e mostrar o resultado num mapa do 
 
 | Critério | Indicador | Fonte e janela |
 |---|---|---|
-| Risco | ações da Defesa Civil pedidas pelo cidadão por mil habitantes por ano | Defesa Civil, 2021–2024 |
+| Risco | atendimentos da Defesa Civil pedidos pelo cidadão por mil habitantes por ano (um atendimento = mesmo endereço, dia e serviço; conta uma vez mesmo com várias ações) | Defesa Civil, 2021–2024 |
 | Vulnerabilidade | dois subcritérios de mesmo peso: % da população em favelas e comunidades urbanas; renda nominal média mensal dos responsáveis pelos domicílios (invertida: renda menor = mais prioridade) | IBGE, Censo 2022 (renda: Agregados por bairros, V06004, maio de 2026) |
 | Atraso | % dos pedidos abertos que já passaram do p90 da própria categoria | 156, arquivos 2025–2026; p90 dos atendidos de 2021–2025 |
 | Reincidência | % dos pedidos em local + serviço repetido | 156, 2021–2025, endereços com número |
@@ -48,6 +48,22 @@ isso sem mudar os pesos dos quatro critérios. A correlação entre o ranking no
 primeiros se mantêm, e bairros como Morro da Conceição, Totó, Mangabeira e Campina do Barreto sobem de 10 a 14
 posições.
 
+## Como o risco é contado (atualizado em 17/11/2026)
+
+A base aberta da Defesa Civil grava cada **ação** de um atendimento numa linha (vistoria, mapeamento da área,
+atendimento social…). Em 2021–2024 são 80.498 ações do cidadão para 51.357 atendimentos, 1,6 ação por atendimento.
+Contar linhas premiava o bairro em que um único atendimento gerou muitas ações: em Mangabeira, 49 das 53 ações são
+mapeamentos no mesmo endereço e no mesmo dia. Agora o risco conta **atendimentos** (mesmo endereço pseudonimizado, mesmo
+dia, mesmo serviço). A taxa passa a ir de 0,1 a 60 por mil habitantes por ano (mediana 1,3; o máximo é Dois Irmãos).
+
+Efeito: correlação de 0,97 com o ranking anterior; os 10 primeiros são os mesmos, só muda a ordem entre eles.
+Mangabeira cai 38 posições; Bongi, Pina e Rosarinho caem de 12 a 17; Casa Forte e Porto da Madeira, 8.
+O mapa da Defesa Civil na página Território continua mostrando ações, como na EDA (N3).
+
+Ficaram fora do critério, de propósito: o monitoramento por iniciativa da própria Defesa Civil (PROATIVA) e as ações
+sem serviço registrado (INDEFINIDA: atendimento social, porta a porta, roçagem, cestas básicas). O critério mede a
+demanda do cidadão.
+
 ## Julgamentos padrão (proposta inicial do grupo, NÃO validada)
 
 Escala de Saaty: 1 = igual, 3 = moderadamente, 5 = fortemente, 7 = muito, 9 = extremamente mais importante.
@@ -63,8 +79,8 @@ Escala de Saaty: 1 = igual, 3 = moderadamente, 5 = fortemente, 7 = muito, 9 = ex
 
 **Resultado:** Risco 45,5% · Vulnerabilidade 26,3% · Atraso 14,1% · Reincidência 14,1%; **RC = 0,4%** (coerente).
 
-Top 5 com esses pesos (com a renda): Guabiraba, Dois Irmãos, São José, Passarinho, Linha do Tiro. Antes da renda, o
-quinto era Apipucos.
+Top 5 com esses pesos (com a renda e o risco por atendimento): Guabiraba, Dois Irmãos, Passarinho, São José, Beberibe.
+Antes da renda, o quinto era Apipucos; com a renda e o risco por ação, era Linha do Tiro.
 
 **Sensibilidade:** multiplicando o peso de cada critério por 0,5, 0,75, 1,25 ou 1,5 (e redistribuindo o resto), 6 a 10
 dos 10 primeiros continuam no top 10. Os casos mais sensíveis são reduzir o peso do risco à metade (6 de 10) e
@@ -76,7 +92,7 @@ ranking continua razoavelmente estável. (Antes da renda, o intervalo era de 7 a
 1. **Validar os julgamentos** com a Profª Maíra, o Prof. Marcelo e, se possível, quem opera a Defesa Civil e a Emlurb.
    A página deixa refazer as comparações e ver o efeito na hora.
 2. Risco e vulnerabilidade se correlacionam em parte: bairros de morro somam pontos nos dois. Com a renda, a
-   correlação entre as notas dos dois critérios fica em ρ ≈ 0,47.
+   correlação entre as notas dos dois critérios fica em ρ ≈ 0,48.
 3. O índice é por bairro e retrospectivo. Um índice **por pedido aberto** (para ordenar a fila) precisaria de um
    critério de criticidade por serviço, que depende de julgamento da Prefeitura.
 4. AHP não é aprendizado de máquina e não conta como o bônus de modelagem preditiva. Uma classificação supervisionada

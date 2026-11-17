@@ -241,7 +241,7 @@ with aba_indice:
             return f"{num(linha['dias_alem_do_prazo'])} dias além do prazo legal" if chave == "atraso" else "não se aplica"
         bairro = ind.loc[linha["bairro_oficial"]]
         if chave == "risco":
-            return f"{num(bairro['taxa_defesa_civil'], 1)} ações da Defesa Civil por mil hab./ano no bairro"
+            return f"{num(bairro['taxa_defesa_civil'], 1)} atendimentos da Defesa Civil por mil hab./ano no bairro"
         if chave == "vulnerabilidade":
             return (f"{num(bairro['pct_favela'], 1)}% dos moradores do bairro em favelas; renda média dos responsáveis "
                     f"R$ {num(bairro['renda_media'])}")
@@ -633,6 +633,12 @@ with aba_metodo:
             "indicador, eles ficavam com a nota mínima de vulnerabilidade. A renda média dos responsáveis pelos domicílios "
             "(Censo 2022, por bairro) capta essa vulnerabilidade. O ranking geral quase não muda (correlação de 0,97 com o "
             "anterior), mas esses bairros sobem de 10 a 14 posições.")
+    leitura("Como o risco é contado (17/11): a base da Defesa Civil grava cada ação de um atendimento numa linha "
+            "(vistoria, mapeamento da área, atendimento social…), em média 1,6 ação por atendimento. Contar linhas "
+            "premiava o bairro em que um único atendimento gerou muitas ações: em Mangabeira, 49 das 53 ações de "
+            "2021–2024 são mapeamentos no mesmo endereço e no mesmo dia. Agora o risco conta atendimentos (mesmo endereço, "
+            "dia e serviço). Os 10 primeiros continuam os mesmos (só a ordem entre eles muda), mas Mangabeira cai 38 posições e Bongi, Pina e Rosarinho, de 12 a 17. "
+            "O mapa da Defesa Civil em Território continua mostrando ações, como na EDA.")
 
 
     # --- Sensibilidade --------------------------------------------------------------------------------------
@@ -654,7 +660,7 @@ with aba_metodo:
             f"{int(pior['mantidos_no_top'])} de 10. Se quase tudo fica acima de 7, o ranking é estável e a discussão "
             "com especialistas pode focar nos poucos bairros de fronteira.")
     st.caption("AHP não é aprendizado de máquina e não substitui o bônus de modelagem preditiva. Ele torna explícito e "
-               "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,47), então "
+               "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,48), então "
                "os bairros de morro somam pontos nos dois. O teste mexe nos pesos dos quatro critérios; os pesos internos "
                "da vulnerabilidade (½ para favela, ½ para renda) ficam fixos.")
 
@@ -805,6 +811,7 @@ with aba_metodo:
 | $N$ | Número de bairros comparados (89) |
 | $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média); na renda, da maior para a menor, porque renda menor pede mais prioridade |
 | $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
+| $r_R(b)$ | Posição do bairro em atendimentos da Defesa Civil pedidos pelo cidadão por mil habitantes por ano (2021–2024) ÷ $N$; um atendimento é um endereço, num dia, num serviço, e conta uma vez mesmo que tenha várias ações |
 | $r_{\\text{favela}}(b)$ | Posição do bairro em % da população em favelas e comunidades urbanas (IBGE, Censo 2022) ÷ $N$ |
 | $r_{\\text{renda}}(b)$ | Posição do bairro em renda nominal média mensal dos responsáveis pelos domicílios (IBGE, Censo 2022), da maior para a menor, ÷ $N$ |
 | $r_V(b)$ | Nota de vulnerabilidade: $\\tfrac{1}{2}\\, r_{\\text{favela}}(b) + \\tfrac{1}{2}\\, r_{\\text{renda}}(b)$, os dois subcritérios com o mesmo peso (julgamento 1) |

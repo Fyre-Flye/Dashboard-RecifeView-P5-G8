@@ -432,6 +432,17 @@ def linha_do_tempo_ouvidoria(df: pd.DataFrame) -> pd.DataFrame:
     return t.sort_values("data_abertura").reset_index(drop=True)
 
 
+def atendimentos_defesa_civil(dc: pd.DataFrame) -> pd.DataFrame:
+    """Um registro por atendimento da Defesa Civil: mesmo endereço (id_local), mesmo dia e mesmo serviço.
+
+    A base aberta grava cada ação de um atendimento numa linha (vistoria, mapeamento da área, atendimento social...).
+    Contar linhas premia o bairro em que um atendimento gerou muitas ações: em Mangabeira, 49 das 53 ações de
+    2021–2024 são mapeamentos no mesmo endereço e no mesmo dia. Em média são 1,6 ação por atendimento.
+    """
+    dia = pd.to_datetime(dc["data_abertura"]).dt.normalize()
+    return dc.loc[~pd.DataFrame({"local": dc["id_local"], "dia": dia, "servico": dc["servico"]}).duplicated()]
+
+
 def _taxa_por_mil(base: pd.DataFrame, anos: int, populacao: pd.Series, por: int = 1000) -> pd.Series:
     n = base.groupby(_texto(base["bairro_oficial"])).size()
     return (n / anos / populacao * por).reindex(populacao.index)
@@ -468,7 +479,7 @@ def indicadores_bairro(df: pd.DataFrame, bairros: pd.DataFrame, estoque: pd.Data
     t["pct_favela"] = b["pct_favela"]
     t["renda_media"] = renda_por_bairro().reindex(t.index)
     t["taxa_156"] = _taxa_por_mil(s156, a1 - a0 + 1, pop)
-    t["taxa_defesa_civil"] = _taxa_por_mil(dc, 2024 - a0 + 1, pop).fillna(0)
+    t["taxa_defesa_civil"] = _taxa_por_mil(atendimentos_defesa_civil(dc), 2024 - a0 + 1, pop).fillna(0)
     t["taxa_sedec"] = _taxa_por_mil(sedec, 2023 - a0 + 1, pop).fillna(0)
     t["taxa_indicacoes"] = _taxa_por_mil(ind, a1 - a0 + 1, pop, por=10000).fillna(0)
 

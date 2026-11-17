@@ -78,6 +78,18 @@ def test_estoque_usa_so_arquivos_recentes_e_compara_com_o_p90_da_categoria():
     assert t["acima_prazo_tipico"].sum() == 1
 
 
+def test_defesa_civil_conta_atendimento_e_nao_cada_acao():
+    linha = {"fonte": "DEFESA_CIVIL", "iniciativa": "CIDADAO", "bairro_oficial": "MANGABEIRA", "servico": "VISTORIA"}
+    df = pd.DataFrame(
+        [linha | {"id_local": "A", "data_abertura": "2024-05-15", "tipo_registro": "ACAO: MAPEAMENTO DE AREA DE RISCO"}] * 49
+        + [linha | {"id_local": "A", "data_abertura": "2024-05-15", "tipo_registro": "ACAO: ATENDIMENTO SOCIAL"},
+           linha | {"id_local": "A", "data_abertura": "2024-05-15", "servico": "COLOCACAO DE LONAS PLASTICAS",
+                    "tipo_registro": "ACAO: "},                                # outro serviço no mesmo dia: outro atendimento
+           linha | {"id_local": "A", "data_abertura": "2024-07-08", "tipo_registro": "ACAO: "},     # outro dia
+           linha | {"id_local": "B", "data_abertura": "2024-05-15", "tipo_registro": "ACAO: "}])    # outro endereço
+    assert len(agregados.atendimentos_defesa_civil(df)) == 4
+
+
 def test_camara_indicacoes_nao_leva_texto_nem_autoria():
     df = pd.DataFrame([{
         "fonte": "CAMARA_REQUERIMENTOS", "tipo_registro": "INDICACAO", "ano": 2024, "rpa": "1",

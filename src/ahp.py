@@ -44,9 +44,10 @@ class Criterio:
 
 
 CRITERIOS = [
-    Criterio("risco", "Risco", "taxa_defesa_civil", "ações / mil hab. / ano",
-             "Demanda do cidadão à Defesa Civil (vistoria, lona) por habitante, 2021–2024. "
-             "Mede exposição a risco em encostas e áreas alagáveis.",
+    Criterio("risco", "Risco", "taxa_defesa_civil", "atendimentos / mil hab. / ano",
+             "Atendimentos da Defesa Civil pedidos pelo cidadão (vistoria, lona) por habitante, 2021–2024. Cada "
+             "atendimento conta uma vez, mesmo que tenha gerado várias ações. Mede exposição a risco em encostas e "
+             "áreas alagáveis.",
              "Posição relativa da taxa entre os bairros: r = posição ÷ N.",
              "Herda a nota do bairro do pedido."),
     Criterio("vulnerabilidade", "Vulnerabilidade", "pct_favela", "% em favela; renda média",
@@ -138,7 +139,7 @@ def notas_por_criterio(indicadores: pd.DataFrame, criterios=CRITERIOS) -> pd.Dat
     """Nota de 0 a 1 de cada bairro em cada critério: a posição relativa (percentil) entre os bairros.
 
     Usar a posição, e não o valor bruto, evita que poucos bairros extremos (a Defesa Civil vai de 0,1 a
-    119 ações por mil habitantes) achatem todos os outros. Bairro sem dado no critério recebe 0.
+    60 atendimentos por mil habitantes por ano) achatem todos os outros. Bairro sem dado no critério recebe 0.
     """
     notas = pd.DataFrame(index=indicadores.index)
     for c in criterios:
