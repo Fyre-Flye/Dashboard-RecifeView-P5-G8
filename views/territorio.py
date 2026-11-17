@@ -37,7 +37,7 @@ def taxas(chave: str) -> pd.DataFrame:
         d = d[d["categoria"].isin(f.categorias)]
     anos = d["ano"].nunique()                               # anos do recorte em que a fonte tem dado
     vol = d.groupby("bairro_oficial")["n"].sum()
-    t = bairros[["nome", "rpa", "populacao", "pct_favela", "taxa_confiavel"]].copy()
+    t = bairros[["nome", "rpa", "populacao", "pct_favela", "renda_media", "taxa_confiavel"]].copy()
     t["volume"] = vol.reindex(t.index).fillna(0)
     t["taxa"] = (t["volume"] / max(anos, 1) / t["populacao"] * por).where(t["taxa_confiavel"])
     t["anos"] = anos
@@ -45,6 +45,7 @@ def taxas(chave: str) -> pd.DataFrame:
     t["taxa_txt"] = t["taxa"].map(lambda v: metricas.numero(v, 1) if pd.notna(v) else "não calculada (< 1.000 moradores)")
     t["volume_txt"] = t["volume"].map(metricas.numero)
     t["favela_txt"] = t["pct_favela"].map(lambda v: metricas.porcentagem(v, 1))
+    t["renda_txt"] = t["renda_media"].map(lambda v: f"R$ {metricas.numero(v)}")
     destaque = pd.Series(True, index=t.index)
     if f.rpas:
         destaque &= t["rpa"].isin(f.rpas)
@@ -66,7 +67,7 @@ def faixas_quintil(taxa: pd.Series) -> pd.Series:
 
 def mapa(t: pd.DataFrame, titulo_legenda: str, chave: str) -> alt.Chart:
     geo = alt.Data(values=malha()["features"])
-    campos = ["nome", "rpa", "taxa", "faixa", "taxa_txt", "volume_txt", "favela_txt", "destaque"]
+    campos = ["nome", "rpa", "taxa", "faixa", "taxa_txt", "volume_txt", "favela_txt", "renda_txt", "destaque"]
     # A seleção usa um campo calculado sem ponto no nome: com "properties.bairro_oficial", o Streamlit
     # devolve a chave escapada ("properties\\.bairro_oficial") e o clique no mapa não abria o detalhe.
     clique = alt.selection_point(fields=["bairro"], name="bairro", on="click", empty=False)
@@ -86,7 +87,7 @@ def mapa(t: pd.DataFrame, titulo_legenda: str, chave: str) -> alt.Chart:
         stroke=alt.condition(clique, alt.value(DESTAQUE), alt.value("white")),
         tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("rpa:N", title="RPA"),
                  alt.Tooltip("taxa_txt:N", title=titulo_legenda), alt.Tooltip("volume_txt:N", title="Volume no período"),
-                 alt.Tooltip("favela_txt:N", title="% em favela")],
+                 alt.Tooltip("favela_txt:N", title="% em favela"), alt.Tooltip("renda_txt:N", title="Renda média")],
     ).add_params(clique).project(type="mercator").properties(height=470)
 
 
@@ -121,8 +122,10 @@ if escolhido:
     linha = bairros.loc[escolhido]
     st.subheader(f"{linha['nome']} · RPA {linha['rpa']}")
     k = st.columns(5)
-    kpi(k[0], "População", metricas.numero(linha["populacao"]), f"{metricas.porcentagem(linha['pct_favela'], 1)} em favela",
-        "Censo 2022 (IBGE).")
+    kpi(k[0], "População", metricas.numero(linha["populacao"]),
+        f"{metricas.porcentagem(linha['pct_favela'], 1)} em favela · renda R$ {metricas.numero(linha['renda_media'])}",
+        "Censo 2022 (IBGE). Renda: média mensal dos responsáveis pelos domicílios. As duas entram no critério "
+        "Vulnerabilidade do índice de prioridade.")
     a = t156.set_index("bairro_oficial").loc[escolhido]
     b = tdc.set_index("bairro_oficial").loc[escolhido]
     kpi(k[1], "Pedidos ao 156", a["volume_txt"], f"{a['taxa_txt'].split(' (')[0]} / mil hab. / ano")
@@ -146,7 +149,7 @@ def dispersao(t: pd.DataFrame, titulo: str, escala: alt.Scale, valores=None) -> 
         y=alt.Y("taxa:Q", title=titulo, scale=escala, axis=alt.Axis(values=valores) if valores else alt.Axis()),
         color=alt.condition("datum.destaque", alt.value(AZUL), alt.value(AZUL25)),
         tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("favela_txt:N", title="% em favela"),
-                 alt.Tooltip("taxa_txt:N", title="Taxa")],
+                 alt.Tooltip("renda_txt:N", title="Renda média"), alt.Tooltip("taxa_txt:N", title="Taxa")],
     )
     tendencia = alt.Chart(d).transform_loess("pct_favela", "taxa", bandwidth=0.6).mark_line(
         color=cor_forte(), strokeWidth=2.5).encode(x="pct_favela:Q", y=alt.Y("taxa:Q", scale=escala))
@@ -168,11 +171,13 @@ leitura("<b>Serviço urbano:</b> a nuvem é plana. Bairros mais vulneráveis nã
         "(ρ de Spearman ≈ −0,13, não significativo; N3). <b>Emergência:</b> a tendência sobe acima de 30–40% da "
         "população em favela, e alguns bairros de morro ficam muito acima dos demais (ρ ≈ 0,37). A linha escura é uma "
         "tendência suavizada (LOESS). Por isso o índice de prioridade usa a vulnerabilidade como critério próprio, em "
-        "vez de confiar só no volume de pedidos.")
+        "vez de confiar só no volume de pedidos. Nesse critério, a % em favela divide o peso com a renda média dos "
+        "responsáveis (Censo 2022), porque 19 bairros têm 0% em favela pelo recorte do IBGE e alguns deles são pobres; "
+        "a renda aparece no detalhe do bairro, no mapa e na tabela abaixo.")
 
 # --- Tabela -------------------------------------------------------------------------------------------
 with st.expander("Tabela por Bairro (para Conferir e Exportar)"):
-    tabela_b = t156[["nome", "rpa", "populacao", "pct_favela", "volume", "taxa"]].merge(
+    tabela_b = t156[["nome", "rpa", "populacao", "pct_favela", "renda_media", "volume", "taxa"]].merge(
         tdc[["bairro_oficial", "volume", "taxa"]].rename(columns={"volume": "volume_dc", "taxa": "taxa_dc"}),
         left_on=t156["bairro_oficial"], right_on="bairro_oficial").drop(columns=["bairro_oficial"])
     st.dataframe(tabela_b.sort_values("taxa", ascending=False), hide_index=True, width="stretch",
@@ -181,6 +186,8 @@ with st.expander("Tabela por Bairro (para Conferir e Exportar)"):
                      "rpa": st.column_config.Column("RPA", help=ajuda.texto("RPA")),
                      "populacao": st.column_config.NumberColumn("População", format="localized", help=ajuda.texto("População")),
                      "pct_favela": st.column_config.NumberColumn("% em favela", format="%.1f", help=ajuda.texto("% em favela")),
+                     "renda_media": st.column_config.NumberColumn("Renda média (R$)", format="localized",
+                                                                  help=ajuda.texto("Renda média (R$)")),
                      "volume": st.column_config.NumberColumn("Pedidos 156", format="localized", help=ajuda.texto("Pedidos 156")),
                      "taxa": st.column_config.NumberColumn("156 / mil hab. / ano", format="%.1f",
                                                            help=ajuda.texto("156 / mil hab. / ano")),

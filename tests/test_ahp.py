@@ -76,6 +76,8 @@ def test_renda_cobre_os_94_bairros_do_recife():
     bairros = pd.read_parquet("data/clean/bairros.parquet")
     assert set(renda["bairro_oficial"]) == set(bairros["bairro_oficial"])
     assert renda["renda_media"].gt(0).all()
+    publicada = bairros.set_index("bairro_oficial")["renda_media"]       # a que o Território mostra
+    assert publicada.equals(renda.set_index("bairro_oficial")["renda_media"].reindex(publicada.index))
 
 
 def test_sensibilidade_sem_mudanca_mantem_todo_o_top():

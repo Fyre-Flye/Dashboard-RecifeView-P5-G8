@@ -73,7 +73,8 @@ Mais o estoque aberto (arquivos 2025–2026): pedidos abertos e % que já passou
 
 ## Território
 
-O detalhe do bairro clicado traz população e % em favela, pedidos ao 156 e ações da Defesa Civil (volume e taxa
+O detalhe do bairro clicado traz população, % em favela e renda média dos responsáveis (Censo 2022, as duas que
+entram no critério Vulnerabilidade do AHP), pedidos ao 156 e ações da Defesa Civil (volume e taxa
 por mil habitantes), % em local repetido e % do estoque aberto fora do prazo. A taxa por habitante vem sempre ao
 lado do volume, porque bairro grande pede mais só por ser grande, e bairro central e pequeno recebe pedidos de quem
 circula (N3, 6.2).

@@ -43,6 +43,7 @@ COLUNAS = {
     # território
     "População": "Moradores do bairro no Censo 2022.",
     "% em favela": "Parcela da população em favelas e comunidades urbanas (Censo 2022).",
+    "Renda média (R$)": "Renda nominal média mensal dos responsáveis pelos domicílios do bairro (IBGE, Censo 2022).",
     "Pedidos 156": "Pedidos ao 156 do bairro no período escolhido.",
     "156 / mil hab. / ano": "Pedidos ao 156 por mil moradores, por ano.",
     "Ações Def. Civil": "Ações da Defesa Civil pedidas pelo cidadão no bairro, no período.",

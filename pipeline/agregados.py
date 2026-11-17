@@ -32,7 +32,7 @@ def _texto(serie: pd.Series) -> pd.Series:
 
 
 def tabela_bairros(df: pd.DataFrame, nomes_oficiais: dict[str, str]) -> pd.DataFrame:
-    """Um registro por bairro oficial: nome com acento, RPA, população, domicílios e % em favela."""
+    """Um registro por bairro oficial: nome com acento, RPA, população, domicílios, % em favela e renda média."""
     com_bairro = df.dropna(subset=["bairro_oficial"])
     t = com_bairro.groupby(_texto(com_bairro["bairro_oficial"])).agg(
         rpa=("rpa", lambda s: s.dropna().mode().iat[0] if s.notna().any() else None),
@@ -44,8 +44,9 @@ def tabela_bairros(df: pd.DataFrame, nomes_oficiais: dict[str, str]) -> pd.DataF
     t = t.reset_index()
     t["nome"] = t["bairro_oficial"].map(nomes_oficiais).fillna(t["bairro_oficial"].str.title())
     t["rpa"] = t["rpa"].astype(str)
+    t["renda_media"] = t["bairro_oficial"].map(renda_por_bairro())
     t["taxa_confiavel"] = t["populacao"] >= POPULACAO_MINIMA
-    return t[["bairro_oficial", "nome", "rpa", "populacao", "domicilios", "pct_favela", "taxa_confiavel"]]
+    return t[["bairro_oficial", "nome", "rpa", "populacao", "domicilios", "pct_favela", "renda_media", "taxa_confiavel"]]
 
 
 def demanda(df: pd.DataFrame) -> pd.DataFrame:
