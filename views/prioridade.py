@@ -20,7 +20,10 @@ CORES = {"risco": DESTAQUE, "vulnerabilidade": "#9A3FB8", "atraso": "#0F62FE", "
 st.title("Prioridade (AHP)")
 st.markdown("Onde agir primeiro, com **critérios explícitos e ajustáveis**. O índice combina quatro critérios que "
             "saíram da EDA, com pesos obtidos pelo AHP (Analytic Hierarchy Process): quem decide compara os critérios "
-            "dois a dois, e o método calcula os pesos e confere se os julgamentos são coerentes.")
+            "dois a dois, e o método calcula os pesos e confere se os julgamentos são coerentes. Depois, cada bairro ou "
+            "pedido recebe uma nota de 0 a 1 em cada critério, e o índice é a **soma ponderada** dessas notas pelos pesos. "
+            "A vulnerabilidade tem **dois subcritérios** de mesmo peso: % da população em favela e renda média "
+            "(Censo 2022).")
 st.info("Os julgamentos que vêm carregados são uma **proposta inicial do grupo para discussão**, não pesos validados "
         "pela Prefeitura. O próximo passo é refazer as comparações com a Profª Maíra, o Prof. Marcelo e, se possível, "
         "quem opera a Defesa Civil e a Emlurb. Você pode refazê-las abaixo e ver o mapa mudar.", icon=":material/info:")
@@ -281,8 +284,9 @@ with aba_indice:
                 st.caption("Nota = soma dos pontos; pontos = nota do critério (0 a 1) × peso × 10. "
                            + ("Na Ouvidoria só o atraso conta, pela posição entre as manifestações abertas."
                               if fonte == OUVIDORIA else
-                              "Risco e vulnerabilidade usam a posição do bairro entre os 89; atraso e reincidência, "
-                              "o próprio pedido (fórmula na seção 6)."))
+                              "Risco e vulnerabilidade usam a posição do bairro entre os 89 (a vulnerabilidade é a "
+                              "média das posições em % de favela e em renda, renda menor = nota maior); atraso e "
+                              "reincidência, o próprio pedido (fórmula na seção 6)."))
 
 
     def tabela_exibicao(linhas: pd.DataFrame, fonte: str, notas: bool = True) -> pd.DataFrame:
@@ -416,7 +420,7 @@ with aba_indice:
                         alt.Tooltip("indice_txt:N", title="Índice")] + [
                         alt.Tooltip(f"k{i}:N", title=n) for i, n in enumerate(nomes_crit)]), width="stretch")
         leitura("Barras mais longas, prioridade maior. A cor mostra o porquê: um bairro pode subir por risco (morros), "
-                "por vulnerabilidade, por pedidos que passaram do prazo ou por problemas que voltam.")
+                "por vulnerabilidade (favela e renda baixa), por pedidos que passaram do prazo ou por problemas que voltam.")
 
     def limites_do_recife() -> tuple[float, float, float, float]:
         xs, ys = [], []
@@ -601,6 +605,21 @@ with aba_metodo:
             "que poucos bairros extremos achatem os outros. Na classificação de um pedido (seção 4), risco e vulnerabilidade "
             "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo. "
             "A fórmula completa, com um exemplo de cálculo, está mais abaixo nesta aba (seção 6).")
+    st.markdown("**A hierarquia do AHP.** A vulnerabilidade tem um nível a mais: dois subcritérios comparados entre si "
+                "com julgamento 1 (mesma importância), o que dá ½ e ½. Com só dois itens, essa comparação é sempre "
+                "consistente. O peso final de cada subcritério é o da vulnerabilidade vezes ½.")
+    st.code(f"""Prioridade
+├── Risco ............................ {metricas.numero(w['risco'] * 100, 1)}%
+├── Vulnerabilidade .................. {metricas.numero(w['vulnerabilidade'] * 100, 1)}%
+│     ├── % em favela (½) ............ {metricas.numero(w['vulnerabilidade'] * 50, 2)}%
+│     └── renda média, invertida (½) . {metricas.numero(w['vulnerabilidade'] * 50, 2)}%
+├── Atraso ........................... {metricas.numero(w['atraso'] * 100, 1)}%
+└── Reincidência ..................... {metricas.numero(w['reincidencia'] * 100, 1)}%""", language=None)
+    leitura("Por que a renda entrou (17/11): 19 bairros tinham 0% da população em favela, entre eles morros antigos e "
+            "consolidados (Morro da Conceição, Alto do Mandu, Totó), que o IBGE não delimita como favela. Com só esse "
+            "indicador, eles ficavam com a nota mínima de vulnerabilidade. A renda média dos responsáveis pelos domicílios "
+            "(Censo 2022, por bairro) capta essa vulnerabilidade. O ranking geral quase não muda (correlação de 0,97 com o "
+            "anterior), mas esses bairros sobem de 10 a 14 posições.")
 
 
     # --- Sensibilidade --------------------------------------------------------------------------------------
@@ -622,8 +641,9 @@ with aba_metodo:
             f"{int(pior['mantidos_no_top'])} de 10. Se quase tudo fica acima de 7, o ranking é estável e a discussão "
             "com especialistas pode focar nos poucos bairros de fronteira.")
     st.caption("AHP não é aprendizado de máquina e não substitui o bônus de modelagem preditiva. Ele torna explícito e "
-               "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,37), então "
-               "os bairros de morro somam pontos nos dois.")
+               "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,47), então "
+               "os bairros de morro somam pontos nos dois. O teste mexe nos pesos dos quatro critérios; os pesos internos "
+               "da vulnerabilidade (½ para favela, ½ para renda) ficam fixos.")
 
 
     # --- Fórmula ---------------------------------------------------------------------------------------
@@ -770,8 +790,11 @@ with aba_metodo:
 | $RC$ | Razão de consistência; acima de 0,10 os julgamentos devem ser revistos |
 | $b$ | Bairro; no índice, os 89 com 1.000 moradores ou mais |
 | $N$ | Número de bairros comparados (89) |
-| $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média) |
+| $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média); na renda, da maior para a menor, porque renda menor pede mais prioridade |
 | $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
+| $r_{\\text{favela}}(b)$ | Posição do bairro em % da população em favelas e comunidades urbanas (IBGE, Censo 2022) ÷ $N$ |
+| $r_{\\text{renda}}(b)$ | Posição do bairro em renda nominal média mensal dos responsáveis pelos domicílios (IBGE, Censo 2022), da maior para a menor, ÷ $N$ |
+| $r_V(b)$ | Nota de vulnerabilidade: $\\tfrac{1}{2}\\, r_{\\text{favela}}(b) + \\tfrac{1}{2}\\, r_{\\text{renda}}(b)$, os dois subcritérios com o mesmo peso (julgamento 1) |
 | $b_p$ | Bairro do pedido $p$; pedidos dos bairros fora do índice (menos de 1.000 moradores) não são classificados |
 | $d_p$ | Dias desde a abertura do pedido (no 156) ou desde o envio à Prefeitura (na Câmara) até a data das bases |
 | $T_{c_p}$ | Prazo típico da categoria do pedido: p90 dos dias até atender no 156 (2021–2025) ou até a resposta no mesmo tema na Câmara; categoria sem prazo típico, o termo de atraso vale 0 |
