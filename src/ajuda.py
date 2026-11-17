@@ -37,7 +37,7 @@ COLUNAS = {
     # critérios do AHP
     "Critério": "Critério do índice de prioridade (AHP).",
     "Risco": "Nota de 0 a 10 no critério Risco (Defesa Civil no bairro).",
-    "Vulnerabilidade": "Nota de 0 a 10 no critério Vulnerabilidade (% em favela no bairro).",
+    "Vulnerabilidade": "Nota de 0 a 10 no critério Vulnerabilidade (% em favela e renda média no bairro, com o mesmo peso).",
     "Atraso": "Nota de 0 a 10 no critério Atraso (tempo aberto contra o prazo típico).",
     "Reincidência": "Nota de 0 a 10 no critério Reincidência (o problema que volta).",
     # território

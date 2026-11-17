@@ -9,6 +9,8 @@ a ~110 m, nunca a exata) (`ocorrencias_abertas_156`,
 do AHP: levam só campos que as fontes já publicam, sem endereço, `id_local`, protocolo, ementa ou autoria.
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -434,6 +436,17 @@ def _taxa_por_mil(base: pd.DataFrame, anos: int, populacao: pd.Series, por: int 
     return (n / anos / populacao * por).reindex(populacao.index)
 
 
+RENDA_BAIRRO = Path(__file__).resolve().parent.parent / "data" / "referencia" / "renda_bairro_censo2022.csv"
+
+
+def renda_por_bairro() -> pd.Series:
+    """Renda nominal média mensal dos responsáveis pelos domicílios, por bairro (IBGE, Censo 2022, V06004).
+
+    Extraída de Agregados_por_bairros_renda_responsavel_BR (IBGE, maio de 2026), só os 94 bairros do Recife.
+    """
+    return pd.read_csv(RENDA_BAIRRO).set_index("bairro_oficial")["renda_media"]
+
+
 def indicadores_bairro(df: pd.DataFrame, bairros: pd.DataFrame, estoque: pd.DataFrame) -> pd.DataFrame:
     """Indicadores por bairro na janela da N3 (2021–2025), base do índice de prioridade (AHP).
 
@@ -452,6 +465,7 @@ def indicadores_bairro(df: pd.DataFrame, bairros: pd.DataFrame, estoque: pd.Data
     t["rpa"] = b["rpa"]
     t["populacao"] = pop
     t["pct_favela"] = b["pct_favela"]
+    t["renda_media"] = renda_por_bairro().reindex(t.index)
     t["taxa_156"] = _taxa_por_mil(s156, a1 - a0 + 1, pop)
     t["taxa_defesa_civil"] = _taxa_por_mil(dc, 2024 - a0 + 1, pop).fillna(0)
     t["taxa_sedec"] = _taxa_por_mil(sedec, 2023 - a0 + 1, pop).fillna(0)

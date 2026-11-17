@@ -9,6 +9,8 @@ Como funciona, em três passos:
    diz se os julgamentos são coerentes entre si (RC ≤ 0,10).
 3. Cada bairro recebe uma nota de 0 a 1 em cada critério (posição relativa entre os bairros)
    e o índice é a soma ponderada, de 0 a 10 (escala de nota, mais fácil de ler para gestores).
+   Um critério pode ter subcritérios (um nível a mais na hierarquia): a nota dele é a soma ponderada
+   das notas dos subcritérios, com pesos locais que somam 1.
 
 Os julgamentos padrão abaixo são uma proposta inicial do grupo para discussão. NÃO foram validados
 por especialistas da Prefeitura; o painel deixa qualquer pessoa refazê-los.
@@ -22,6 +24,14 @@ import pandas as pd
 
 
 @dataclass(frozen=True)
+class Subcriterio:
+    coluna: str          # coluna de indicadores_bairro.parquet
+    nome: str
+    peso: float          # peso local dentro do critério (os subcritérios de um critério somam 1)
+    maior_e_pior: bool = True   # False quando o valor menor é que pede prioridade (ex.: renda)
+
+
+@dataclass(frozen=True)
 class Criterio:
     chave: str
     nome: str
@@ -30,6 +40,7 @@ class Criterio:
     descricao: str
     nota_bairro: str     # como o indicador vira nota de 0 a 1 no índice dos bairros
     nota_pedido: str     # como vira nota de 0 a 1 na classificação de um pedido aberto
+    subcriterios: tuple = ()   # vazio: a nota vem só de `coluna`
 
 
 CRITERIOS = [
@@ -38,11 +49,15 @@ CRITERIOS = [
              "Mede exposição a risco em encostas e áreas alagáveis.",
              "Posição relativa da taxa entre os bairros: r = posição ÷ N.",
              "Herda a nota do bairro do pedido."),
-    Criterio("vulnerabilidade", "Vulnerabilidade", "pct_favela", "% da população",
-             "Parcela da população do bairro em favelas e comunidades urbanas (Censo 2022). "
-             "O mesmo problema pesa mais onde a capacidade de se recuperar é menor, e o volume de pedidos não mostra isso.",
-             "Posição relativa do percentual entre os bairros: r = posição ÷ N.",
-             "Herda a nota do bairro do pedido."),
+    Criterio("vulnerabilidade", "Vulnerabilidade", "pct_favela", "% em favela; renda média",
+             "Dois subcritérios do Censo 2022, com o mesmo peso: a parcela da população em favelas e comunidades "
+             "urbanas e a renda média mensal dos responsáveis pelos domicílios. O mesmo problema pesa mais onde a "
+             "capacidade de se recuperar é menor. A renda entrou porque morros antigos e consolidados (Morro da "
+             "Conceição, Alto do Mandu) não são delimitados como favela pelo IBGE e ficavam com nota mínima.",
+             "Média das duas posições relativas: (posição em % de favela ÷ N + posição em renda, da maior para a "
+             "menor, ÷ N) ÷ 2. Renda menor = nota maior.",
+             "Herda a nota do bairro do pedido.",
+             (Subcriterio("pct_favela", "% em favela", 0.5), Subcriterio("renda_media", "renda média", 0.5, False))),
     Criterio("atraso", "Atraso", "pct_atraso_156", "% do estoque aberto",
              "Parcela dos pedidos do 156 ainda abertos (arquivos 2025–2026) que já passaram do prazo "
              "típico da categoria (p90 dos atendidos de 2021–2025).",
@@ -127,8 +142,16 @@ def notas_por_criterio(indicadores: pd.DataFrame, criterios=CRITERIOS) -> pd.Dat
     """
     notas = pd.DataFrame(index=indicadores.index)
     for c in criterios:
-        notas[c.chave] = indicadores[c.coluna].rank(pct=True, method="average").fillna(0.0)
+        if c.subcriterios:
+            notas[c.chave] = sum(s.peso * nota_subcriterio(indicadores, s) for s in c.subcriterios)
+        else:
+            notas[c.chave] = indicadores[c.coluna].rank(pct=True, method="average").fillna(0.0)
     return notas
+
+
+def nota_subcriterio(indicadores: pd.DataFrame, s: Subcriterio) -> pd.Series:
+    """Posição relativa no subcritério; quando o valor menor é o pior (renda), a ordem se inverte."""
+    return indicadores[s.coluna].rank(pct=True, method="average", ascending=s.maior_e_pior).fillna(0.0)
 
 
 def indice_prioridade(indicadores: pd.DataFrame, w: dict[str, float], criterios=CRITERIOS) -> pd.DataFrame:

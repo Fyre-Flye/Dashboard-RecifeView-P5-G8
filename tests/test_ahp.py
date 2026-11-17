@@ -39,6 +39,7 @@ def _indicadores():
     return pd.DataFrame({
         "taxa_defesa_civil": [100.0, 1.0, 50.0, 2.0],
         "pct_favela": [80.0, 0.0, 40.0, 5.0],
+        "renda_media": [1200.0, 9000.0, 2500.0, 4000.0],
         "pct_atraso_156": [60.0, 50.0, 55.0, np.nan],
         "pct_reincidencia_156": [40.0, 50.0, 45.0, 30.0],
     }, index=["MORRO", "CENTRO", "MEIO", "SEM_ESTOQUE"])
@@ -52,6 +53,29 @@ def test_indice_ordena_e_soma_as_contribuicoes():
     assert np.allclose(contrib, r["indice"])
     assert r["indice"].between(0, ahp.NOTA_MAXIMA).all()
     assert r.loc["SEM_ESTOQUE", "contrib_atraso"] == 0     # sem dado no critério = nota 0
+
+
+def test_vulnerabilidade_soma_favela_e_renda_com_a_renda_invertida():
+    notas = ahp.notas_por_criterio(_indicadores())
+    # MORRO: maior % de favela (posição 4/4) e menor renda (posição 4/4 de trás para frente) -> nota máxima
+    assert notas.loc["MORRO", "vulnerabilidade"] == pytest.approx(1.0)
+    # CENTRO: menor % de favela (1/4) e maior renda (1/4) -> nota mínima
+    assert notas.loc["CENTRO", "vulnerabilidade"] == pytest.approx(0.25)
+    sub = ahp.CRITERIOS[1].subcriterios
+    assert sum(s.peso for s in sub) == pytest.approx(1)
+
+
+def test_bairro_sem_favela_mas_pobre_nao_fica_com_vulnerabilidade_minima():
+    ind = _indicadores().assign(pct_favela=[80.0, 0.0, 40.0, 0.0], renda_media=[1200.0, 9000.0, 2500.0, 1300.0])
+    notas = ahp.notas_por_criterio(ind)
+    assert notas.loc["SEM_ESTOQUE", "vulnerabilidade"] > notas.loc["CENTRO", "vulnerabilidade"]
+
+
+def test_renda_cobre_os_94_bairros_do_recife():
+    renda = pd.read_csv("data/referencia/renda_bairro_censo2022.csv")
+    bairros = pd.read_parquet("data/clean/bairros.parquet")
+    assert set(renda["bairro_oficial"]) == set(bairros["bairro_oficial"])
+    assert renda["renda_media"].gt(0).all()
 
 
 def test_sensibilidade_sem_mudanca_mantem_todo_o_top():
@@ -69,7 +93,8 @@ def _ocorrencias(**colunas):
 
 
 def _indicadores_dois_bairros():
-    return pd.DataFrame({"taxa_defesa_civil": [1.0, 5.0], "pct_favela": [10.0, 50.0], "pct_atraso_156": [20.0, 40.0],
+    return pd.DataFrame({"taxa_defesa_civil": [1.0, 5.0], "pct_favela": [10.0, 50.0],
+                         "renda_media": [5000.0, 1500.0], "pct_atraso_156": [20.0, 40.0],
                          "pct_reincidencia_156": [30.0, 50.0]}, index=pd.Index(["A", "B"], name="bairro_oficial"))
 
 

@@ -121,6 +121,8 @@ with aba_indice:
     r["indice_txt"] = r["indice"].map(lambda v: metricas.numero(v, 1))
     for k in CHAVES:
         r[f"{k}_txt"] = r[CRIT[k].coluna].map(lambda v: metricas.numero(v, 1))
+    r["vulnerabilidade_txt"] = (r["pct_favela"].map(lambda v: metricas.numero(v, 1)) + "% em favela; renda média R$ "
+                                + r["renda_media"].map(lambda v: metricas.numero(v)))
 
     # --- Exemplo de ocorrências classificadas ----------------------------------------------------------------
     SITUACAO = {"CADASTRADA": "cadastrado", "PREPARACAO": "em preparação", "EXECUCAO": "em execução",
@@ -227,7 +229,8 @@ with aba_indice:
         if chave == "risco":
             return f"{num(bairro['taxa_defesa_civil'], 1)} ações da Defesa Civil por mil hab./ano no bairro"
         if chave == "vulnerabilidade":
-            return f"{num(bairro['pct_favela'], 1)}% dos moradores do bairro em favelas"
+            return (f"{num(bairro['pct_favela'], 1)}% dos moradores do bairro em favelas; renda média dos responsáveis "
+                    f"R$ {num(bairro['renda_media'])}")
         if chave == "atraso":
             if pd.isna(linha["prazo_tipico_dias"]) or not linha["prazo_tipico_dias"]:
                 return "categoria sem prazo típico"
@@ -639,12 +642,15 @@ with aba_metodo:
                      "$IA_n$ = índice aleatório de Saaty", "$RC$ = razão de consistência"])
     st.markdown("**Nota de um bairro** $b$ (seção 3):")
     st.latex(r"P_b = 10 \cdot \big(\, w_R\, r_R(b) + w_V\, r_V(b) + w_A\, r_A(b) + w_E\, r_E(b) \,\big),"
-             r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N}")
+             r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N},"
+             r"\qquad r_V(b) = \tfrac{1}{2}\, r_{\text{favela}}(b) + \tfrac{1}{2}\, r_{\text{renda}}(b)")
     legenda_formula(["$P_b$ = nota de prioridade do bairro (0 a 10)", "$b$ = bairro",
                      "$w_R, w_V, w_A, w_E$ = pesos de risco, vulnerabilidade, atraso e reincidência",
                      "$r_k(b)$ = nota do bairro no critério $k$ (0 a 1)",
                      "$\\text{posição}_k(b)$ = posição do bairro do menor para o maior valor no critério $k$",
-                     "$N$ = número de bairros comparados (89)"])
+                     "$N$ = número de bairros comparados (89)",
+                     "$r_V(b)$ = vulnerabilidade, com dois subcritérios de mesmo peso: % em favela e renda média "
+                     "dos responsáveis (renda: posição da maior para a menor, renda menor = nota maior)"])
     st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
     st.latex(r"P_p = 10 \cdot \bigg(\, w_R\, r_R(b_p) + w_V\, r_V(b_p) "
              r"+ w_A\, \frac{\min\!\big(d_p / T_{c_p},\; 2\big)}{2} "
@@ -673,8 +679,10 @@ with aba_metodo:
         grupo = todos[todos["pedidos_anteriores"].between(2, 5) & vezes.between(1.2, 1.8)]
         escolhido = grupo.loc[(grupo["indice"] - grupo["indice"].quantile(0.75)).abs().idxmin()].copy()
         escolhido["nome"] = indicadores.loc[escolhido["bairro_oficial"], "nome"]
-        posicoes = {c.chave: float(indicadores[c.coluna].rank(method="average")[escolhido["bairro_oficial"]])
-                    for c in ahp.CRITERIOS if c.chave in ("risco", "vulnerabilidade")}
+        b = escolhido["bairro_oficial"]
+        posicoes = {"risco": float(indicadores[CRIT["risco"].coluna].rank(method="average")[b])}
+        for s in CRIT["vulnerabilidade"].subcriterios:   # % em favela e renda (renda: da maior para a menor)
+            posicoes[s.coluna] = float(indicadores[s.coluna].rank(method="average", ascending=s.maior_e_pior)[b])
         return escolhido, pesos_padrao, posicoes
 
 
@@ -701,7 +709,6 @@ with aba_metodo:
         f"reincidência {metricas.numero(wp['reincidencia'] * 100, 1)}%.")
     st.markdown("Nota de cada critério, de 0 a 1:")
     pos_r = metricas.numero(pos["risco"], 1 if pos["risco"] % 1 else 0)
-    pos_v = metricas.numero(pos["vulnerabilidade"], 1 if pos["vulnerabilidade"] % 1 else 0)
     _, col_r, col_v, _ = st.columns([1, 2, 2, 1])
     with col_r:
         st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}")
@@ -709,10 +716,12 @@ with aba_metodo:
                          f"{pos_r} = $\\text{{posição}}_R(b_p)$, posição do {ex['nome']} em risco",
                          "89 = $N$, bairros comparados"])
     with col_v:
-        st.latex(rf"r_V(b_p) = \frac{{{n_tex(pos['vulnerabilidade'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
+        st.latex(rf"r_V(b_p) = \tfrac{{1}}{{2}}\cdot\frac{{{n_tex(pos['pct_favela'], 1)}}}{{89}} + "
+                 rf"\tfrac{{1}}{{2}}\cdot\frac{{{n_tex(pos['renda_media'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
         legenda_formula([f"$r_V(b_p)$ = nota de vulnerabilidade do {ex['nome']}",
-                         f"{pos_v} = $\\text{{posição}}_V(b_p)$, posição do {ex['nome']} em vulnerabilidade",
-                         "89 = $N$, bairros comparados"])
+                         f"{metricas.numero(pos['pct_favela'], 1)} = posição do {ex['nome']} em % de favela",
+                         f"{metricas.numero(pos['renda_media'], 1)} = posição do {ex['nome']} em renda, da maior para a menor",
+                         "1/2 = peso de cada subcritério; 89 = $N$, bairros comparados"])
     _, col_a, col_e, _ = st.columns([0.3, 2.5, 2.5, 0.3])
     with col_a:
         st.latex(rf"\text{{atraso}} = \frac{{\min({metricas.numero(ex['idade_dias'])}/{metricas.numero(ex['prazo_tipico_dias'])},\;2)}}{{2}}"

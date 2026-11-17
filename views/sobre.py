@@ -58,6 +58,9 @@ with aba_fontes:
     st.caption("Células vazias: a fonte não publica aquele ano. 2025 e 2026 são parciais (a Ouvidoria de 2025 só traz "
                "parte do ano; o arquivo de 2025 da Defesa Civil foi publicado vazio; 2026 vai até o download, em "
                "07/10/2026).")
+    st.caption("Fora do dataset, no critério Vulnerabilidade do índice de prioridade: renda nominal média mensal dos "
+               "responsáveis pelos domicílios, por bairro (IBGE, Censo 2022, Agregados por bairros, renda do responsável, "
+               "variável V06004, publicado em maio de 2026), no arquivo data/referencia/renda_bairro_censo2022.csv.")
     st.caption("Fora do dataset, só na página Chuva e Carga (estudo): chuva diária dos pluviômetros do Cemaden em Recife "
                "(mapa interativo do Cemaden; mediana das estações, abril a agosto de 2022 a 2025 e abril a maio de "
                "2026) e a reanálise ERA5 (Open-Meteo), só como referência. Os avisos oficiais de cada temporal vêm dos "
