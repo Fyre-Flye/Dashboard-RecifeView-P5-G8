@@ -14,10 +14,10 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, ajuda, metricas, retrato
-from src.componentes import cursor_vertical, fontes, leitura, placa, regua
-from src.config import (AZUL, DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria,
+from src.componentes import cursor_vertical, fontes, fundo_cinza, leitura, mapa_de_bairros, placa, regua
+from src.config import (AZUL, DESTAQUE, RAMPA, TEXTO_TEMA, eixo_numero, formato_br, nome_categoria,
                         nome_unidade)
-from src.dados import malha, resumo_preparacao, tabela
+from src.dados import resumo_preparacao, tabela
 
 SEGUNDOS_POR_DIA = 2.5
 DIAS_SIMULADOS = 30
@@ -247,19 +247,22 @@ def quadro() -> None:
         titulo("Onde o Estoque Atrasado Está", "pedidos do 156 além do prazo típico",
                "Quanto mais escuro o bairro, mais pedidos abertos já passaram do prazo típico da categoria. A escala de cores "
                "é comprimida (potência 0,3), porque as contagens vão de poucos a mais de mil: assim os bairros do meio não "
-               "somem no claro e o mapa fica na mesma faixa de azuis do Onde Agir Primeiro.")
-        por_bairro = abertos[abertos["atrasado"]].groupby("bairro_oficial", observed=True).size().rename("atrasados").reset_index()
-        por_bairro["nome"] = por_bairro["bairro_oficial"].map(nomes_bairro)
-        por_bairro["txt"] = por_bairro["atrasados"].map(num)
-        st.altair_chart(alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(stroke="white", strokeWidth=0.6)
-                        .transform_lookup(lookup="properties.bairro_oficial",
-                                          from_=alt.LookupData(por_bairro, "bairro_oficial", ["nome", "atrasados", "txt"]))
-                        .encode(color=alt.condition("isValid(datum.atrasados)", alt.Color(
-                            "atrasados:Q", title="pedidos atrasados", scale=alt.Scale(range=RAMPA, type="pow", exponent=0.3),
+               "somem no claro e o mapa fica na mesma faixa de azuis do Onde Agir Primeiro. Cinza: bairro sem nenhum "
+               "pedido atrasado nesta data.")
+        contagem = abertos[abertos["atrasado"]].groupby("bairro_oficial", observed=True).size()
+        # Todos os 94 bairros entram na tabela: o bairro sem atrasado fica cinza, mas com nome e "nenhum" na dica.
+        por_bairro = pd.DataFrame({"bairro_oficial": nomes_bairro.index, "nome": nomes_bairro.to_numpy()})
+        por_bairro["atrasados"] = por_bairro["bairro_oficial"].map(contagem)
+        por_bairro["txt"] = por_bairro["atrasados"].map(lambda v: num(v) if pd.notna(v) else "nenhum")
+        campos = ["nome", "atrasados", "txt"]
+        dicas = [alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("txt:N", title="Atrasados")]
+        cores = mapa_de_bairros(por_bairro, campos, traco=0.6).encode(
+            color=alt.Color("atrasados:Q", title="pedidos atrasados", scale=alt.Scale(range=RAMPA, type="pow", exponent=0.3),
                             legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=200,
-                                              values=legenda_extremos(por_bairro["atrasados"]),
-                                              labelExpr=formato_br())), alt.value(SEM_DADO)),
-                                tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("txt:N", title="Atrasados")])
+                                              values=legenda_extremos(por_bairro["atrasados"].dropna()),
+                                              labelExpr=formato_br())),
+            tooltip=dicas)
+        st.altair_chart(alt.layer(fundo_cinza(por_bairro, campos, dicas, traco=0.6), cores)
                         .project(type="mercator").properties(height=370), width="stretch")
         st.space("stretch")
         ver_detalhe("views/territorio.py", "Ver taxas por bairro em Território", ":material/map:")

@@ -6,7 +6,8 @@ import unicodedata
 import altair as alt
 import streamlit as st
 
-from src.config import AZUL, CINZA, DESTAQUE, rotulo_fonte
+from src.config import AZUL, CINZA, DESTAQUE, SEM_DADO, rotulo_fonte
+from src.dados import malha
 
 # Placas: borda esquerda grossa na cor do estado (azul neutro, laranja atenção); o link do rodapé fica dentro
 # da moldura, com o hover contido. Vale em todas as páginas: o app.py injeta este CSS uma vez.
@@ -50,6 +51,25 @@ def placa(onde, rotulo: str, valor: str, detalhe: str = "", alerta: bool = False
 def kpi(coluna, rotulo: str, valor: str, contexto: str | None = None, ajuda: str | None = None) -> None:
     """Cartão de indicador das páginas de detalhe: a mesma placa do Painel Geral, em azul."""
     placa(coluna, rotulo, valor, contexto or "", ajuda=ajuda or "")
+
+
+def mapa_de_bairros(dados, campos: list[str], traco: float = 0.7) -> alt.Chart:
+    """Os 94 bairros desenhados a partir da malha, com os campos de `dados` (uma linha por bairro_oficial)."""
+    return alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(stroke="white", strokeWidth=traco).transform_lookup(
+        lookup="properties.bairro_oficial", from_=alt.LookupData(dados, "bairro_oficial", campos))
+
+
+def fundo_cinza(dados, campos: list[str], dicas: list, traco: float = 0.7, opacidade=None) -> alt.Chart:
+    """Camada de baixo de um mapa com cor quantitativa: todos os bairros em cinza.
+
+    O Vega-Lite descarta da camada colorida o bairro cujo valor é nulo (fora do índice, sem pedido atrasado). Sem este
+    fundo, o bairro sumia do mapa, sem cor e sem dica, em vez de ficar cinza.
+    """
+    codificacao = {"tooltip": dicas}
+    if opacidade is not None:
+        codificacao["opacity"] = opacidade
+    return mapa_de_bairros(dados, campos, traco).mark_geoshape(
+        fill=SEM_DADO, stroke="white", strokeWidth=traco).encode(**codificacao)
 
 
 def leitura(texto: str) -> None:

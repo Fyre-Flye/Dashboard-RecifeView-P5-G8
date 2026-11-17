@@ -6,8 +6,8 @@ import pandas as pd
 import streamlit as st
 
 from src import ahp, ajuda, filtros, metricas
-from src.componentes import fontes, kpi, leitura, regua
-from src.config import (DESTAQUE, RAMPA, SEM_DADO, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
+from src.componentes import fontes, fundo_cinza, kpi, leitura, mapa_de_bairros, regua
+from src.config import (DESTAQUE, RAMPA, TEXTO_TEMA, cor_fundo, cor_suave, eixo_numero,
                         nome_categoria, nome_orgao, nome_unidade)
 from src.dados import malha, resumo_preparacao, tabela
 
@@ -116,11 +116,22 @@ with aba_indice:
     # --- Índice ---------------------------------------------------------------------------------------------
     ind = tabela("indicadores_bairro").set_index("bairro_oficial")
     r = ahp.indice_prioridade(ind, w)
-    r["destaque"] = True
-    if f.rpas:
-        r["destaque"] &= r["rpa"].isin(f.rpas)
-    if f.bairros:
-        r["destaque"] &= r.index.isin(f.bairros)
+
+    def destacados(t: pd.DataFrame) -> pd.Series:
+        """Bairros dentro da RPA e dos bairros escolhidos nos filtros (os outros ficam esmaecidos no mapa)."""
+        d = pd.Series(True, index=t.index)
+        if f.rpas:
+            d &= t["rpa"].isin(f.rpas)
+        if f.bairros:
+            d &= t.index.isin(f.bairros)
+        return d
+
+    r["destaque"] = destacados(r)
+    # Os bairros com menos de 1.000 moradores não têm índice, mas precisam estar no mapa (cinza), com o mesmo
+    # destaque dos filtros. Sem esta tabela, o lookup do mapa não achava o bairro e ele ficava esmaecido, quase branco.
+    todos = tabela("bairros").set_index("bairro_oficial")
+    fora_do_indice = todos.loc[todos.index.difference(r.index), ["nome", "rpa"]]
+    fora_do_indice["destaque"] = destacados(fora_do_indice)
     r["indice_txt"] = r["indice"].map(lambda v: metricas.numero(v, 1))
     for k in CHAVES:
         r[f"{k}_txt"] = r[CRIT[k].coluna].map(lambda v: metricas.numero(v, 1))
@@ -369,20 +380,23 @@ with aba_indice:
                  help="O índice de prioridade de cada bairro, de 0 a 10, com os pesos acima. Passe o mouse no mapa.")
     c1, c2 = st.columns([1, 1.15], gap="large")
     with c1:
-        tabela_mapa = r.reset_index()
-        campos = ["nome", "rpa", "indice", "indice_txt", "posicao", "destaque"] + [f"{k}_txt" for k in CHAVES]
-        mapa = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(stroke="white", strokeWidth=0.7).transform_lookup(
-            lookup="properties.bairro_oficial", from_=alt.LookupData(tabela_mapa, "bairro_oficial", campos),
-        ).encode(
-            color=alt.condition("isValid(datum.indice)", alt.Color(
-                "indice:Q", title="índice de prioridade (0 a 10)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
-                legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
-                alt.value(SEM_DADO)),
-            opacity=alt.condition("datum.destaque", alt.value(1), alt.value(0.25)),
-            tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("posicao:Q", title="Posição"),
-                     alt.Tooltip("indice_txt:N", title="Índice")]
-                    + [alt.Tooltip(f"{k}_txt:N", title=f"{CRIT[k].nome} ({CRIT[k].unidade})") for k in CHAVES],
-        ).project(type="mercator").properties(height=520)
+        campos = ["nome", "rpa", "indice", "indice_txt", "posicao_txt", "destaque"] + [f"{k}_txt" for k in CHAVES]
+        tabela_mapa = pd.concat([
+            r.assign(posicao_txt=r["posicao"].map(lambda p: f"{p}º de {len(r)}")),
+            fora_do_indice.assign(indice_txt="fora do índice (menos de 1.000 moradores)", posicao_txt="—",
+                                  **{f"{k}_txt": "—" for k in CHAVES}),
+        ]).reset_index()[["bairro_oficial"] + campos]
+        esmaecer = alt.condition("datum.destaque", alt.value(1), alt.value(0.25))
+        dicas = ([alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("posicao_txt:N", title="Posição"),
+                  alt.Tooltip("indice_txt:N", title="Índice")]
+                 + [alt.Tooltip(f"{k}_txt:N", title=f"{CRIT[k].nome} ({CRIT[k].unidade})") for k in CHAVES])
+        cores = mapa_de_bairros(tabela_mapa, campos).encode(
+            color=alt.Color("indice:Q", title="índice de prioridade (0 a 10)",
+                            scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
+                            legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
+            opacity=esmaecer, tooltip=dicas)
+        mapa = alt.layer(fundo_cinza(tabela_mapa, campos, dicas, opacidade=esmaecer), cores
+                         ).project(type="mercator").properties(height=520)
         st.altair_chart(mapa, width="stretch")
         leitura("Quanto mais escuro, maior a prioridade. Cinza: bairros com menos de 1.000 moradores, fora do índice.")
 
@@ -439,18 +453,17 @@ with aba_indice:
 
         O fundo explica a parte da nota que vem do lugar (risco e vulnerabilidade); a cruz é a ocorrência.
         """
-        fundo = r.reset_index()[["bairro_oficial", "nome", "indice"]].assign(
-            indice_txt=lambda d: d["indice"].map(lambda v: metricas.numero(v, 1)))
-        base = alt.Chart(alt.Data(values=malha()["features"])).mark_geoshape(
-            stroke="white", strokeWidth=0.7).transform_lookup(
-            lookup="properties.bairro_oficial", from_=alt.LookupData(fundo, "bairro_oficial", ["nome", "indice", "indice_txt"]),
-        ).encode(
-            color=alt.condition("isValid(datum.indice)", alt.Color(
-                "indice:Q", title="fundo: índice do bairro (seção 3)", scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
-                legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
-                alt.value(SEM_DADO)),
-            tooltip=[alt.Tooltip("properties.nome:N", title="Bairro"), alt.Tooltip("indice_txt:N", title="Índice do bairro")])
-        camadas = [base]
+        fundo = pd.concat([r[["nome", "indice", "indice_txt"]],
+                           fora_do_indice[["nome"]].assign(indice_txt="fora do índice (menos de 1.000 moradores)")]
+                          ).reset_index()
+        campos_fundo = ["nome", "indice", "indice_txt"]
+        dicas_fundo = [alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("indice_txt:N", title="Índice do bairro")]
+        base = mapa_de_bairros(fundo, campos_fundo).encode(
+            color=alt.Color("indice:Q", title="fundo: índice do bairro (seção 3)",
+                            scale=alt.Scale(range=RAMPA, domain=[0, ahp.NOTA_MAXIMA]),
+                            legend=alt.Legend(orient="bottom", direction="horizontal", gradientLength=220, titleLimit=300)),
+            tooltip=dicas_fundo)
+        camadas = [fundo_cinza(fundo, campos_fundo, dicas_fundo), base]
         if len(pontos):
             x0, x1, y0, y1 = limites_do_recife()
             pts = pontos.assign(x0=x0, x1=x1, y0=y0, y1=y1, rotulo=pontos["ordem"].astype(str) + "º",
