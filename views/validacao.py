@@ -116,7 +116,7 @@ else:
         tooltip=[alt.Tooltip("nome:N", title="Bairro"), alt.Tooltip("txt:N", title="Tendência")])
     zero = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color=CINZA).encode(x="x:Q")
     st.altair_chart((barras + zero + regua(barras, "y")).properties(height=alt.Step(24)), width="stretch")
-    # Correlação de postos (Spearman) feita à mão: method="spearman" exige o scipy, que o deploy não instala.
+    # Correlação de postos (Spearman) feita à mão: a do pandas exige o scipy, que o deploy não instala.
     correl = t.rank().corr(ind["taxa_defesa_civil"].rank())
     leitura(f"Os 10 bairros que mais ganham e os 10 que mais perdem fatia nos pedidos ao 156, entre os 89 do índice "
             f"({anos[0]}–{anos[1]}). A correlação de postos com a taxa de risco é {metricas.numero(correl, 2)}: esse indicador "
