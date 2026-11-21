@@ -11,7 +11,8 @@ st.title("Testes e Validação")
 st.markdown("O que mudou no painel depois de **uso real e do feedback recebido**: o que a orientadora validou, os "
             "problemas que apareceram usando o painel e foram corrigidos, e o que ainda será refinado antes da "
             "apresentação pública. A principal fonte de feedback foi a orientação com a **Profª Maíra Farias em "
-            "17/11/2026** (gravada com autorização e transcrita); os outros itens vieram do uso do próprio grupo.")
+            "17/11/2026** (gravada com autorização); as recomendações estão resumidas abaixo. Os outros itens vieram do "
+            "uso do próprio grupo.")
 
 
 def tabela_texto(linhas: list[tuple], colunas: list[str], altura: int = 90) -> None:
@@ -24,22 +25,22 @@ def tabela_texto(linhas: list[tuple], colunas: list[str], altura: int = 90) -> N
 st.subheader("1. O Que Foi Validado com a Orientadora",
              help="Pontos que a Profª Maíra viu funcionando no painel e aprovou, ou sugeriu e já foram aplicados.")
 tabela_texto([
-    ("AHP para priorizar", "Aprovou a abordagem: \"é super válido e é usado ainda hoje\" e \"isso pra Prefeitura já é "
-     "legal\". Destacou que ele deixa a prioridade auditável.", "Validado"),
-    ("Ocorrências classificadas (Prioridade, aba 2)", "Leu com o grupo a nota de pedidos reais (Dois Unidos, Alto José "
-     "Bonifácio) e comentou por que cada um subiu: risco do bairro, atraso e reincidência. Gostou do gráfico, mas disse que "
-     "\"dá para melhorar\".", "Validado; visual a refinar"),
-    ("Vulnerabilidade com dois subcritérios", "Sugeriu separar \"vulnerabilidade por renda e por % de favela\", porque "
-     "não caminham juntas.", "Aplicado em 17/11"),
-    ("Risco com dois subcritérios", "Disse que o risco \"está englobando muita coisa\" e sugeriu quebrar em subcritérios "
-     "(volume de ações e ações por habitante, pelas anotações feitas antes da gravação).", "Aplicado em 20/11"),
-    ("Avaliar dados ausentes dos indicadores", "\"Se tem muito dado ausente, talvez não seja um bom indicador para o "
-     "AHP.\"", "Aplicado em 20/11 (tabela na aba Método da Prioridade)"),
-    ("Data de referência fixa", "O atraso deve contar até a data em que os dados foram baixados, não até \"hoje\".",
-     "Já era assim; confirmado"),
-    ("Bairros fora do índice em cinza", "Entendeu na hora que cinza é ausência de nota (menos de 1.000 moradores).",
-     "Validado"),
-], ["Item", "O que ela disse ou viu", "Situação"])
+    ("AHP para priorizar", "Aprovou a abordagem: o AHP é um método consolidado e útil para a Prefeitura, porque deixa a "
+     "prioridade explícita e auditável.", "Validado"),
+    ("Ocorrências classificadas (Prioridade, aba 2)", "Leu com o grupo a nota de pedidos reais e entendeu por que cada um "
+     "subiu (risco do bairro, atraso e reincidência). Gostou do gráfico e sugeriu melhorar o visual.",
+     "Validado; visual a refinar"),
+    ("Vulnerabilidade com dois subcritérios", "Recomendou separar a vulnerabilidade por renda da vulnerabilidade por "
+     "favela, porque medem coisas diferentes e não caminham juntas.", "Aplicado em 17/11"),
+    ("Risco com dois subcritérios", "Observou que o risco reunia coisas demais num número só e recomendou dividi-lo em "
+     "subcritérios: volume de ações e ações por habitante.", "Aplicado em 20/11"),
+    ("Avaliar dados ausentes dos indicadores", "Recomendou conferir os dados ausentes de cada indicador antes de usá-lo no "
+     "AHP: um indicador com muita falta não serve de critério.", "Aplicado em 20/11 (tabela na aba Método da Prioridade)"),
+    ("Data de referência fixa", "Lembrou que o atraso deve contar até a data em que os dados foram baixados, e não até o "
+     "dia de hoje.", "Já era assim; confirmado"),
+    ("Bairros fora do índice em cinza", "Entendeu sem explicação que o cinza é ausência de nota (menos de 1.000 "
+     "moradores).", "Validado"),
+], ["Item", "O que a orientadora recomendou ou observou", "Situação"])
 
 # --- 2. Corrigido por uso -------------------------------------------------------------------------------------
 st.subheader("2. Problemas Encontrados no Uso e Corrigidos",
@@ -72,7 +73,7 @@ tabela_texto([
      "viés.", "Grupo"),
     ("Pesos do AHP", "Continuam uma proposta do grupo. Falta refazer as comparações com os professores e, se possível, "
      "com a Defesa Civil e a Emlurb.", "Grupo e especialistas"),
-    ("Visual das ocorrências classificadas", "A orientadora gostou, mas disse que dá para melhorar.", "Grupo"),
+    ("Visual das ocorrências classificadas", "A orientadora gostou e sugeriu melhorar o visual.", "Grupo"),
     ("Dados da Defesa Civil", "A base aberta para em 2024 e nov.–dez. de 2024 estão incompletos. Alto do Mandu tem "
      "poucos atendimentos na Defesa Civil, mas está no percentil 0,73 na SEDEC: pode haver registro sob outro bairro.",
      "Pedido de dados à Prefeitura"),
