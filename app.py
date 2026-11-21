@@ -33,13 +33,15 @@ pagina = st.navigation({
     ],
     "Referência": [
         st.Page("views/sobre.py", title="Sobre os Dados", icon=":material/info:"),
+        st.Page("views/validacao.py", title="Testes e Validação", icon=":material/fact_check:"),
     ],
 })
 
 SEM_FILTROS = {"Painel Geral": "O Painel Geral mostra a cidade inteira num dia, com os pesos padrão do AHP: os "
                                "filtros não se aplicam aqui e voltam a valer nas outras páginas.",
                "Sobre os Dados": "Esta página descreve o dataset inteiro: os filtros não se aplicam aqui.",
-               "Chuva e Carga (estudo)": "Estudo da cidade inteira, por semana: os filtros não se aplicam aqui."}
+               "Chuva e Carga (estudo)": "Estudo da cidade inteira, por semana: os filtros não se aplicam aqui.",
+               "Testes e Validação": "Esta página registra testes e feedback da cidade inteira: os filtros não se aplicam aqui."}
 desenhar_barra_lateral(SEM_FILTROS.get(pagina.title))
 pagina.run()
 

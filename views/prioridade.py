@@ -22,8 +22,9 @@ st.markdown("Onde agir primeiro, com **critérios explícitos e ajustáveis**. O
             "saíram da EDA, com pesos obtidos pelo AHP (Analytic Hierarchy Process): quem decide compara os critérios "
             "dois a dois, e o método calcula os pesos e confere se os julgamentos são coerentes. Depois, cada bairro ou "
             "pedido recebe uma nota de 0 a 1 em cada critério, e o índice é a **soma ponderada** dessas notas pelos pesos. "
-            "A vulnerabilidade tem **dois subcritérios** de mesmo peso: % da população em favela e renda média "
-            "(Censo 2022).")
+            "Risco e vulnerabilidade têm **dois subcritérios** de mesmo peso cada: o risco soma o volume de atendimentos "
+            "da Defesa Civil e a taxa por mil habitantes; a vulnerabilidade soma a % da população em favela e a renda "
+            "média (Censo 2022).")
 st.info("Os julgamentos que vêm carregados são uma **proposta inicial do grupo para discussão**, não pesos validados "
         "pela Prefeitura. O próximo passo é refazer as comparações com a Profª Maíra, o Prof. Marcelo e, se possível, "
         "quem opera a Defesa Civil e a Emlurb. Você pode refazê-las abaixo e ver o mapa mudar.", icon=":material/info:")
@@ -135,6 +136,8 @@ with aba_indice:
     r["indice_txt"] = r["indice"].map(lambda v: metricas.numero(v, 1))
     for k in CHAVES:
         r[f"{k}_txt"] = r[CRIT[k].coluna].map(lambda v: metricas.numero(v, 1))
+    r["risco_txt"] = (r["atend_defesa_civil_ano"].map(lambda v: metricas.numero(v)) + " atendimentos/ano; "
+                      + r["taxa_defesa_civil"].map(lambda v: metricas.numero(v, 1)) + " por mil hab.")
     r["vulnerabilidade_txt"] = (r["pct_favela"].map(lambda v: metricas.numero(v, 1)) + "% em favela; renda média R$ "
                                 + r["renda_media"].map(lambda v: metricas.numero(v)))
 
@@ -241,7 +244,8 @@ with aba_indice:
             return f"{num(linha['dias_alem_do_prazo'])} dias além do prazo legal" if chave == "atraso" else "não se aplica"
         bairro = ind.loc[linha["bairro_oficial"]]
         if chave == "risco":
-            return f"{num(bairro['taxa_defesa_civil'], 1)} atendimentos da Defesa Civil por mil hab./ano no bairro"
+            return (f"{num(bairro['atend_defesa_civil_ano'])} atendimentos da Defesa Civil por ano no bairro; "
+                    f"{num(bairro['taxa_defesa_civil'], 1)} por mil hab./ano")
         if chave == "vulnerabilidade":
             return (f"{num(bairro['pct_favela'], 1)}% dos moradores do bairro em favelas; renda média dos responsáveis "
                     f"R$ {num(bairro['renda_media'])}")
@@ -618,11 +622,43 @@ with aba_metodo:
             "que poucos bairros extremos achatem os outros. Na classificação de um pedido (seção 4), risco e vulnerabilidade "
             "vêm do bairro, e atraso e reincidência são medidos no próprio pedido. Os pesos saem das comparações abaixo. "
             "A fórmula completa, com um exemplo de cálculo, está mais abaixo nesta aba (seção 6).")
-    st.markdown("**A hierarquia do AHP.** A vulnerabilidade tem um nível a mais: dois subcritérios comparados entre si "
-                "com julgamento 1 (mesma importância), o que dá ½ e ½. Com só dois itens, essa comparação é sempre "
-                "consistente. O peso final de cada subcritério é o da vulnerabilidade vezes ½.")
+
+    # --- Dados ausentes ---------------------------------------------------------------------------------------
+    st.markdown("**Dados ausentes em cada indicador.** Antes de um indicador entrar no AHP, vale conferir se ele tem "
+                "dado para todos os bairros e o que falta (recomendação da Profª Maíra na orientação de 17/11).")
+    AUSENTES = [  # (coluna, indicador, fonte e período, o que falta ou vira zero)
+        ("atend_defesa_civil_ano", "Risco · volume de atendimentos", "Defesa Civil, pedidos do cidadão, 2021–2024",
+         "2025 em diante não foi publicado na base aberta. Nov. e dez. de 2024 têm menos de 20% do volume mensal típico "
+         "(publicação provavelmente incompleta). 0,8% dos atendimentos não têm bairro e ficam fora da conta. As lacunas "
+         "são de período, iguais para todos os bairros."),
+        ("taxa_defesa_civil", "Risco · atendimentos por mil hab.", "Defesa Civil 2021–2024 ÷ população do Censo 2022",
+         "As mesmas lacunas do volume. Bairros com menos de 1.000 moradores ficam fora do índice, porque poucos "
+         "moradores inflam a taxa."),
+        ("pct_favela", "Vulnerabilidade · % em favela", "IBGE, Censo 2022",
+         "Nenhum bairro sem dado. 19 bairros têm 0%: não é dado ausente, é o recorte do IBGE, que não delimita morros "
+         "antigos e consolidados como favela. Por isso a renda entrou como segundo subcritério."),
+        ("renda_media", "Vulnerabilidade · renda média", "IBGE, Censo 2022 (agregados por bairro)", "Nenhum bairro sem dado."),
+        ("pct_atraso_156", "Atraso · % do estoque além do prazo típico", "156, arquivos de 2025–2026",
+         "Nenhum bairro sem dado. No pedido, 0,5% dos abertos são de categoria sem prazo típico e ficam com nota 0 "
+         "de atraso."),
+        ("pct_reincidencia_156", "Reincidência · % em local + serviço repetido", "156, 2021–2025",
+         "Nenhum bairro sem dado, mas 32% dos pedidos não têm número no endereço e ficam fora da conta (não dá para "
+         "saber se o local se repete). No pedido, endereço sem número vale 0 (18% dos abertos)."),
+    ]
+    ausentes = pd.DataFrame([{"Indicador": nome, "Fonte e período": fonte,
+                              "Bairros com dado": f"{int(ind[col].notna().sum())} de {len(ind)}",
+                              "O que falta ou vira zero": falta} for col, nome, fonte, falta in AUSENTES])
+    st.table(ausentes.set_index("Indicador"))
+    leitura("Conclusão: nenhum indicador deixa bairro sem dado. As lacunas são de período (a Defesa Civil só vai até "
+            "2024) e de endereço (reincidência), as duas iguais para todos os bairros ou tratadas de forma explícita na "
+            "fórmula. A Ouvidoria não entra no índice dos bairros porque a base aberta não tem o lugar da manifestação.")
+    st.markdown("**A hierarquia do AHP.** Risco e vulnerabilidade têm um nível a mais: em cada um, dois subcritérios "
+                "comparados entre si com julgamento 1 (mesma importância), o que dá ½ e ½. Com só dois itens, essa "
+                "comparação é sempre consistente. O peso final de cada subcritério é o do critério vezes ½.")
     st.code(f"""Prioridade
 ├── Risco ............................ {metricas.numero(w['risco'] * 100, 1)}%
+│     ├── volume de atendimentos (½) . {metricas.numero(w['risco'] * 50, 2)}%
+│     └── taxa por mil hab. (½) ...... {metricas.numero(w['risco'] * 50, 2)}%
 ├── Vulnerabilidade .................. {metricas.numero(w['vulnerabilidade'] * 100, 1)}%
 │     ├── % em favela (½) ............ {metricas.numero(w['vulnerabilidade'] * 50, 2)}%
 │     └── renda média, invertida (½) . {metricas.numero(w['vulnerabilidade'] * 50, 2)}%
@@ -639,6 +675,13 @@ with aba_metodo:
             "2021–2024 são mapeamentos no mesmo endereço e no mesmo dia. Agora o risco conta atendimentos (mesmo endereço, "
             "dia e serviço). Os 10 primeiros continuam os mesmos (só a ordem entre eles muda), mas Mangabeira cai 38 posições e Bongi, Pina e Rosarinho, de 12 a 17. "
             "O mapa da Defesa Civil em Território continua mostrando ações, como na EDA.")
+    leitura("Por que o risco tem dois subcritérios (20/11, sugestão da Profª Maíra na orientação de 17/11): a taxa por "
+            "mil habitantes sozinha premia o bairro pequeno, em que poucos moradores inflam a conta; o volume sozinho "
+            "premiaria o bairro grande (a Cohab tem o maior volume, cerca de 2.200 atendimentos por ano). Juntos, um "
+            "corrige o outro. Volume e taxa andam parecido, mas não são a mesma coisa (correlação de postos de 0,84). "
+            "O ranking quase não muda (correlação de 0,97 e os mesmos 10 primeiros), mas bairros grandes com muito "
+            "atendimento sobem (Boa Viagem +21, Várzea +13, Pina +12) e bairros pequenos com taxa inflada descem "
+            "(Torreão −15; Cabanga, Derby e Apipucos −14).")
 
 
     # --- Sensibilidade --------------------------------------------------------------------------------------
@@ -660,9 +703,9 @@ with aba_metodo:
             f"{int(pior['mantidos_no_top'])} de 10. Se quase tudo fica acima de 7, o ranking é estável e a discussão "
             "com especialistas pode focar nos poucos bairros de fronteira.")
     st.caption("AHP não é aprendizado de máquina e não substitui o bônus de modelagem preditiva. Ele torna explícito e "
-               "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,48), então "
+               "auditável um critério que hoje é implícito. Risco e vulnerabilidade andam juntos em parte (ρ ≈ 0,49), então "
                "os bairros de morro somam pontos nos dois. O teste mexe nos pesos dos quatro critérios; os pesos internos "
-               "da vulnerabilidade (½ para favela, ½ para renda) ficam fixos.")
+               "do risco e da vulnerabilidade (½ e ½) ficam fixos.")
 
 
     # --- Fórmula ---------------------------------------------------------------------------------------
@@ -682,12 +725,15 @@ with aba_metodo:
     st.markdown("**Nota de um bairro** $b$ (seção 3):")
     st.latex(r"P_b = 10 \cdot \big(\, w_R\, r_R(b) + w_V\, r_V(b) + w_A\, r_A(b) + w_E\, r_E(b) \,\big),"
              r"\qquad r_k(b) = \frac{\text{posição}_k(b)}{N},"
+             r"\qquad r_R(b) = \tfrac{1}{2}\, r_{\text{volume}}(b) + \tfrac{1}{2}\, r_{\text{taxa}}(b),"
              r"\qquad r_V(b) = \tfrac{1}{2}\, r_{\text{favela}}(b) + \tfrac{1}{2}\, r_{\text{renda}}(b)")
     legenda_formula(["$P_b$ = nota de prioridade do bairro (0 a 10)", "$b$ = bairro",
                      "$w_R, w_V, w_A, w_E$ = pesos de risco, vulnerabilidade, atraso e reincidência",
                      "$r_k(b)$ = nota do bairro no critério $k$ (0 a 1)",
                      "$\\text{posição}_k(b)$ = posição do bairro do menor para o maior valor no critério $k$",
                      "$N$ = número de bairros comparados (89)",
+                     "$r_R(b)$ = risco, com dois subcritérios de mesmo peso: volume de atendimentos da Defesa Civil por "
+                     "ano e atendimentos por mil habitantes por ano",
                      "$r_V(b)$ = vulnerabilidade, com dois subcritérios de mesmo peso: % em favela e renda média "
                      "dos responsáveis (renda: posição da maior para a menor, renda menor = nota maior)"])
     st.markdown("**Nota de um pedido aberto** $p$ do 156 ou da Câmara (seção 4), com os mesmos pesos:")
@@ -719,9 +765,10 @@ with aba_metodo:
         escolhido = grupo.loc[(grupo["indice"] - grupo["indice"].quantile(0.75)).abs().idxmin()].copy()
         escolhido["nome"] = indicadores.loc[escolhido["bairro_oficial"], "nome"]
         b = escolhido["bairro_oficial"]
-        posicoes = {"risco": float(indicadores[CRIT["risco"].coluna].rank(method="average")[b])}
-        for s in CRIT["vulnerabilidade"].subcriterios:   # % em favela e renda (renda: da maior para a menor)
-            posicoes[s.coluna] = float(indicadores[s.coluna].rank(method="average", ascending=s.maior_e_pior)[b])
+        posicoes = {}
+        for k in ("risco", "vulnerabilidade"):   # subcritérios (renda: da maior para a menor)
+            for s in CRIT[k].subcriterios:
+                posicoes[s.coluna] = float(indicadores[s.coluna].rank(method="average", ascending=s.maior_e_pior)[b])
         return escolhido, pesos_padrao, posicoes
 
 
@@ -747,13 +794,14 @@ with aba_metodo:
         f"{metricas.numero(wp['vulnerabilidade'] * 100, 1)}%, atraso {metricas.numero(wp['atraso'] * 100, 1)}% e "
         f"reincidência {metricas.numero(wp['reincidencia'] * 100, 1)}%.")
     st.markdown("Nota de cada critério, de 0 a 1:")
-    pos_r = metricas.numero(pos["risco"], 1 if pos["risco"] % 1 else 0)
-    _, col_r, col_v, _ = st.columns([1, 2, 2, 1])
+    _, col_r, col_v, _ = st.columns([0.3, 2.5, 2.5, 0.3])
     with col_r:
-        st.latex(rf"r_R(b_p) = \frac{{{n_tex(pos['risco'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}")
+        st.latex(rf"r_R(b_p) = \tfrac{{1}}{{2}}\cdot\frac{{{n_tex(pos['atend_defesa_civil_ano'], 1)}}}{{89}} + "
+                 rf"\tfrac{{1}}{{2}}\cdot\frac{{{n_tex(pos['taxa_defesa_civil'], 1)}}}{{89}} = {n_tex(nota['risco'], 3)}")
         legenda_formula([f"$r_R(b_p)$ = nota de risco do {ex['nome']}",
-                         f"{pos_r} = $\\text{{posição}}_R(b_p)$, posição do {ex['nome']} em risco",
-                         "89 = $N$, bairros comparados"])
+                         f"{metricas.numero(pos['atend_defesa_civil_ano'], 1)} = posição do {ex['nome']} em volume de atendimentos",
+                         f"{metricas.numero(pos['taxa_defesa_civil'], 1)} = posição do {ex['nome']} em atendimentos por mil hab.",
+                         "1/2 = peso de cada subcritério; 89 = $N$, bairros comparados"])
     with col_v:
         st.latex(rf"r_V(b_p) = \tfrac{{1}}{{2}}\cdot\frac{{{n_tex(pos['pct_favela'], 1)}}}{{89}} + "
                  rf"\tfrac{{1}}{{2}}\cdot\frac{{{n_tex(pos['renda_media'], 1)}}}{{89}} = {n_tex(nota['vulnerabilidade'], 3)}")
@@ -811,7 +859,9 @@ with aba_metodo:
 | $N$ | Número de bairros comparados (89) |
 | $\\text{posição}_k(b)$ | Posição do bairro do menor para o maior valor no indicador do critério $k$ (empates dividem a posição média); na renda, da maior para a menor, porque renda menor pede mais prioridade |
 | $r_k(b)$ | Nota de 0 a 1 do bairro no critério $k$; bairro sem dado recebe 0 |
-| $r_R(b)$ | Posição do bairro em atendimentos da Defesa Civil pedidos pelo cidadão por mil habitantes por ano (2021–2024) ÷ $N$; um atendimento é um endereço, num dia, num serviço, e conta uma vez mesmo que tenha várias ações |
+| $r_{\\text{volume}}(b)$ | Posição do bairro em atendimentos da Defesa Civil pedidos pelo cidadão por ano (2021–2024) ÷ $N$; um atendimento é um endereço, num dia, num serviço, e conta uma vez mesmo que tenha várias ações |
+| $r_{\\text{taxa}}(b)$ | Posição do bairro nos mesmos atendimentos por mil habitantes por ano ÷ $N$ |
+| $r_R(b)$ | Nota de risco: $\\tfrac{1}{2}\\, r_{\\text{volume}}(b) + \\tfrac{1}{2}\\, r_{\\text{taxa}}(b)$, os dois subcritérios com o mesmo peso (julgamento 1) |
 | $r_{\\text{favela}}(b)$ | Posição do bairro em % da população em favelas e comunidades urbanas (IBGE, Censo 2022) ÷ $N$ |
 | $r_{\\text{renda}}(b)$ | Posição do bairro em renda nominal média mensal dos responsáveis pelos domicílios (IBGE, Censo 2022), da maior para a menor, ÷ $N$ |
 | $r_V(b)$ | Nota de vulnerabilidade: $\\tfrac{1}{2}\\, r_{\\text{favela}}(b) + \\tfrac{1}{2}\\, r_{\\text{renda}}(b)$, os dois subcritérios com o mesmo peso (julgamento 1) |

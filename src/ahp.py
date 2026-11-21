@@ -44,12 +44,16 @@ class Criterio:
 
 
 CRITERIOS = [
-    Criterio("risco", "Risco", "taxa_defesa_civil", "atendimentos / mil hab. / ano",
-             "Atendimentos da Defesa Civil pedidos pelo cidadão (vistoria, lona) por habitante, 2021–2024. Cada "
-             "atendimento conta uma vez, mesmo que tenha gerado várias ações. Mede exposição a risco em encostas e "
-             "áreas alagáveis.",
-             "Posição relativa da taxa entre os bairros: r = posição ÷ N.",
-             "Herda a nota do bairro do pedido."),
+    Criterio("risco", "Risco", "taxa_defesa_civil", "atendimentos / ano; atendimentos / mil hab. / ano",
+             "Dois subcritérios com o mesmo peso, dos atendimentos da Defesa Civil pedidos pelo cidadão (vistoria, "
+             "lona), 2021–2024: o volume por ano e a taxa por mil habitantes. Cada atendimento conta uma vez, mesmo "
+             "que tenha gerado várias ações. Mede exposição a risco em encostas e áreas alagáveis. A taxa sozinha "
+             "premia o bairro pequeno (poucos moradores inflam a conta); o volume sozinho, o bairro grande; juntos, "
+             "um corrige o outro (sugestão da Profª Maíra, 17/11).",
+             "Média das duas posições relativas: (posição em volume ÷ N + posição em taxa ÷ N) ÷ 2.",
+             "Herda a nota do bairro do pedido.",
+             (Subcriterio("atend_defesa_civil_ano", "volume de atendimentos", 0.5),
+              Subcriterio("taxa_defesa_civil", "atendimentos por mil hab.", 0.5))),
     Criterio("vulnerabilidade", "Vulnerabilidade", "pct_favela", "% em favela; renda média",
              "Dois subcritérios do Censo 2022, com o mesmo peso: a parcela da população em favelas e comunidades "
              "urbanas e a renda média mensal dos responsáveis pelos domicílios. O mesmo problema pesa mais onde a "

@@ -38,6 +38,7 @@ def test_julgamentos_padrao_sao_consistentes_e_somam_um():
 def _indicadores():
     return pd.DataFrame({
         "taxa_defesa_civil": [100.0, 1.0, 50.0, 2.0],
+        "atend_defesa_civil_ano": [900.0, 20.0, 300.0, 4.0],
         "pct_favela": [80.0, 0.0, 40.0, 5.0],
         "renda_media": [1200.0, 9000.0, 2500.0, 4000.0],
         "pct_atraso_156": [60.0, 50.0, 55.0, np.nan],
@@ -63,6 +64,18 @@ def test_vulnerabilidade_soma_favela_e_renda_com_a_renda_invertida():
     assert notas.loc["CENTRO", "vulnerabilidade"] == pytest.approx(0.25)
     sub = ahp.CRITERIOS[1].subcriterios
     assert sum(s.peso for s in sub) == pytest.approx(1)
+
+
+def test_risco_soma_volume_e_taxa_com_o_mesmo_peso():
+    # PEQUENO: taxa alta (poucos moradores) mas volume baixo; GRANDE: o contrário. Nenhum dos dois fica no topo sozinho.
+    ind = pd.DataFrame({"taxa_defesa_civil": [80.0, 5.0, 60.0, 1.0], "atend_defesa_civil_ano": [10.0, 900.0, 800.0, 2.0],
+                        "pct_favela": [0.0] * 4, "renda_media": [1.0] * 4, "pct_atraso_156": [0.0] * 4,
+                        "pct_reincidencia_156": [0.0] * 4}, index=["PEQUENO", "GRANDE", "MORRO", "CENTRO"])
+    notas = ahp.notas_por_criterio(ind)["risco"]
+    assert notas["MORRO"] == notas.max()                      # alto nos dois
+    assert notas["PEQUENO"] == pytest.approx(notas["GRANDE"])  # alto num só: empatam no meio
+    assert notas["CENTRO"] == notas.min()
+    assert sum(s.peso for s in ahp.CRITERIOS[0].subcriterios) == pytest.approx(1)
 
 
 def test_bairro_sem_favela_mas_pobre_nao_fica_com_vulnerabilidade_minima():
@@ -95,7 +108,7 @@ def _ocorrencias(**colunas):
 
 
 def _indicadores_dois_bairros():
-    return pd.DataFrame({"taxa_defesa_civil": [1.0, 5.0], "pct_favela": [10.0, 50.0],
+    return pd.DataFrame({"taxa_defesa_civil": [1.0, 5.0], "atend_defesa_civil_ano": [10.0, 40.0], "pct_favela": [10.0, 50.0],
                          "renda_media": [5000.0, 1500.0], "pct_atraso_156": [20.0, 40.0],
                          "pct_reincidencia_156": [30.0, 50.0]}, index=pd.Index(["A", "B"], name="bairro_oficial"))
 

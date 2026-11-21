@@ -479,7 +479,12 @@ def indicadores_bairro(df: pd.DataFrame, bairros: pd.DataFrame, estoque: pd.Data
     t["pct_favela"] = b["pct_favela"]
     t["renda_media"] = renda_por_bairro().reindex(t.index)
     t["taxa_156"] = _taxa_por_mil(s156, a1 - a0 + 1, pop)
-    t["taxa_defesa_civil"] = _taxa_por_mil(atendimentos_defesa_civil(dc), 2024 - a0 + 1, pop).fillna(0)
+    atendimentos = atendimentos_defesa_civil(dc)
+    anos_dc = 2024 - a0 + 1
+    t["taxa_defesa_civil"] = _taxa_por_mil(atendimentos, anos_dc, pop).fillna(0)
+    # Volume absoluto (subcritério do risco desde 20/11): a taxa sozinha premia bairro pequeno; o volume, bairro grande.
+    t["atend_defesa_civil_ano"] = (atendimentos.groupby(_texto(atendimentos["bairro_oficial"])).size() / anos_dc
+                                   ).reindex(t.index).fillna(0)
     t["taxa_sedec"] = _taxa_por_mil(sedec, 2023 - a0 + 1, pop).fillna(0)
     t["taxa_indicacoes"] = _taxa_por_mil(ind, a1 - a0 + 1, pop, por=10000).fillna(0)
 
