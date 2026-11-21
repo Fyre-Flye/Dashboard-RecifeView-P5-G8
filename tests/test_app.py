@@ -38,3 +38,10 @@ def test_painel_geral_simula_sorteia_e_volta_para_hoje_sem_erro():
         next(b for b in at.button if b.label.startswith(rotulo) or b.label.endswith(rotulo)).click().run()
         assert not at.exception, [e.value for e in at.exception]
         assert at.session_state["wr_modo"] == modo
+
+
+def test_paginas_nao_usam_correlacao_que_depende_do_scipy():
+    # O Streamlit Cloud instala só o requirements.txt, sem scipy; corr(method="spearman") quebrava a página online.
+    from pathlib import Path
+    for arquivo in list(Path("views").glob("*.py")) + list(Path("src").glob("*.py")):
+        assert 'method="spearman"' not in arquivo.read_text(encoding="utf-8"), arquivo
